@@ -1,0 +1,50 @@
+﻿function Get-M365AdminContentUnderstandingSetting {
+    <#
+    .SYNOPSIS
+        Retrieves Microsoft 365 admin center Content Understanding settings.
+
+    .DESCRIPTION
+        Reads Content Understanding settings payloads from the admin center endpoints captured in
+        the settings HAR.
+
+    .PARAMETER Name
+        The Content Understanding settings payload to retrieve.
+
+    .PARAMETER Force
+        Bypasses the cache and forces a fresh retrieval.
+
+    .EXAMPLE
+        Get-M365AdminContentUnderstandingSetting -Name Setting
+
+        Retrieves the primary Content Understanding settings payload.
+
+    .OUTPUTS
+        Object
+        Returns the selected Content Understanding settings payload.
+    #>
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory)]
+        [ValidateSet('AutoFill', 'BillingSettings', 'ESignature', 'ImageTagging', 'Licensing', 'PlaybackTranscriptTranslation', 'PowerAppsEnvironments', 'Setting', 'TaxonomyTagging')]
+        [string]$Name,
+
+        [Parameter()]
+        [switch]$Force
+    )
+
+    process {
+        $path = switch ($Name) {
+            'AutoFill' { '/admin/api/contentunderstanding/autofillsetting' }
+            'BillingSettings' { '/admin/api/contentunderstanding/billingSettings' }
+            'ESignature' { '/admin/api/contentunderstanding/esignaturesettings' }
+            'ImageTagging' { '/admin/api/contentunderstanding/imagetaggingsetting' }
+            'Licensing' { '/admin/api/contentunderstanding/licensing' }
+            'PlaybackTranscriptTranslation' { '/admin/api/contentunderstanding/playbacktranscripttranslationsettings' }
+            'PowerAppsEnvironments' { '/admin/api/contentunderstanding/powerAppsEnvironments' }
+            'Setting' { '/admin/api/contentunderstanding/setting' }
+            'TaxonomyTagging' { '/admin/api/contentunderstanding/taxonomytaggingsetting' }
+        }
+
+        Get-M365AdminPortalData -Path $path -CacheKey "M365AdminContentUnderstandingSetting:$Name" -Force:$Force
+    }
+}

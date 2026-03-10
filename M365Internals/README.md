@@ -1,12 +1,12 @@
-![](./images/m365internals-banner.jpg "M365Internals")
+﻿![](../images/m365internals-banner.jpg "M365Internals")
 
 # M365Internals
 
-Welcome to M365Internals, the unofficial PowerShell module to interact with the Microsoft 365 admin center. The module provides direct access to the same portal-backed APIs used by `admin.cloud.microsoft`, so you can script and automate tenant, settings, search, Viva, reporting, navigation, and related admin-center data.
+Welcome to the M365Internals module folder. This is the PowerShell implementation behind the repository, containing the exported cmdlets, internal helpers, manifest, format definitions, and session plumbing used to interact with the Microsoft 365 admin center.
 
 ## Description
 
-M365Internals is a PowerShell module that provides direct access to Microsoft 365 admin center portal APIs. It enables automation and scripting capabilities for managing and querying Microsoft 365 admin resources including tenant configuration, company settings, domains, groups, recommendations, reporting, search, security settings, and related portal metadata.
+This folder contains the actual M365Internals PowerShell module. The implementation is specific to `admin.cloud.microsoft` and includes connection handling, read-only admin-center cmdlets, Graph-proxy helpers, REST utilities, cache support, and shared portal request/session logic.
 
 ## Disclaimer
 
@@ -18,24 +18,31 @@ USE AT YOUR OWN RISK. The authors and contributors are not responsible for any i
 
 ## Key Features
 
+### Module Layout
+
+The module follows the same high-level structure as XDRInternals, adapted for Microsoft 365 admin-center APIs:
+
+- `functions/` contains exported cmdlets such as `Connect-M365Portal`, `Connect-M365PortalBySoftwarePasskey`, the `Get-M365Admin*` family, and `Invoke-M365RestMethod`
+- `internal/functions/` contains helper functions for cache management, session state, portal request handling, Graph proxy access, and software-passkey authentication
+- `internal/scripts/` contains support script space for future initialization or helper workflows
+- `M365Internals.psd1` is the module manifest
+- `M365Internals.psm1` loads the module content from the folder structure above
+- `M365Internals.Format.ps1xml` contains custom formatting definitions for module output types
+
 ### Caching Functionality
 
-Many cmdlets in this module implement intelligent caching to improve performance and reduce repeated portal calls:
+The module includes shared in-memory caching for portal metadata and repeated read operations:
 
-- Cached data is stored in memory with tenant-aware cache keys
-- Default cache duration varies by cmdlet, typically between 5 and 15 minutes
-- Many read cmdlets support the `-Force` parameter to bypass cache and retrieve fresh data
-- Cached responses are automatically refreshed when they expire
+- Cache entries are tenant-aware and scoped to the active portal connection when possible
+- Read-heavy cmdlets commonly support `-Force` to bypass cache
+- Common bootstrap and settings data can be reused across repeated calls in the same session
 
 Example:
 ```powershell
-# First call retrieves from the admin center and caches the result
+# Retrieve and cache shell information
 Get-M365AdminShellInfo
 
-# Second call uses cached data if it is still valid
-Get-M365AdminShellInfo
-
-# Force a fresh retrieval
+# Bypass the cache for a fresh response
 Get-M365AdminShellInfo -Force
 ```
 
@@ -84,46 +91,31 @@ Import-Module M365Internals
 ### From GitHub
 
 ```powershell
-# Clone the repository
-git clone https://github.com/MSCloudInternals/M365Internals.git
-
-# Import the module
-Import-Module .\M365Internals\M365Internals.psd1
+# Import the module directly from the repository root
+Import-Module .\M365Internals.psd1
 ```
 
 ## Usage
 
-### Connect to the Microsoft 365 admin center
+### Import the module locally
 
 ```powershell
-# Connect by exchanging an ESTSAUTHPERSISTENT cookie
-Connect-M365Portal -EstsAuthCookieValue $estsCookie
-```
-
-```powershell
-# Connect by using a local software passkey file
-Connect-M365PortalBySoftwarePasskey -KeyFilePath '.\secadmin.passkey'
+Import-Module .\M365Internals.psd1
 ```
 
 ### Examples
 
 ```powershell
-# Retrieve admin center shell information
-Get-M365AdminShellInfo
+# Connect by exchanging an ESTSAUTHPERSISTENT cookie
+Connect-M365Portal -EstsAuthCookieValue $estsCookie
 
-# Retrieve the asynchronous navigation payload
-Get-M365AdminNavigation -Async
+# Connect by using a local software passkey file
+Connect-M365PortalBySoftwarePasskey -KeyFilePath '.\secadmin.passkey'
 
-# Retrieve the full feature payload
-Get-M365AdminFeature -All
-
-# Retrieve the company profile settings payload
+# Retrieve company profile settings
 Get-M365AdminCompanySetting -Name Profile
 
-# Retrieve fresh shell information without using cache
-Get-M365AdminShellInfo -Force
-
-# Invoke a direct authenticated request to the admin center
+# Invoke an authenticated admin-center request directly
 Invoke-M365RestMethod -Path '/admin/api/coordinatedbootstrap/shellinfo'
 ```
 
