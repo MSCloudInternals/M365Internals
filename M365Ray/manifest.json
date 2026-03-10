@@ -1,0 +1,25 @@
+﻿{
+    "manifest_version": 3,
+    "name": "M365Ray - M365 Admin Inspector",
+    "version": "1.0",
+    "description": "Maps admin.cloud.microsoft requests to M365Internals cmdlets.",
+    "icons": {
+        "16": "images/icon16.png",
+        "32": "images/icon32.png",
+        "48": "images/icon48.png",
+        "128": "images/icon128.png"
+    },
+    "devtools_page": "devtools.html",
+    "background": {
+        "service_worker": "background.js"
+    },
+    "permissions": [
+        "cookies",
+        "storage",
+        "clipboardWrite",
+        "webRequest"
+    ],
+    "host_permissions": [
+        "https://admin.cloud.microsoft/*"
+    ]
+}

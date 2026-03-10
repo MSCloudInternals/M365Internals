@@ -1,0 +1,886 @@
+﻿[
+	{
+		"Cmdlet": "Get-M365AdminShellInfo",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/coordinatedbootstrap/shellinfo"
+	},
+	{
+		"Cmdlet": "Get-M365AdminHomeData",
+		"ApiUri": "https://admin.cloud.microsoft/adminportal/home/ClassicModernAdminDataStream?ref=/homepage"
+	},
+	{
+		"Cmdlet": "Get-M365AdminFeature",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/features/all"
+	},
+	{
+		"Cmdlet": "Get-M365AdminFeature",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/features/initialload",
+		"Parameters": {
+			"InitialLoad": "fixed:true"
+		},
+		"SwitchParameters": [
+			"InitialLoad"
+		]
+	},
+	{
+		"Cmdlet": "Get-M365AdminFeature",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/features/config",
+		"Parameters": {
+			"Config": "fixed:true"
+		},
+		"SwitchParameters": [
+			"Config"
+		]
+	},
+	{
+		"Cmdlet": "Get-M365AdminFeature",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/features/admincontentcdnimagepath",
+		"Parameters": {
+			"AdminContentCdnImagePath": "fixed:true"
+		},
+		"SwitchParameters": [
+			"AdminContentCdnImagePath"
+		]
+	},
+	{
+		"Cmdlet": "Get-M365AdminNavigation",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/navigation"
+	},
+	{
+		"Cmdlet": "Get-M365AdminNavigation",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/navigation/async",
+		"Parameters": {
+			"Async": "fixed:true"
+		},
+		"SwitchParameters": [
+			"Async"
+		]
+	},
+	{
+		"Cmdlet": "Get-M365AdminAppSetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/settings/apps/bookings",
+		"Parameters": {
+			"Name": "fixed:Bookings"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminAppSetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/settings/apps/calendarsharing",
+		"Parameters": {
+			"Name": "fixed:CalendarSharing"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminAppSetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/settings/apps/dirsync",
+		"Parameters": {
+			"Name": "fixed:DirectorySynchronization"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminAppSetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/settings/apps/dynamicscrm",
+		"Parameters": {
+			"Name": "fixed:DynamicsCrm"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminAppSetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/settings/apps/EndUserCommunications",
+		"Parameters": {
+			"Name": "fixed:EndUserCommunications"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminAppSetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/settings/apps/learning",
+		"Parameters": {
+			"Name": "fixed:Learning"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminAppSetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/settings/apps/looppolicy",
+		"Parameters": {
+			"Name": "fixed:LoopPolicy"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminAppSetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/settings/apps/mail",
+		"Parameters": {
+			"Name": "fixed:Mail"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminAppSetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/settings/apps/o365dataplan",
+		"Parameters": {
+			"Name": "fixed:O365DataPlan"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminAppSetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/settings/apps/officeforms",
+		"Parameters": {
+			"Name": "fixed:OfficeForms"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminAppSetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/settings/apps/officeformspro",
+		"Parameters": {
+			"Name": "fixed:OfficeFormsPro"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminAppSetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/settings/apps/officeonline",
+		"Parameters": {
+			"Name": "fixed:OfficeOnline"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminAppSetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/settings/apps/sitessharing",
+		"Parameters": {
+			"Name": "fixed:SitesSharing"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminAppSetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/settings/apps/skypeteams",
+		"Parameters": {
+			"Name": "fixed:SkypeTeams"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminAppSetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/settings/apps/store",
+		"Parameters": {
+			"Name": "fixed:Store"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminAppSetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/settings/apps/Sway",
+		"Parameters": {
+			"Name": "fixed:Sway"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminAppSetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/settings/apps/usersoftware",
+		"Parameters": {
+			"Name": "fixed:UserSoftware"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminAppSetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/settings/apps/whiteboard",
+		"Parameters": {
+			"Name": "fixed:Whiteboard"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminCompanySetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/Settings/company/helpdesk",
+		"Parameters": {
+			"Name": "fixed:HelpDesk"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminCompanySetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/Settings/company/profile",
+		"Parameters": {
+			"Name": "fixed:Profile"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminCompanySetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/Settings/company/releasetrack",
+		"Parameters": {
+			"Name": "fixed:ReleaseTrack"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminCompanySetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/Settings/company/sendfromaddress",
+		"Parameters": {
+			"Name": "fixed:SendFromAddress"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminCompanySetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/Settings/company/theme/v2",
+		"Parameters": {
+			"Name": "fixed:Theme"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminCompanySetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/Settings/company/tile",
+		"Parameters": {
+			"Name": "fixed:Tile"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminContentUnderstandingSetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/contentunderstanding/autofillsetting",
+		"Parameters": {
+			"Name": "fixed:AutoFill"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminContentUnderstandingSetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/contentunderstanding/billingSettings",
+		"Parameters": {
+			"Name": "fixed:BillingSettings"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminContentUnderstandingSetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/contentunderstanding/esignaturesettings",
+		"Parameters": {
+			"Name": "fixed:ESignature"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminContentUnderstandingSetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/contentunderstanding/imagetaggingsetting",
+		"Parameters": {
+			"Name": "fixed:ImageTagging"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminContentUnderstandingSetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/contentunderstanding/licensing",
+		"Parameters": {
+			"Name": "fixed:Licensing"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminContentUnderstandingSetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/contentunderstanding/playbacktranscripttranslationsettings",
+		"Parameters": {
+			"Name": "fixed:PlaybackTranscriptTranslation"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminContentUnderstandingSetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/contentunderstanding/powerAppsEnvironments",
+		"Parameters": {
+			"Name": "fixed:PowerAppsEnvironments"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminContentUnderstandingSetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/contentunderstanding/setting",
+		"Parameters": {
+			"Name": "fixed:Setting"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminContentUnderstandingSetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/contentunderstanding/taxonomytaggingsetting",
+		"Parameters": {
+			"Name": "fixed:TaxonomyTagging"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminDomain",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/Domains/List"
+	},
+	{
+		"Cmdlet": "Get-M365AdminDomain",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/DomainList/Customization",
+		"Parameters": {
+			"Customization": "fixed:true"
+		},
+		"SwitchParameters": [
+			"Customization"
+		]
+	},
+	{
+		"Cmdlet": "Get-M365AdminDomain",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/Domains/GetDomainBuyModel",
+		"Parameters": {
+			"BuyModel": "fixed:true"
+		},
+		"SwitchParameters": [
+			"BuyModel"
+		]
+	},
+	{
+		"Cmdlet": "Get-M365AdminDomain",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/Domains/GetRegistrarsHelpInfo",
+		"Parameters": {
+			"RegistrarsHelpInfo": "fixed:true"
+		},
+		"SwitchParameters": [
+			"RegistrarsHelpInfo"
+		]
+	},
+	{
+		"Cmdlet": "Get-M365AdminDomain",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/Domains/Records?domainName={DomainName}",
+		"Parameters": {
+			"Records": "fixed:true",
+			"DomainName": "query:domainName"
+		},
+		"SwitchParameters": [
+			"Records"
+		]
+	},
+	{
+		"Cmdlet": "Get-M365AdminDomain",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/Domains/Records/ListingCategory?domainName={DomainName}",
+		"Parameters": {
+			"ListingCategory": "fixed:true",
+			"DomainName": "query:domainName"
+		},
+		"SwitchParameters": [
+			"ListingCategory"
+		]
+	},
+	{
+		"Cmdlet": "Get-M365AdminDomain",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/Domains/CheckDnsHealth?domainName={DomainName}&overrideSkip={OverrideSkip}&canRefreshCache={CanRefreshCache}&dnsHealthCheckScenario={DnsHealthCheckScenario}",
+		"Parameters": {
+			"DnsHealth": "fixed:true",
+			"DomainName": "query:domainName",
+			"OverrideSkip": "query:overrideSkip",
+			"CanRefreshCache": "query:canRefreshCache",
+			"DnsHealthCheckScenario": "query:dnsHealthCheckScenario"
+		},
+		"SwitchParameters": [
+			"DnsHealth"
+		]
+	},
+	{
+		"Cmdlet": "Get-M365AdminDomain",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/Domains/CheckIsTroubleshootingAllowed?domainName={DomainName}&canRefreshCache={CanRefreshCache}",
+		"Parameters": {
+			"TroubleshootingAllowed": "fixed:true",
+			"DomainName": "query:domainName",
+			"CanRefreshCache": "query:canRefreshCache"
+		},
+		"SwitchParameters": [
+			"TroubleshootingAllowed"
+		]
+	},
+	{
+		"Cmdlet": "Get-M365AdminDomain",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/Domains/Dependencies?domainName={DomainName}&kind={DependencyKind}",
+		"Parameters": {
+			"Dependencies": "fixed:true",
+			"DomainName": "query:domainName",
+			"DependencyKind": "query:kind"
+		},
+		"SwitchParameters": [
+			"Dependencies"
+		]
+	},
+	{
+		"Cmdlet": "Get-M365AdminDomain",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/Domains/Records/Export?format={Format}&domainType={DomainType}&domainName={DomainName}&domainCapabilities={DomainCapabilities}&mode={Mode}",
+		"Parameters": {
+			"ExportRecords": "fixed:true",
+			"Format": "query:format",
+			"DomainType": "query:domainType",
+			"DomainName": "query:domainName",
+			"DomainCapabilities": "query:domainCapabilities",
+			"Mode": "query:mode"
+		},
+		"SwitchParameters": [
+			"ExportRecords"
+		]
+	},
+	{
+		"Cmdlet": "Get-M365AdminGroup",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/groups/GetGroups",
+		"Method": "POST"
+	},
+	{
+		"Cmdlet": "Get-M365AdminGroup",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/groups/labels",
+		"Parameters": {
+			"Name": "fixed:Labels"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminGroup",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/groups/permissions",
+		"Parameters": {
+			"Name": "fixed:Permissions"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminPartnerClient",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/partners/AOBOClients?partnerType={PartnerType}",
+		"Parameters": {
+			"PartnerType": "query:partnerType"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminRecommendation",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/recommendations/m365"
+	},
+	{
+		"Cmdlet": "Get-M365AdminRecommendation",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/recommendations/m365alerts?referrer=M365AdminDashboard",
+		"Parameters": {
+			"Name": "fixed:M365Alerts"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminRecommendation",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/recommendations/m365suggestions?referrer=SearchAnswers",
+		"Parameters": {
+			"Name": "fixed:M365Suggestions"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminReportSetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/reports/config/GetTenantConfiguration"
+	},
+	{
+		"Cmdlet": "Get-M365AdminReportSetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/reports/productivityScoreConfig/GetProductivityScoreConfig",
+		"Parameters": {
+			"Name": "fixed:ProductivityScoreConfig"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminReportSetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/reports/productivityScoreCustomerOption",
+		"Parameters": {
+			"Name": "fixed:ProductivityScoreCustomerOption"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminSearchSetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/searchadminapi/configurations",
+		"Parameters": {
+			"Name": "fixed:Configurations"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminSearchSetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/searchadminapi/ConfigurationSettings",
+		"Parameters": {
+			"Name": "fixed:ConfigurationSettings"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminSearchSetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/searchadminapi/firstrunexperience/get",
+		"Parameters": {
+			"Name": "fixed:FirstRunExperience"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminSearchSetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/searchadminapi/modernResultTypes",
+		"Parameters": {
+			"Name": "fixed:ModernResultTypes"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminSearchSetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/searchadminapi/news/industry/Bing",
+		"Parameters": {
+			"Name": "fixed:NewsIndustry"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminSearchSetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/searchadminapi/news/msbenabled/Bing",
+		"Parameters": {
+			"Name": "fixed:NewsMsbEnabled"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminSearchSetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/searchadminapi/news/options/Bing",
+		"Parameters": {
+			"Name": "fixed:NewsOptions"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminSearchSetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/searchadminapi/Pivots",
+		"Parameters": {
+			"Name": "fixed:Pivots"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminSearchSetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/searchadminapi/Qnas",
+		"Parameters": {
+			"Name": "fixed:Qnas"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminSearchSetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/searchadminapi/searchintelligencehome/cards",
+		"Parameters": {
+			"Name": "fixed:SearchIntelligenceHomeCards"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminSearchSetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/searchadminapi/UDTConnectorsSummary",
+		"Parameters": {
+			"Name": "fixed:UdtConnectorsSummary"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminSecuritySetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/settings/security/activitybasedtimeout",
+		"Parameters": {
+			"Name": "fixed:ActivityBasedTimeout"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminSecuritySetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/settings/security/bingdatacollection",
+		"Parameters": {
+			"Name": "fixed:BingDataCollection"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminSecuritySetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/settings/security/dataaccess",
+		"Parameters": {
+			"Name": "fixed:DataAccess"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminSecuritySetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/Settings/security/guestUserPolicy",
+		"Parameters": {
+			"Name": "fixed:GuestUserPolicy"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminSecuritySetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/settings/security/multifactorauth",
+		"Parameters": {
+			"Name": "fixed:MultiFactorAuth"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminSecuritySetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/settings/security/o365guestuser",
+		"Parameters": {
+			"Name": "fixed:O365GuestUser"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminSecuritySetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/Settings/security/passwordpolicy",
+		"Parameters": {
+			"Name": "fixed:PasswordPolicy"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminSecuritySetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/Settings/security/privacypolicy",
+		"Parameters": {
+			"Name": "fixed:PrivacyPolicy"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminSecuritySetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/identitysecurity/securitydefaults",
+		"Parameters": {
+			"Name": "fixed:SecurityDefaults"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminSecuritySetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/securitysettings/settings",
+		"Parameters": {
+			"Name": "fixed:SecuritySettings"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminSecuritySetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/securitysettings/settings/status",
+		"Parameters": {
+			"Name": "fixed:SecuritySettingsStatus"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminSecuritySetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/securitysettings/optIn",
+		"Parameters": {
+			"Name": "fixed:SecuritySettingsOptIn"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminSecuritySetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/Settings/security/tenantLockbox",
+		"Parameters": {
+			"Name": "fixed:TenantLockbox"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminService",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/services/apps/azurespeechservices",
+		"Parameters": {
+			"Name": "fixed:AzureSpeechServices"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminService",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/services/apps/cortana",
+		"Parameters": {
+			"Name": "fixed:Cortana"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminService",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/services/apps/developerportal",
+		"Parameters": {
+			"Name": "fixed:DeveloperPortal"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminService",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/services/apps/m365lighthouse",
+		"Parameters": {
+			"Name": "fixed:M365Lighthouse"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminService",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/services/apps/modernAuth",
+		"Parameters": {
+			"Name": "fixed:ModernAuth"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminService",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/services/apps/planner",
+		"Parameters": {
+			"Name": "fixed:Planner"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminService",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/services/apps/searchintelligenceanalytics",
+		"Parameters": {
+			"Name": "fixed:SearchIntelligenceAnalytics"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminService",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/services/apps/todo",
+		"Parameters": {
+			"Name": "fixed:Todo"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminService",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/services/apps/vivainsights",
+		"Parameters": {
+			"Name": "fixed:VivaInsights"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminTenantRelationship",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/tenantRelationships/multiTenantOrganization"
+	},
+	{
+		"Cmdlet": "Get-M365AdminTenantRelationship",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/tenantRelationships/orgRelationships",
+		"Parameters": {
+			"Name": "fixed:OrganizationRelationships"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminTenantRelationship",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/tenantRelationships/multiTenantOrganization/removedTenants",
+		"Parameters": {
+			"Name": "fixed:RemovedTenants"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminTenantRelationship",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/tenantRelationships/multiTenantOrganization/tenants",
+		"Parameters": {
+			"Name": "fixed:Tenants"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminTenantRelationship",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/tenantRelationships/userSyncApps/outboundDetails",
+		"Parameters": {
+			"Name": "fixed:UserSyncAppOutboundDetails"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminTenantSetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/tenant/AADLink",
+		"Parameters": {
+			"Name": "fixed:AADLink"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminTenantSetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/tenant/accountSkus",
+		"Parameters": {
+			"Name": "fixed:AccountSkus"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminTenantSetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/tenant/datalocationandcommitments",
+		"Parameters": {
+			"Name": "fixed:DataLocationAndCommitments"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminTenantSetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/tenant/isTenantEligibleToRemoveSAC",
+		"Parameters": {
+			"Name": "fixed:EligibleToRemoveSac"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminTenantSetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/tenant/localdatalocation",
+		"Parameters": {
+			"Name": "fixed:LocalDataLocation"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminTenantSetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/tenant/o365activationusercounts",
+		"Parameters": {
+			"Name": "fixed:O365ActivationUserCounts"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminTenantSetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/tenant/isReportsPrivacyEnabled",
+		"Parameters": {
+			"Name": "fixed:ReportsPrivacyEnabled"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminUserSetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/users/administrativeunits",
+		"Parameters": {
+			"Name": "fixed:AdministrativeUnits"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminUserSetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/users/getcommondvpreferences",
+		"Parameters": {
+			"Name": "fixed:CommonDvPreferences"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminUserSetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/users/contextualalerts",
+		"Parameters": {
+			"Name": "fixed:ContextualAlerts"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminUserSetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/users/currentUser",
+		"Parameters": {
+			"Name": "fixed:CurrentUser"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminUserSetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/users/dashboardlayout?cardCategory={CardCategory}&culture={Culture}",
+		"Parameters": {
+			"Name": "fixed:DashboardLayout",
+			"CardCategory": "query:cardCategory",
+			"Culture": "query:culture"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminUserSetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/users/isGCCTenant",
+		"Parameters": {
+			"Name": "fixed:GccTenant"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminUserSetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/Users/ListUsers",
+		"Parameters": {
+			"Name": "fixed:ListUsers"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminUserSetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/users/products",
+		"Parameters": {
+			"Name": "fixed:Products"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminUserSetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/users/getuserroles",
+		"Parameters": {
+			"Name": "fixed:Roles"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminUserSetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/users/svinfo",
+		"Parameters": {
+			"Name": "fixed:SvInfo"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminUserSetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/users/teamssettingsinfo",
+		"Parameters": {
+			"Name": "fixed:TeamsSettingsInfo"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminUserSetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/users/tokenWithExpiry",
+		"Parameters": {
+			"Name": "fixed:TokenWithExpiry"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminVivaSetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/viva/modules"
+	},
+	{
+		"Cmdlet": "Get-M365AdminVivaSetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/viva/roles",
+		"Parameters": {
+			"Name": "fixed:Roles"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminVivaSetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/viva/glint/lookupClient",
+		"Parameters": {
+			"Name": "fixed:GlintClient"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminEnhancedRestoreStatus",
+		"ApiUri": "https://admin.cloud.microsoft/fd/msgraph/beta/$batch",
+		"Method": "POST",
+		"MatchBodyIncludes": [
+			"solutions/backupRestore/protectionUnits/microsoft.graph.siteProtectionUnit/$count",
+			"solutions/backupRestore/protectionUnits/microsoft.graph.driveProtectionUnit/$count",
+			"solutions/backupRestore/protectionUnits/microsoft.graph.mailboxProtectionUnit/$count"
+		]
+	}
+]

@@ -1,0 +1,26 @@
+﻿{
+    "manifest_version": 2,
+    "name": "M365Ray - M365 Admin Inspector (Firefox)",
+    "version": "1.0",
+    "description": "Maps admin.cloud.microsoft requests to M365Internals cmdlets.",
+    "devtools_page": "devtools.html",
+    "background": {
+        "scripts": [
+            "browserShim.js",
+            "background.js"
+        ]
+    },
+    "permissions": [
+        "cookies",
+        "storage",
+        "clipboardWrite",
+        "webRequest",
+        "https://admin.cloud.microsoft/*"
+    ],
+    "browser_specific_settings": {
+        "gecko": {
+            "id": "m365ray-firefox@local",
+            "strict_min_version": "109.0"
+        }
+    }
+}
