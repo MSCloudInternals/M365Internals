@@ -52,6 +52,23 @@ Last updated: 2026-03-23
 - Billing & usage: `#/copilot/managecost`
 - Settings: `#/copilot/settings/Optimize`
 
+## Agents Routes Confirmed Live
+
+- Overview: `#/agents/overview`
+- All agents: `#/agents/all`
+- All agents map frontier: `#/agents/all/map`
+- All agents requests: `#/agents/all/requested`
+- All agents catalog: `#/agents/all/agent-catalog`
+- Tools: `#/agents/tools`
+- Settings: `#/agents/settings`
+- Settings templates: `#/agents/settings/templates`
+
+## Agents: Known Issues And Follow-Up
+
+- `POST /admin/api/agentusers/metrics` is part of the live Agents overview experience, but replaying it with an empty JSON body returned `400` during browser-assisted probing.
+- The new grouped Agents cmdlets intentionally omit that POST-backed metric until the exact request body and semantics are captured.
+- The stable read model for the Agents area is currently based on the surrounding GET-backed overview, registry, tools, and settings payloads.
+
 ## Copilot: Known Issues And Follow-Up
 
 - `fd/purview/apiproxy/cpm/v1.0/Tenant/AIBaselineSummary` returned `400` during direct PowerShell validation even though the Copilot Security and Copilot Settings pages rendered successfully in the browser.

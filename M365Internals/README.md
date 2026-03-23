@@ -52,6 +52,10 @@ Get-M365AdminShellInfo -Force
 | ---------------------------------------- | -------------------------------------------------------------------------- |
 | Connect-M365Portal                       | Authenticate to the Microsoft 365 admin center by using cookies or a session |
 | Connect-M365PortalBySoftwarePasskey      | Authenticate to the Microsoft 365 admin center by using a local software passkey |
+| Get-M365AdminAgent                       | Retrieve the Agents > All agents route-family payloads                     |
+| Get-M365AdminAgentOverview               | Retrieve Agents overview inventory, adoption, and risky-agent payloads     |
+| Get-M365AdminAgentSetting                | Retrieve Agents settings, sharing, templates, and user-access payloads     |
+| Get-M365AdminAgentTool                   | Retrieve Agents tools payloads such as the MCP server inventory            |
 | Get-M365AdminAppSetting                  | Retrieve app settings such as Bookings, Mail, Office Online, Store, and Whiteboard |
 | Get-M365AdminBrandCenterSetting          | Retrieve Brand center configuration and BrandGuide site URL data            |
 | Get-M365AdminBookingsSetting             | Retrieve the Bookings org settings flyout with friendly property names      |
@@ -144,6 +148,18 @@ Get-M365AdminCopilotBillingUsage
 
 # Retrieve the Copilot settings payloads
 Get-M365AdminCopilotSetting
+
+# Retrieve the Agents overview payloads
+Get-M365AdminAgentOverview
+
+# Retrieve the All agents payloads
+Get-M365AdminAgent
+
+# Retrieve the Agents tools payloads
+Get-M365AdminAgentTool
+
+# Retrieve the Agents settings payloads
+Get-M365AdminAgentSetting
 
 # Retrieve the summarized Bookings org settings
 Get-M365AdminBookingsSetting
