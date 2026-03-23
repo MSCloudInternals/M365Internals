@@ -32,6 +32,28 @@
     )
 
     process {
+        function Get-SearchPortalData {
+            param(
+                [Parameter(Mandatory)]
+                [string]$Path,
+
+                [Parameter(Mandatory)]
+                [string]$CacheKey,
+
+                [Parameter()]
+                [ValidateSet('Get', 'Post', 'Put', 'Patch', 'Delete')]
+                [string]$Method = 'Get',
+
+                [Parameter()]
+                $Body,
+
+                [Parameter()]
+                [switch]$Force
+            )
+
+            return Get-M365AdminPortalData -Path $Path -CacheKey $CacheKey -Method $Method -Body $Body -Headers (Get-M365PortalContextHeaders -Context MicrosoftSearch) -Force:$Force
+        }
+
         if ($Name -eq 'AccountLinking') {
             return [pscustomobject]@{
                 Name        = 'Account Linking'
@@ -43,7 +65,7 @@
 
         if ($Name -eq 'Configurations') {
             try {
-                return Get-M365AdminPortalData -Path '/admin/api/searchadminapi/configurations' -CacheKey 'M365AdminSearchSetting:Configurations' -Headers (Get-M365PortalContextHeaders -Context MicrosoftSearch) -Force:$Force
+                return Get-SearchPortalData -Path '/admin/api/searchadminapi/configurations' -CacheKey 'M365AdminSearchSetting:Configurations' -Force:$Force
             }
             catch {
                 return [pscustomobject]@{
@@ -55,27 +77,48 @@
             }
         }
 
-        if ($Name -in @('FirstRunExperience', 'Qnas')) {
-            $path = if ($Name -eq 'FirstRunExperience') { '/admin/api/searchadminapi/firstrunexperience/get' } else { '/admin/api/searchadminapi/Qnas' }
-
+        if ($Name -eq 'FirstRunExperience') {
             try {
-                return Get-M365AdminPortalData -Path $path -CacheKey "M365AdminSearchSetting:$Name" -Headers (Get-M365PortalContextHeaders -Context MicrosoftSearch) -Force:$Force
+                return Get-SearchPortalData -Path '/admin/api/searchadminapi/firstrunexperience/get' -CacheKey 'M365AdminSearchSetting:FirstRunExperience' -Method Post -Body @(
+                    'SearchHomepageBannerFirstTime'
+                    'SearchHomepageBannerReturning'
+                    'SearchHomepageLearningFeedback'
+                    'SearchHomepageAnalyticsFirstTime'
+                    'SearchHomepageAnalyticsReturning'
+                ) -Force:$Force
             }
             catch {
                 return [pscustomobject]@{
-                    Name        = $Name
+                    Name        = 'FirstRunExperience'
                     DataBacked  = $false
                     Error       = $_.Exception.Message
-                    Description = 'This Search setting currently returns the same tenant-specific 400 response seen in the live portal.'
+                    Description = 'The Search first-run experience payload could not be retrieved, even though the live portal uses a POST-backed request shape for this surface.'
+                }
+            }
+        }
+
+        if ($Name -eq 'Qnas') {
+            try {
+                return Get-SearchPortalData -Path '/admin/api/searchadminapi/Qnas' -CacheKey 'M365AdminSearchSetting:Qnas' -Method Post -Body @{
+                    ServiceType = 'Bing'
+                    Filter = 'Published'
+                } -Force:$Force
+            }
+            catch {
+                return [pscustomobject]@{
+                    Name        = 'Qnas'
+                    DataBacked  = $false
+                    Error       = $_.Exception.Message
+                    Description = 'The live portal uses a POST-backed QnAs request, but this tenant currently returns 404 for the published Bing payload.'
                 }
             }
         }
 
         if ($Name -eq 'News') {
             [pscustomobject]@{
-                NewsOptions    = Get-M365AdminPortalData -Path '/admin/api/searchadminapi/news/options/Bing' -CacheKey 'M365AdminSearchSetting:NewsOptions' -Headers (Get-M365PortalContextHeaders -Context MicrosoftSearch) -Force:$Force
-                NewsIndustry   = Get-M365AdminPortalData -Path '/admin/api/searchadminapi/news/industry/Bing' -CacheKey 'M365AdminSearchSetting:NewsIndustry' -Headers (Get-M365PortalContextHeaders -Context MicrosoftSearch) -Force:$Force
-                NewsMsbEnabled = Get-M365AdminPortalData -Path '/admin/api/searchadminapi/news/msbenabled/Bing' -CacheKey 'M365AdminSearchSetting:NewsMsbEnabled' -Headers (Get-M365PortalContextHeaders -Context MicrosoftSearch) -Force:$Force
+                NewsOptions    = Get-SearchPortalData -Path '/admin/api/searchadminapi/news/options/Bing' -CacheKey 'M365AdminSearchSetting:NewsOptions' -Force:$Force
+                NewsIndustry   = Get-SearchPortalData -Path '/admin/api/searchadminapi/news/industry/Bing' -CacheKey 'M365AdminSearchSetting:NewsIndustry' -Force:$Force
+                NewsMsbEnabled = Get-SearchPortalData -Path '/admin/api/searchadminapi/news/msbenabled/Bing' -CacheKey 'M365AdminSearchSetting:NewsMsbEnabled' -Force:$Force
             }
             return
         }
@@ -91,6 +134,6 @@
             'UdtConnectorsSummary' { '/admin/api/searchadminapi/UDTConnectorsSummary' }
         }
 
-        Get-M365AdminPortalData -Path $path -CacheKey "M365AdminSearchSetting:$Name" -Headers (Get-M365PortalContextHeaders -Context MicrosoftSearch) -Force:$Force
+        Get-SearchPortalData -Path $path -CacheKey "M365AdminSearchSetting:$Name" -Force:$Force
     }
 }

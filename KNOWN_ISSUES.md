@@ -65,7 +65,9 @@ Last updated: 2026-03-23
 
 ## Agents: Known Issues And Follow-Up
 
-- `POST /admin/api/agentusers/metrics` is part of the live Agents overview experience, but replaying it with an empty JSON body returned `400` during browser-assisted probing.
+- `POST /admin/api/agentusers/metrics` is part of the live Agents overview experience.
+- The live browser request body is `{"tenantMetricRequests":[{"type":"assistedHours","grain":"rolling30Days"}]}`.
+- In the current tenant, the successful replay returns `{"agentMetrics":[],"tenantMetrics":[]}`.
 - The surrounding `fd/addins/api/apps/insight` payload already exposes the overview summary data that matters for read-only coverage: total agents, blocked agents, orphaned agents, and builder/app-type breakdowns.
 - `Get-M365AdminAgentOverview` now exposes a derived `Summary` result based on that GET-backed data, so the unresolved POST is not currently required for useful read coverage.
 
@@ -80,9 +82,10 @@ Last updated: 2026-03-23
 ### Search & intelligence
 
 - `/admin/api/searchadminapi/configurations` still returns `503` in both direct PowerShell reads and live in-browser fetches.
-- `/admin/api/searchadminapi/firstrunexperience/get` and `/admin/api/searchadminapi/Qnas` currently return `400 ApiVersionUnspecified` in both direct PowerShell reads and live in-browser fetches.
-- The grouped cmdlet currently surfaces this section as unavailable or error detail instead of failing the aggregate.
-- Follow-up: identify whether these endpoints depend on non-public backend prerequisites or a required API-version/header combination that the current tenant UX is not exposing.
+- `/admin/api/searchadminapi/firstrunexperience/get` is a POST-backed endpoint. The live portal sends an array of feature names and returns `200` in this tenant when that body is preserved.
+- `/admin/api/searchadminapi/Qnas` is also POST-backed. The live portal sends `{"ServiceType":"Bing","Filter":"Published"}` and the current tenant returns `404` for that published Bing payload.
+- The grouped cmdlet should preserve those POST request shapes and only surface tenant-specific unavailability when the portal itself does.
+- Follow-up: determine whether additional `Qnas` filter/service combinations are used in other tenants.
 
 ### Integrated apps
 

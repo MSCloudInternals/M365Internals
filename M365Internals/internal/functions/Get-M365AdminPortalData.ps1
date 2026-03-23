@@ -1,11 +1,11 @@
 ﻿function Get-M365AdminPortalData {
     <#
     .SYNOPSIS
-        Retrieves cached JSON data from a Microsoft 365 admin portal endpoint.
+        Retrieves cached data from a Microsoft 365 admin portal endpoint.
 
     .DESCRIPTION
-        Wraps direct Invoke-RestMethod GET calls against admin.cloud.microsoft by reusing the
-        current portal session, merging optional headers, and caching successful responses.
+        Wraps portal requests against admin.cloud.microsoft by reusing the current portal
+        session, merging optional headers, and caching successful responses.
 
     .PARAMETER Path
         The portal-relative path or fully qualified URI to query.
@@ -18,6 +18,15 @@
 
     .PARAMETER Headers
         Optional request headers to merge with the current portal headers.
+
+    .PARAMETER Method
+        The HTTP method to use for the request.
+
+    .PARAMETER Body
+        Optional request body for non-GET requests.
+
+    .PARAMETER ContentType
+        Optional request content type when a body is supplied.
 
     .PARAMETER Force
         Bypasses the cache and forces a fresh retrieval.
@@ -41,6 +50,16 @@
 
         [Parameter()]
         [hashtable]$Headers,
+
+        [Parameter()]
+        [ValidateSet('Get', 'Post', 'Put', 'Patch', 'Delete')]
+        [string]$Method = 'Get',
+
+        [Parameter()]
+        $Body,
+
+        [Parameter()]
+        [string]$ContentType,
 
         [Parameter()]
         [switch]$Force
@@ -71,18 +90,22 @@
             'https://admin.cloud.microsoft/{0}' -f $Path
         }
 
-        $resolvedHeaders = @{}
-        foreach ($entry in @($script:m365PortalHeaders.GetEnumerator())) {
-            $resolvedHeaders[$entry.Key] = $entry.Value
-        }
-        if ($Headers) {
-            foreach ($entry in @($Headers.GetEnumerator())) {
-                $resolvedHeaders[$entry.Key] = $entry.Value
-            }
-        }
-
         try {
-            $result = Invoke-RestMethod -Uri $uri -Method Get -ContentType 'application/json' -WebSession $script:m365PortalSession -Headers $resolvedHeaders
+            $requestParams = @{
+                Uri     = $uri
+                Method  = $Method
+                Headers = $Headers
+            }
+
+            if ($PSBoundParameters.ContainsKey('Body')) {
+                $requestParams.Body = $Body
+            }
+
+            if ($PSBoundParameters.ContainsKey('ContentType')) {
+                $requestParams.ContentType = $ContentType
+            }
+
+            $result = Invoke-M365PortalRequest @requestParams
         }
         catch {
             throw "Failed to retrieve M365 admin portal data from ${uri}: $($_.Exception.Message)"
