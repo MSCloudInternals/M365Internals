@@ -41,6 +41,36 @@
             }
         }
 
+        if ($Name -eq 'Configurations') {
+            try {
+                return Get-M365AdminPortalData -Path '/admin/api/searchadminapi/configurations' -CacheKey 'M365AdminSearchSetting:Configurations' -Headers (Get-M365PortalContextHeaders -Context MicrosoftSearch) -Force:$Force
+            }
+            catch {
+                return [pscustomobject]@{
+                    Name        = 'Configurations'
+                    DataBacked  = $false
+                    Error       = $_.Exception.Message
+                    Description = 'The Search configurations endpoint is currently unavailable in this tenant and returns the same 503 response seen in the live portal.'
+                }
+            }
+        }
+
+        if ($Name -in @('FirstRunExperience', 'Qnas')) {
+            $path = if ($Name -eq 'FirstRunExperience') { '/admin/api/searchadminapi/firstrunexperience/get' } else { '/admin/api/searchadminapi/Qnas' }
+
+            try {
+                return Get-M365AdminPortalData -Path $path -CacheKey "M365AdminSearchSetting:$Name" -Headers (Get-M365PortalContextHeaders -Context MicrosoftSearch) -Force:$Force
+            }
+            catch {
+                return [pscustomobject]@{
+                    Name        = $Name
+                    DataBacked  = $false
+                    Error       = $_.Exception.Message
+                    Description = 'This Search setting currently returns the same tenant-specific 400 response seen in the live portal.'
+                }
+            }
+        }
+
         if ($Name -eq 'News') {
             [pscustomobject]@{
                 NewsOptions    = Get-M365AdminPortalData -Path '/admin/api/searchadminapi/news/options/Bing' -CacheKey 'M365AdminSearchSetting:NewsOptions' -Headers (Get-M365PortalContextHeaders -Context MicrosoftSearch) -Force:$Force
@@ -51,15 +81,12 @@
         }
 
         $path = switch ($Name) {
-            'Configurations' { '/admin/api/searchadminapi/configurations' }
             'ConfigurationSettings' { '/admin/api/searchadminapi/ConfigurationSettings' }
-            'FirstRunExperience' { '/admin/api/searchadminapi/firstrunexperience/get' }
             'ModernResultTypes' { '/admin/api/searchadminapi/modernResultTypes' }
             'NewsIndustry' { '/admin/api/searchadminapi/news/industry/Bing' }
             'NewsMsbEnabled' { '/admin/api/searchadminapi/news/msbenabled/Bing' }
             'NewsOptions' { '/admin/api/searchadminapi/news/options/Bing' }
             'Pivots' { '/admin/api/searchadminapi/Pivots' }
-            'Qnas' { '/admin/api/searchadminapi/Qnas' }
             'SearchIntelligenceHomeCards' { '/admin/api/searchadminapi/searchintelligencehome/cards' }
             'UdtConnectorsSummary' { '/admin/api/searchadminapi/UDTConnectorsSummary' }
         }

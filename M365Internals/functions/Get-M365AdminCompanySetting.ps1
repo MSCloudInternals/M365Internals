@@ -32,6 +32,27 @@
     )
 
     process {
+        function Get-CompanySettingResult {
+            param (
+                [Parameter(Mandatory)]
+                [string]$ResultName,
+
+                [Parameter(Mandatory)]
+                [string]$Path
+            )
+
+            $result = Get-M365AdminPortalData -Path $Path -CacheKey "M365AdminCompanySetting:$ResultName" -Force:$Force
+            if ($null -ne $result) {
+                return $result
+            }
+
+            [pscustomobject]@{
+                Name        = $ResultName
+                DataBacked  = $false
+                Description = 'The portal did not return a settings payload for this company setting in the current tenant.'
+            }
+        }
+
         if ($Name -eq 'DataLocation') {
             $dataLocationAndCommitments = Get-M365AdminPortalData -Path '/admin/api/tenant/datalocationandcommitments' -CacheKey 'M365AdminCompanySetting:DataLocationAndCommitments' -Force:$Force
             $localDataLocation = Get-M365AdminPortalData -Path '/admin/api/tenant/localdatalocation' -CacheKey 'M365AdminCompanySetting:LocalDataLocation' -Force:$Force
@@ -69,6 +90,6 @@
             'Tile' { '/admin/api/Settings/company/tile' }
         }
 
-        Get-M365AdminPortalData -Path $path -CacheKey "M365AdminCompanySetting:$Name" -Force:$Force
+        Get-CompanySettingResult -ResultName $Name -Path $path
     }
 }

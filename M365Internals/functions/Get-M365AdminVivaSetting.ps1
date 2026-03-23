@@ -33,11 +33,35 @@
     )
 
     process {
+        function Get-VivaSettingResult {
+            param (
+                [Parameter(Mandatory)]
+                [string]$ResultName,
+
+                [Parameter(Mandatory)]
+                [string]$Path,
+
+                [Parameter()]
+                [hashtable]$ResultHeaders
+            )
+
+            $result = Get-M365AdminPortalData -Path $Path -CacheKey "M365AdminVivaSetting:$ResultName" -Headers $ResultHeaders -Force:$Force
+            if ($null -ne $result) {
+                return $result
+            }
+
+            [pscustomobject]@{
+                Name        = $ResultName
+                DataBacked  = $false
+                Description = 'The Viva endpoint returned no data for this setting in the current tenant.'
+            }
+        }
+
         if ($Name -eq 'All') {
             [pscustomobject]@{
-                Modules     = Get-M365AdminPortalData -Path '/admin/api/viva/modules' -CacheKey 'M365AdminVivaSetting:Modules' -Headers (Get-M365PortalContextHeaders -Context Viva) -Force:$Force
-                Roles       = Get-M365AdminPortalData -Path '/admin/api/viva/roles' -CacheKey 'M365AdminVivaSetting:Roles' -Headers (Get-M365PortalContextHeaders -Context Viva) -Force:$Force
-                GlintClient = Get-M365AdminPortalData -Path '/admin/api/viva/glint/lookupClient' -CacheKey 'M365AdminVivaSetting:GlintClient' -Headers (Get-M365PortalContextHeaders -Context Viva) -Force:$Force
+                Modules     = Get-VivaSettingResult -ResultName 'Modules' -Path '/admin/api/viva/modules' -ResultHeaders (Get-M365PortalContextHeaders -Context Viva)
+                Roles       = Get-VivaSettingResult -ResultName 'Roles' -Path '/admin/api/viva/roles' -ResultHeaders (Get-M365PortalContextHeaders -Context Viva)
+                GlintClient = Get-VivaSettingResult -ResultName 'GlintClient' -Path '/admin/api/viva/glint/lookupClient' -ResultHeaders (Get-M365PortalContextHeaders -Context Viva)
                 AccountSkus = Get-M365AdminTenantSetting -Name AccountSkus -Force:$Force
             }
             return
@@ -51,6 +75,6 @@
         }
 
         $headers = if ($Name -eq 'AccountSkus') { $null } else { Get-M365PortalContextHeaders -Context Viva }
-        Get-M365AdminPortalData -Path $path -CacheKey "M365AdminVivaSetting:$Name" -Headers $headers -Force:$Force
+        Get-VivaSettingResult -ResultName $Name -Path $path -ResultHeaders $headers
     }
 }

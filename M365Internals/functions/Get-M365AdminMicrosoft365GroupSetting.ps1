@@ -35,16 +35,31 @@
     process {
         $tenantId = Get-M365PortalTenantId
 
+        function Get-OwnerlessGroupPolicyResult {
+            try {
+                $result = Get-M365AdminPortalData -Path ("/fd/speedwayB2Service/v1.0/organizations('TID:{0}')/policy/ownerlessGroupPolicy" -f $tenantId) -CacheKey 'M365AdminMicrosoft365GroupSetting:OwnerlessGroupPolicy' -Force:$Force
+                if ($null -ne $result) {
+                    return $result
+                }
+            }
+            catch {
+                if ($_.Exception.Message -notmatch '404') {
+                    throw
+                }
+            }
+
+            [pscustomobject]@{
+                Name        = 'OwnerlessGroupPolicy'
+                DataBacked  = $false
+                Description = 'The ownerless groups policy has not been initialized in the current tenant.'
+            }
+        }
+
         switch ($Name) {
             'All' {
                 $guestAccess = Get-M365AdminPortalData -Path '/admin/api/settings/security/o365guestuser' -CacheKey 'M365AdminMicrosoft365GroupSetting:GuestAccess' -Force:$Force
                 $guestUserPolicy = Get-M365AdminPortalData -Path '/admin/api/Settings/security/guestUserPolicy' -CacheKey 'M365AdminMicrosoft365GroupSetting:GuestUserPolicy' -Force:$Force
-                try {
-                    $ownerlessGroupPolicy = Get-M365AdminPortalData -Path ("/fd/speedwayB2Service/v1.0/organizations('TID:{0}')/policy/ownerlessGroupPolicy" -f $tenantId) -CacheKey 'M365AdminMicrosoft365GroupSetting:OwnerlessGroupPolicy' -Force:$Force
-                }
-                catch {
-                    $ownerlessGroupPolicy = $null
-                }
+                $ownerlessGroupPolicy = Get-OwnerlessGroupPolicyResult
 
                 [pscustomobject]@{
                     GuestAccess          = $guestAccess
@@ -60,7 +75,7 @@
                 $path = '/admin/api/Settings/security/guestUserPolicy'
             }
             'OwnerlessGroupPolicy' {
-                $path = "/fd/speedwayB2Service/v1.0/organizations('TID:{0}')/policy/ownerlessGroupPolicy" -f $tenantId
+                return Get-OwnerlessGroupPolicyResult
             }
         }
 

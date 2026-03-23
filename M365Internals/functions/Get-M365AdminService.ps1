@@ -32,6 +32,28 @@
     )
 
     process {
+        function Get-ServiceResult {
+            param (
+                [Parameter(Mandatory)]
+                [string]$ResultName,
+
+                [Parameter(Mandatory)]
+                [string]$Path
+            )
+
+            try {
+                return Get-M365AdminPortalData -Path $Path -CacheKey "M365AdminService:$ResultName" -Force:$Force
+            }
+            catch {
+                return [pscustomobject]@{
+                    Name        = $ResultName
+                    DataBacked  = $false
+                    Error       = $_.Exception.Message
+                    Description = 'This service configuration endpoint currently does not return a usable payload in the current tenant.'
+                }
+            }
+        }
+
         switch ($Name) {
             'AccountLinking' { return Get-M365AdminSearchSetting -Name AccountLinking -Force:$Force }
             'AdoptionScore' { return Get-M365AdminReportSetting -Name AdoptionScore -Force:$Force }
@@ -90,6 +112,6 @@
             'VivaInsights' { '/admin/api/services/apps/vivainsights' }
         }
 
-        Get-M365AdminPortalData -Path $path -CacheKey "M365AdminService:$Name" -Force:$Force
+        Get-ServiceResult -ResultName $Name -Path $path
     }
 }

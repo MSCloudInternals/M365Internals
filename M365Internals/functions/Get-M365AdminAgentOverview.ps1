@@ -25,7 +25,7 @@
     [CmdletBinding()]
     param (
         [Parameter()]
-        [ValidateSet('ActionableApps', 'AgentInsights', 'Agents', 'All', 'FrontierAccess', 'OfferRecommendations', 'Products', 'RiskyAgents', 'TopAgentsByDailyActiveUsers', 'UsageDailyMetrics', 'UsageMetrics', 'UsageWoWMetrics')]
+        [ValidateSet('ActionableApps', 'AgentInsights', 'Agents', 'All', 'FrontierAccess', 'OfferRecommendations', 'Products', 'RiskyAgents', 'Summary', 'TopAgentsByDailyActiveUsers', 'UsageDailyMetrics', 'UsageMetrics', 'UsageWoWMetrics')]
         [string]$Name = 'All',
 
         [Parameter()]
@@ -33,9 +33,28 @@
     )
 
     process {
+        function Get-AgentSummary {
+            $insights = Get-M365AdminAgentOverview -Name AgentInsights -Force:$Force
+            $riskyAgents = Get-M365AdminAgentOverview -Name RiskyAgents -Force:$Force
+            $counts = $insights.data.titlesInsight.Counts
+            $metrics = $counts.AgentAggregatedMetricsResponse
+
+            [pscustomobject]@{
+                TotalAgents = $metrics.summary.totalAgents
+                TotalAgentsLastWeek = $metrics.summary.totalAgentsLastWeek
+                BlockedAgents = $metrics.summary.blockedAgents
+                TotalRiskyAgentCount = if ([string]::IsNullOrWhiteSpace([string]$riskyAgents.totalRiskyAgentCount)) { $metrics.summary.totalRiskyAgentCount } else { $riskyAgents.totalRiskyAgentCount }
+                OrphanedAgents = $counts.OrphanedAgents
+                CountsByAppType = @($metrics.countsByAppType)
+                CountsByBuilder = @($metrics.countsByBuilder)
+                RiskyAgentsDetails = @($riskyAgents.riskyAgentsDetails)
+            }
+        }
+
         switch ($Name) {
             'All' {
                 return [pscustomobject]@{
+                    Summary = Get-M365AdminAgentOverview -Name Summary -Force:$Force
                     Products = Get-M365AdminAgentOverview -Name Products -Force:$Force
                     OfferRecommendations = Get-M365AdminAgentOverview -Name OfferRecommendations -Force:$Force
                     UsageMetrics = Get-M365AdminAgentOverview -Name UsageMetrics -Force:$Force
@@ -51,6 +70,9 @@
             }
             'Products' {
                 return Get-M365AdminPortalData -Path '/admin/api/users/products' -CacheKey 'M365AdminAgentOverview:Products' -Force:$Force
+            }
+            'Summary' {
+                return Get-AgentSummary
             }
             'OfferRecommendations' {
                 return [pscustomobject]@{

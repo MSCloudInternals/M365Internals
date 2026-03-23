@@ -54,6 +54,29 @@
             }
         }
 
+        function Get-PurviewAIBaselineSummary {
+            param (
+                [Parameter(Mandatory)]
+                [string]$CacheKey,
+
+                [Parameter(Mandatory)]
+                [switch]$BypassCache
+            )
+
+            $purviewHeaders = @{
+                tenantid = $tenantId
+                'x-tid' = $tenantId
+                'client-type' = 'purview'
+                'x-clientpage' = '/'
+                'client-version' = '1.0.2774.1'
+                'x-tabvisible' = 'visible'
+                'x-clientpkgversion' = ''
+                'client-request-id' = [guid]::NewGuid().ToString()
+            }
+
+            Get-M365AdminPortalData -Path '/fd/purview/apiproxy/cpm/v1.0/Tenant/AIBaselineSummary' -CacheKey $CacheKey -Headers $purviewHeaders -Force:$BypassCache
+        }
+
         $tenantId = Get-M365PortalTenantId
         $windowEnd = (Get-Date).ToUniversalTime()
         $windowStart = $windowEnd.AddDays(-31)
@@ -88,7 +111,7 @@
                 return Get-M365AdminPortalData -Path '/fd/purview/apiproxy/adtsch/AuditEnabled' -CacheKey 'M365AdminCopilotSetting:AuditEnabled' -Force:$Force
             }
             'AIBaselineSummary' {
-                return Get-CopilotResult -ResultName 'AIBaselineSummary' -ScriptBlock { Get-M365AdminPortalData -Path '/fd/purview/apiproxy/cpm/v1.0/Tenant/AIBaselineSummary' -CacheKey 'M365AdminCopilotSetting:AIBaselineSummary' -Force:$Force }
+                return Get-CopilotResult -ResultName 'AIBaselineSummary' -ScriptBlock { Get-PurviewAIBaselineSummary -CacheKey 'M365AdminCopilotSetting:AIBaselineSummary' -BypassCache:$Force }
             }
             'PurviewForAISetting' {
                 return Get-CopilotResult -ResultName 'PurviewForAISetting' -ScriptBlock { Get-M365AdminPortalData -Path "/fd/purview/apiproxy/di/find/PurviewForAISetting?tenantId=$tenantId" -CacheKey 'M365AdminCopilotSetting:PurviewForAISetting' -Force:$Force }

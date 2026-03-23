@@ -66,22 +66,23 @@ Last updated: 2026-03-23
 ## Agents: Known Issues And Follow-Up
 
 - `POST /admin/api/agentusers/metrics` is part of the live Agents overview experience, but replaying it with an empty JSON body returned `400` during browser-assisted probing.
-- The new grouped Agents cmdlets intentionally omit that POST-backed metric until the exact request body and semantics are captured.
-- The stable read model for the Agents area is currently based on the surrounding GET-backed overview, registry, tools, and settings payloads.
+- The surrounding `fd/addins/api/apps/insight` payload already exposes the overview summary data that matters for read-only coverage: total agents, blocked agents, orphaned agents, and builder/app-type breakdowns.
+- `Get-M365AdminAgentOverview` now exposes a derived `Summary` result based on that GET-backed data, so the unresolved POST is not currently required for useful read coverage.
 
 ## Copilot: Known Issues And Follow-Up
 
-- `fd/purview/apiproxy/cpm/v1.0/Tenant/AIBaselineSummary` returned `400` during direct PowerShell validation even though the Copilot Security and Copilot Settings pages rendered successfully in the browser.
-- The new Copilot cmdlets now treat this read as non-fatal and return a structured error object for the affected property instead of failing the full grouped result.
-- Follow-up: compare the browser request headers and any hidden preflight/auth requirements for this Purview CPM endpoint before promoting it to a strict read expectation.
+- `fd/purview/apiproxy/cpm/v1.0/Tenant/AIBaselineSummary` requires Purview-specific headers beyond the default same-origin portal request shape.
+- Browser review showed the successful request includes headers such as `tenantid`, `x-tid`, `client-type=purview`, `x-clientpage=/`, `client-version`, `x-tabvisible`, and `client-request-id`.
+- The grouped Copilot cmdlets now send that Purview request shape for `AIBaselineSummary`.
 
 ## Top-Level Settings: Known Issues And Follow-Up
 
 ### Search & intelligence
 
-- `/admin/api/searchadminapi/configurations` still returns `503` in direct PowerShell reads.
+- `/admin/api/searchadminapi/configurations` still returns `503` in both direct PowerShell reads and live in-browser fetches.
+- `/admin/api/searchadminapi/firstrunexperience/get` and `/admin/api/searchadminapi/Qnas` currently return `400 ApiVersionUnspecified` in both direct PowerShell reads and live in-browser fetches.
 - The grouped cmdlet currently surfaces this section as unavailable or error detail instead of failing the aggregate.
-- Follow-up: identify whether this endpoint needs a different header set, route context, method, or preflight sequence.
+- Follow-up: identify whether these endpoints depend on non-public backend prerequisites or a required API-version/header combination that the current tenant UX is not exposing.
 
 ### Integrated apps
 

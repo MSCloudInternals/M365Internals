@@ -37,6 +37,37 @@
             Get-M365AdminPortalData -Path '/fd/addins/api/v2/settings?keys=MetaOSCopilotExtensibilitySettings,AreFirstPartyAppsAllowed,AreThirdPartyAppsAllowed,AreLOBAppsAllowed,AdminRoles,AllowOrgWideSharing' -CacheKey 'M365AdminAgentSetting:Settings' -Force:$Force
         }
 
+        function Get-AgentSettingResult {
+            param (
+                [Parameter(Mandatory)]
+                [string]$ResultName,
+
+                [Parameter(Mandatory)]
+                [scriptblock]$ScriptBlock
+            )
+
+            try {
+                $result = & $ScriptBlock
+                if ($null -ne $result) {
+                    return $result
+                }
+
+                [pscustomobject]@{
+                    Name        = $ResultName
+                    DataBacked  = $false
+                    Description = 'The Agents settings endpoint returned no data for this section in the current tenant.'
+                }
+            }
+            catch {
+                [pscustomobject]@{
+                    Name        = $ResultName
+                    DataBacked  = $false
+                    Error       = $_.Exception.Message
+                    Description = 'The Agents settings endpoint failed during direct retrieval. The portal may be returning a transient error for this section.'
+                }
+            }
+        }
+
         switch ($Name) {
             'All' {
                 return [pscustomobject]@{
@@ -68,12 +99,12 @@
             }
             'Templates' {
                 return [pscustomobject]@{
-                    Templates = Get-M365AdminPortalData -Path '/admin/api/agenttemplates/getagenttemplates' -CacheKey 'M365AdminAgentSetting:Templates' -Force:$Force
-                    Policies = Get-M365AdminPortalData -Path '/admin/api/agenttemplates/getpolicies?expand=true' -CacheKey 'M365AdminAgentSetting:TemplatePolicies' -Force:$Force
-                    BillingAccounts = Get-M365AdminPortalData -Path '/admin/api/tenant/billingAccountsWithShell' -CacheKey 'M365AdminAgentSetting:TemplateBillingAccounts' -Force:$Force
-                    AutoQuotaEnabled = Get-M365AdminPortalData -Path '/_api/SPOInternalUseOnly.TenantAdminSettings/AutoQuotaEnabled' -CacheKey 'M365AdminAgentSetting:AutoQuotaEnabled' -Force:$Force
-                    CustomViewFilterDefaults = Get-M365AdminPortalData -Path '/admin/api/tenant/customviewfilterdefaults' -CacheKey 'M365AdminAgentSetting:CustomViewFilterDefaults' -Force:$Force
-                    UserRoles = Invoke-M365RestMethod -Path '/admin/api/users/getuserroles' -Method Post -Body @{}
+                    Templates = Get-AgentSettingResult -ResultName 'Templates' -ScriptBlock { Get-M365AdminPortalData -Path '/admin/api/agenttemplates/getagenttemplates' -CacheKey 'M365AdminAgentSetting:Templates' -Force:$Force }
+                    Policies = Get-AgentSettingResult -ResultName 'Policies' -ScriptBlock { Get-M365AdminPortalData -Path '/admin/api/agenttemplates/getpolicies?expand=true' -CacheKey 'M365AdminAgentSetting:TemplatePolicies' -Force:$Force }
+                    BillingAccounts = Get-AgentSettingResult -ResultName 'BillingAccounts' -ScriptBlock { Get-M365AdminPortalData -Path '/admin/api/tenant/billingAccountsWithShell' -CacheKey 'M365AdminAgentSetting:TemplateBillingAccounts' -Force:$Force }
+                    AutoQuotaEnabled = Get-AgentSettingResult -ResultName 'AutoQuotaEnabled' -ScriptBlock { Get-M365AdminPortalData -Path '/_api/SPOInternalUseOnly.TenantAdminSettings/AutoQuotaEnabled' -CacheKey 'M365AdminAgentSetting:AutoQuotaEnabled' -Force:$Force }
+                    CustomViewFilterDefaults = Get-AgentSettingResult -ResultName 'CustomViewFilterDefaults' -ScriptBlock { Get-M365AdminPortalData -Path '/admin/api/tenant/customviewfilterdefaults' -CacheKey 'M365AdminAgentSetting:CustomViewFilterDefaults' -Force:$Force }
+                    UserRoles = Get-AgentSettingResult -ResultName 'UserRoles' -ScriptBlock { Invoke-M365RestMethod -Path '/admin/api/users/getuserroles' -Method Post -Body @{} }
                 }
             }
             'UserAccess' {

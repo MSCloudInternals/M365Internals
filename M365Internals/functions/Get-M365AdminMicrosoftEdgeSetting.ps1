@@ -41,13 +41,26 @@
             }
         }
 
+        function Get-EdgeExtensionFeedback {
+            $result = Get-M365AdminPortalData -Path '/fd/edgeenterpriseextensionsmanagement/api/extensions/extensionFeedback' -CacheKey 'M365AdminMicrosoftEdgeSetting:ExtensionFeedback' -Force:$Force
+            if ($null -ne $result) {
+                return $result
+            }
+
+            [pscustomobject]@{
+                Name        = 'ExtensionFeedback'
+                DataBacked  = $false
+                Description = 'The Microsoft Edge extension feedback feed returned no data in the current tenant.'
+            }
+        }
+
         if ($Name -eq 'All') {
             [pscustomobject]@{
                 ConfigurationPolicies = Get-M365AdminPortalData -Path '/fd/OfficePolicyAdmin/v1.0/edge/policies' -CacheKey 'M365AdminMicrosoftEdgeSetting:ConfigurationPolicies' -Force:$Force
                 DeviceCount           = Get-EdgeDeviceSummary
                 FeatureProfiles       = Get-M365AdminPortalData -Path '/fd/edgeenterpriseextensionsmanagement/api/featureManagement/profiles' -CacheKey 'M365AdminMicrosoftEdgeSetting:FeatureProfiles' -Force:$Force
                 ExtensionPolicies     = Get-M365AdminPortalData -Path '/fd/edgeenterpriseextensionsmanagement/api/policies' -CacheKey 'M365AdminMicrosoftEdgeSetting:ExtensionPolicies' -Force:$Force
-                ExtensionFeedback     = Get-M365AdminPortalData -Path '/fd/edgeenterpriseextensionsmanagement/api/extensions/extensionFeedback' -CacheKey 'M365AdminMicrosoftEdgeSetting:ExtensionFeedback' -Force:$Force
+                ExtensionFeedback     = Get-EdgeExtensionFeedback
                 SiteLists             = Get-M365AdminEdgeSiteList -Force:$Force
             }
             return
@@ -61,9 +74,12 @@
             return Get-M365AdminEdgeSiteList -Force:$Force
         }
 
+        if ($Name -eq 'ExtensionFeedback') {
+            return Get-EdgeExtensionFeedback
+        }
+
         $path = switch ($Name) {
             'ConfigurationPolicies' { '/fd/OfficePolicyAdmin/v1.0/edge/policies' }
-            'ExtensionFeedback' { '/fd/edgeenterpriseextensionsmanagement/api/extensions/extensionFeedback' }
             'ExtensionPolicies' { '/fd/edgeenterpriseextensionsmanagement/api/policies' }
             'FeatureProfiles' { '/fd/edgeenterpriseextensionsmanagement/api/featureManagement/profiles' }
         }

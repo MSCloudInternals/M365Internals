@@ -54,6 +54,29 @@
             }
         }
 
+        function Get-PurviewAIBaselineSummary {
+            param (
+                [Parameter(Mandatory)]
+                [string]$CacheKey,
+
+                [Parameter(Mandatory)]
+                [switch]$BypassCache
+            )
+
+            $purviewHeaders = @{
+                tenantid = $tenantId
+                'x-tid' = $tenantId
+                'client-type' = 'purview'
+                'x-clientpage' = '/'
+                'client-version' = '1.0.2774.1'
+                'x-tabvisible' = 'visible'
+                'x-clientpkgversion' = ''
+                'client-request-id' = [guid]::NewGuid().ToString()
+            }
+
+            Get-M365AdminPortalData -Path '/fd/purview/apiproxy/cpm/v1.0/Tenant/AIBaselineSummary' -CacheKey $CacheKey -Headers $purviewHeaders -Force:$BypassCache
+        }
+
         $tenantId = Get-M365PortalTenantId
         $windowEnd = (Get-Date).ToUniversalTime()
         $windowStart = $windowEnd.AddDays(-31)
@@ -97,7 +120,7 @@
                     PurviewBootInfo = Get-CopilotResult -ResultName 'PurviewBootInfo' -ScriptBlock { Get-M365AdminPortalData -Path '/fd/purview/api/boot/getNexusBootInfo' -CacheKey 'M365AdminCopilotOverview:PurviewBootInfo' -Force:$Force }
                     PurviewRoles = Get-CopilotResult -ResultName 'PurviewRoles' -ScriptBlock { Get-M365AdminPortalData -Path '/fd/purview/api/v2/auth/GetCachedRoles?refreshCache=false' -CacheKey 'M365AdminCopilotOverview:PurviewRoles' -Force:$Force }
                     PurviewSettings = Get-CopilotResult -ResultName 'PurviewSettings' -ScriptBlock { Get-M365AdminPortalData -Path "/fd/purview/apiproxy/di/find/PurviewForAISetting?tenantId=$tenantId" -CacheKey 'M365AdminCopilotOverview:PurviewSettings' -Force:$Force }
-                    AIBaselineSummary = Get-CopilotResult -ResultName 'AIBaselineSummary' -ScriptBlock { Get-M365AdminPortalData -Path '/fd/purview/apiproxy/cpm/v1.0/Tenant/AIBaselineSummary' -CacheKey 'M365AdminCopilotOverview:AIBaselineSummary' -Force:$Force }
+                    AIBaselineSummary = Get-CopilotResult -ResultName 'AIBaselineSummary' -ScriptBlock { Get-PurviewAIBaselineSummary -CacheKey 'M365AdminCopilotOverview:AIBaselineSummary' -BypassCache:$Force }
                     DefaultDlpPolicy = Get-CopilotResult -ResultName 'DefaultDlpPolicy' -ScriptBlock { Get-M365AdminPortalData -Path "/fd/purview/apiproxy/di/find/DlpCompliancePolicy?tenantId=$tenantId&filter=$policyFilter" -CacheKey 'M365AdminCopilotOverview:DefaultDlpPolicy' -Force:$Force }
                     SensitiveInfoTypes = Get-CopilotResult -ResultName 'SensitiveInfoTypes' -ScriptBlock { Get-M365AdminPortalData -Path "/fd/purview/apiproxy/di/find/DlpSensitiveInformationType?tenantId=$tenantId" -CacheKey 'M365AdminCopilotOverview:SensitiveInfoTypes' -Force:$Force }
                     OversharingRecommendation = Get-CopilotResult -ResultName 'OversharingRecommendation' -ScriptBlock { Get-M365AdminPortalData -Path "/fd/purview/apiproxy/di/find/PurviewForAI?tenantId=$tenantId&filter=$purviewFilter13&startTime=$startTime&endTime=$endTime" -CacheKey 'M365AdminCopilotOverview:OversharingRecommendation' -Force:$Force }
