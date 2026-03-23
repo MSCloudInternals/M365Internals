@@ -56,6 +56,10 @@ Get-M365AdminShellInfo -Force
 | Get-M365AdminBrandCenterSetting          | Retrieve Brand center configuration and BrandGuide site URL data            |
 | Get-M365AdminBookingsSetting             | Retrieve the Bookings org settings flyout with friendly property names      |
 | Get-M365AdminCompanySetting              | Retrieve company settings such as profile, help desk, release track, and theme |
+| Get-M365AdminCopilotBillingUsage         | Retrieve Copilot Billing & usage tab payloads and billing policy data      |
+| Get-M365AdminCopilotConnector            | Retrieve Copilot Connectors gallery and connection inventory payloads      |
+| Get-M365AdminCopilotOverview             | Retrieve Copilot Overview, Security, Usage, and About payloads             |
+| Get-M365AdminCopilotSetting              | Retrieve Copilot Settings optimize and view-all payloads                   |
 | Get-M365AdminContentUnderstandingSetting | Retrieve Content Understanding settings and related admin payloads          |
 | Get-M365AdminDirectorySyncError          | Retrieve directory sync error rows from the admin center settings surface   |
 | Get-M365AdminDomain                      | Retrieve domain inventory, records, DNS health, and dependency data        |
@@ -128,6 +132,18 @@ Connect-M365PortalBySoftwarePasskey -KeyFilePath '.\admin.passkey'
 
 # Retrieve company profile settings
 Get-M365AdminCompanySetting -Name Profile
+
+# Retrieve the Copilot overview payloads
+Get-M365AdminCopilotOverview
+
+# Retrieve the Copilot connectors payloads
+Get-M365AdminCopilotConnector
+
+# Retrieve the Copilot Billing & usage payloads
+Get-M365AdminCopilotBillingUsage
+
+# Retrieve the Copilot settings payloads
+Get-M365AdminCopilotSetting
 
 # Retrieve the summarized Bookings org settings
 Get-M365AdminBookingsSetting

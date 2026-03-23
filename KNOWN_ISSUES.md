@@ -42,6 +42,22 @@ Last updated: 2026-03-23
 - Partner relationships: `#/partners`
 - Microsoft Edge: `#/Edge`
 
+## Copilot Routes Confirmed Live
+
+- Overview: `#/copilot/overview`
+- Security: `#/copilot/scc`
+- Usage: `#/copilot/usage`
+- About: `#/copilot/discover`
+- Connectors: `#/copilot/connectors`
+- Billing & usage: `#/copilot/managecost`
+- Settings: `#/copilot/settings/Optimize`
+
+## Copilot: Known Issues And Follow-Up
+
+- `fd/purview/apiproxy/cpm/v1.0/Tenant/AIBaselineSummary` returned `400` during direct PowerShell validation even though the Copilot Security and Copilot Settings pages rendered successfully in the browser.
+- The new Copilot cmdlets now treat this read as non-fatal and return a structured error object for the affected property instead of failing the full grouped result.
+- Follow-up: compare the browser request headers and any hidden preflight/auth requirements for this Purview CPM endpoint before promoting it to a strict read expectation.
+
 ## Top-Level Settings: Known Issues And Follow-Up
 
 ### Search & intelligence

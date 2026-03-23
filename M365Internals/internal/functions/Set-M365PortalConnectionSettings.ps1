@@ -169,7 +169,15 @@
     }
 
     $validationResults = New-Object System.Collections.Generic.List[object]
-    $resolvedTenantId = if (Test-IsGuidValue -Value $cookieValues['s.UserTenantId']) { $cookieValues['s.UserTenantId'] } else { $null }
+    $resolvedTenantId = if (Test-IsGuidValue -Value $cookieValues['s.UserTenantId']) {
+        $cookieValues['s.UserTenantId']
+    }
+    elseif ($previousConnection -and (Test-IsGuidValue -Value $previousConnection.TenantId)) {
+        $previousConnection.TenantId
+    }
+    else {
+        $null
+    }
     try {
         if (-not $SkipValidation) {
             $classicModernResponse = Invoke-M365PortalRequest -Path '/adminportal/home/ClassicModernAdminDataStream?ref=/homepage' -Headers (Get-M365PortalContextHeaders -Context Homepage) -RawResponse
@@ -248,6 +256,9 @@
         if ([string]::IsNullOrWhiteSpace($resolvedTenantId)) {
             if (Test-IsGuidValue -Value $cookieValues['s.UserTenantId']) {
                 $resolvedTenantId = $cookieValues['s.UserTenantId']
+            }
+            elseif ($previousConnection -and (Test-IsGuidValue -Value $previousConnection.TenantId)) {
+                $resolvedTenantId = $previousConnection.TenantId
             }
         }
 
