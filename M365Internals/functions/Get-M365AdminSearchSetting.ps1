@@ -24,7 +24,7 @@
     [CmdletBinding()]
     param (
         [Parameter(Mandatory)]
-        [ValidateSet('Configurations', 'ConfigurationSettings', 'FirstRunExperience', 'ModernResultTypes', 'NewsIndustry', 'NewsMsbEnabled', 'NewsOptions', 'Pivots', 'Qnas', 'SearchIntelligenceHomeCards', 'UdtConnectorsSummary')]
+        [ValidateSet('AccountLinking', 'Configurations', 'ConfigurationSettings', 'FirstRunExperience', 'ModernResultTypes', 'News', 'NewsIndustry', 'NewsMsbEnabled', 'NewsOptions', 'Pivots', 'Qnas', 'SearchIntelligenceHomeCards', 'UdtConnectorsSummary')]
         [string]$Name,
 
         [Parameter()]
@@ -32,6 +32,24 @@
     )
 
     process {
+        if ($Name -eq 'AccountLinking') {
+            return [pscustomobject]@{
+                Name        = 'Account Linking'
+                Route       = 'EnterpriseMicrosoftRewards'
+                DataBacked  = $false
+                Description = 'The Org settings Account Linking flyout issued an internal browser request during live capture, but a stable same-origin GET could not be reproduced outside the portal interaction flow.'
+            }
+        }
+
+        if ($Name -eq 'News') {
+            [pscustomobject]@{
+                NewsOptions    = Get-M365AdminPortalData -Path '/admin/api/searchadminapi/news/options/Bing' -CacheKey 'M365AdminSearchSetting:NewsOptions' -Headers (Get-M365PortalContextHeaders -Context MicrosoftSearch) -Force:$Force
+                NewsIndustry   = Get-M365AdminPortalData -Path '/admin/api/searchadminapi/news/industry/Bing' -CacheKey 'M365AdminSearchSetting:NewsIndustry' -Headers (Get-M365PortalContextHeaders -Context MicrosoftSearch) -Force:$Force
+                NewsMsbEnabled = Get-M365AdminPortalData -Path '/admin/api/searchadminapi/news/msbenabled/Bing' -CacheKey 'M365AdminSearchSetting:NewsMsbEnabled' -Headers (Get-M365PortalContextHeaders -Context MicrosoftSearch) -Force:$Force
+            }
+            return
+        }
+
         $path = switch ($Name) {
             'Configurations' { '/admin/api/searchadminapi/configurations' }
             'ConfigurationSettings' { '/admin/api/searchadminapi/ConfigurationSettings' }
@@ -46,6 +64,6 @@
             'UdtConnectorsSummary' { '/admin/api/searchadminapi/UDTConnectorsSummary' }
         }
 
-        Get-M365AdminPortalData -Path $path -CacheKey "M365AdminSearchSetting:$Name" -Force:$Force
+        Get-M365AdminPortalData -Path $path -CacheKey "M365AdminSearchSetting:$Name" -Headers (Get-M365PortalContextHeaders -Context MicrosoftSearch) -Force:$Force
     }
 }

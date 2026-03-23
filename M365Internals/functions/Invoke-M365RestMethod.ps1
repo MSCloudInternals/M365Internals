@@ -104,21 +104,33 @@
         foreach ($headerEntry in @($script:m365PortalHeaders.GetEnumerator())) {
             $resolvedHeaders[$headerEntry.Key] = $headerEntry.Value
         }
-        foreach ($headerEntry in @($Headers.GetEnumerator())) {
-            $resolvedHeaders[$headerEntry.Key] = $headerEntry.Value
+        if ($Headers) {
+            foreach ($headerEntry in @($Headers.GetEnumerator())) {
+                $resolvedHeaders[$headerEntry.Key] = $headerEntry.Value
+            }
+        }
+
+        $resolvedContentType = if ($PSBoundParameters.ContainsKey('ContentType')) {
+            $ContentType
+        }
+        elseif ($PSBoundParameters.ContainsKey('Body')) {
+            'application/json'
         }
 
         $invokeParams = @{
             Uri         = $requestUri
             Method      = $Method
-            ContentType = $ContentType
             WebSession  = $WebSession
             Headers     = $resolvedHeaders
             ErrorAction = 'Stop'
         }
 
+        if (-not [string]::IsNullOrWhiteSpace($resolvedContentType)) {
+            $invokeParams.ContentType = $resolvedContentType
+        }
+
         if ($PSBoundParameters.ContainsKey('Body')) {
-            if (($Body -isnot [string]) -and $ContentType -match 'json') {
+            if (($Body -isnot [string]) -and $resolvedContentType -match 'json') {
                 $invokeParams.Body = $Body | ConvertTo-Json -Depth 10
             }
             else {

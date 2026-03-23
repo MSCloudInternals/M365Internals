@@ -25,7 +25,7 @@
     [CmdletBinding()]
     param (
         [Parameter()]
-        [ValidateSet('MultiTenantOrganization', 'OrganizationRelationships', 'RemovedTenants', 'Tenants', 'UserSyncAppOutboundDetails')]
+        [ValidateSet('MultiTenantCollaboration', 'MultiTenantOrganization', 'OrganizationRelationships', 'RemovedTenants', 'Tenants', 'UserSyncAppOutboundDetails')]
         [string]$Name = 'MultiTenantOrganization',
 
         [Parameter()]
@@ -33,6 +33,21 @@
     )
 
     process {
+        if ($Name -eq 'MultiTenantCollaboration') {
+            $multiTenantOrganization = Get-M365AdminPortalData -Path '/admin/api/tenantRelationships/multiTenantOrganization' -CacheKey 'M365AdminTenantRelationship:MultiTenantOrganization' -Force:$Force
+            $tenants = Get-M365AdminPortalData -Path '/admin/api/tenantRelationships/multiTenantOrganization/tenants' -CacheKey 'M365AdminTenantRelationship:Tenants' -Force:$Force
+            $removedTenants = Get-M365AdminPortalData -Path '/admin/api/tenantRelationships/multiTenantOrganization/removedTenants' -CacheKey 'M365AdminTenantRelationship:RemovedTenants' -Force:$Force
+            $userSyncAppOutboundDetails = Get-M365AdminPortalData -Path '/admin/api/tenantRelationships/userSyncApps/outboundDetails' -CacheKey 'M365AdminTenantRelationship:UserSyncAppOutboundDetails' -Force:$Force
+
+            [pscustomobject]@{
+                MultiTenantOrganization   = $multiTenantOrganization
+                Tenants                   = $tenants
+                RemovedTenants            = $removedTenants
+                UserSyncAppOutboundDetails = $userSyncAppOutboundDetails
+            }
+            return
+        }
+
         $path = switch ($Name) {
             'MultiTenantOrganization' { '/admin/api/tenantRelationships/multiTenantOrganization' }
             'OrganizationRelationships' { '/admin/api/tenantRelationships/orgRelationships' }

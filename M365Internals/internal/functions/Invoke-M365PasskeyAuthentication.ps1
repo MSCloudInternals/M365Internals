@@ -20,7 +20,7 @@
         User-Agent string used for the authentication flow.
 
     .EXAMPLE
-        Invoke-M365PasskeyAuthentication -KeyFilePath '.github\secadmin.passkey'
+        Invoke-M365PasskeyAuthentication -KeyFilePath '.\admin.passkey'
 
         Authenticates with a local software passkey file and returns an authenticated
         web session for the Microsoft 365 admin portal.

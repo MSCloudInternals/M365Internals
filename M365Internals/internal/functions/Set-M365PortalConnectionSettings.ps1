@@ -84,6 +84,20 @@
         return $null
     }
 
+    function Test-IsGuidValue {
+        param (
+            [Parameter(Mandatory)]
+            [AllowEmptyString()]
+            [string]$Value
+        )
+
+        if ([string]::IsNullOrWhiteSpace($Value)) {
+            return $false
+        }
+
+        return ($Value -match '^[0-9a-fA-F-]{36}$')
+    }
+
     if ($UserAgent) {
         $WebSession.UserAgent = $UserAgent
     }
@@ -110,11 +124,11 @@
         $script:m365PortalHeaders['x-portal-routekey'] = $cookieValues['x-portal-routekey']
     }
 
-    if ($cookieValues['UserLoginRef'] -ne '%2Fhomepage') {
+    if ($cookieValues['UserLoginRef'] -ne '%2Fhomepage' -or
+        [string]::IsNullOrWhiteSpace($cookieValues['s.UserTenantId']) -or
+        [string]::IsNullOrWhiteSpace($cookieValues['x-portal-routekey'])) {
         try {
-            $null = Invoke-WebRequest -MaximumRedirection 20 -ErrorAction Stop -WebSession $WebSession -Method Get -Uri 'https://admin.cloud.microsoft/login?ru=%2Fadminportal%3Fref%3D%2Fhomepage' -Headers @{
-                Accept = 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8'
-            } -UserAgent $UserAgent
+            $null = Invoke-M365PortalPostLandingBootstrap -WebSession $WebSession -UserAgent $UserAgent
         }
         catch {
         }
@@ -155,7 +169,7 @@
     }
 
     $validationResults = New-Object System.Collections.Generic.List[object]
-    $resolvedTenantId = $cookieValues['s.UserTenantId']
+    $resolvedTenantId = if (Test-IsGuidValue -Value $cookieValues['s.UserTenantId']) { $cookieValues['s.UserTenantId'] } else { $null }
     try {
         if (-not $SkipValidation) {
             $classicModernResponse = Invoke-M365PortalRequest -Path '/adminportal/home/ClassicModernAdminDataStream?ref=/homepage' -Headers (Get-M365PortalContextHeaders -Context Homepage) -RawResponse
@@ -190,7 +204,8 @@
                 })
 
                 if (-not [string]::IsNullOrWhiteSpace($shellInfoResponse.Content)) {
-                    $null = Set-M365Cache -CacheKey 'ShellInfo' -Value $shellInfoResponse.Content -TTLMinutes 15 -TenantId $cookieValues['s.UserTenantId']
+                    $cacheTenantId = if (-not [string]::IsNullOrWhiteSpace($resolvedTenantId)) { $resolvedTenantId } elseif (Test-IsGuidValue -Value $cookieValues['s.UserTenantId']) { $cookieValues['s.UserTenantId'] } else { $null }
+                    $null = Set-M365Cache -CacheKey 'ShellInfo' -Value $shellInfoResponse.Content -TTLMinutes 15 -TenantId $cacheTenantId
                 }
             }
             catch {
@@ -223,11 +238,17 @@
                     })
                 }
             }
+
+            if ([string]::IsNullOrWhiteSpace($resolvedTenantId)) {
+                throw 'Connected to admin.cloud.microsoft, but failed to resolve the active tenant ID from the validated portal bootstrap responses.'
+            }
         }
 
         Sync-PortalCookieValues
         if ([string]::IsNullOrWhiteSpace($resolvedTenantId)) {
-            $resolvedTenantId = $cookieValues['s.UserTenantId']
+            if (Test-IsGuidValue -Value $cookieValues['s.UserTenantId']) {
+                $resolvedTenantId = $cookieValues['s.UserTenantId']
+            }
         }
 
         $connection = [System.Management.Automation.PSObject]::new()

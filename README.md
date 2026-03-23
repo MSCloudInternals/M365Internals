@@ -46,19 +46,33 @@ Get-M365AdminShellInfo -Force
 | Connect-M365Portal                       | Authenticate to the Microsoft 365 admin center by using cookies or a session |
 | Connect-M365PortalBySoftwarePasskey      | Authenticate to the Microsoft 365 admin center by using a local software passkey |
 | Get-M365AdminAppSetting                  | Retrieve app settings such as Bookings, Mail, Office Online, Store, and Whiteboard |
+| Get-M365AdminBrandCenterSetting          | Retrieve Brand center configuration and BrandGuide site URL data            |
+| Get-M365AdminBookingsSetting             | Retrieve the Bookings org settings flyout with friendly property names      |
 | Get-M365AdminCompanySetting              | Retrieve company settings such as profile, help desk, release track, and theme |
 | Get-M365AdminContentUnderstandingSetting | Retrieve Content Understanding settings and related admin payloads          |
+| Get-M365AdminDirectorySyncError          | Retrieve directory sync error rows from the admin center settings surface   |
 | Get-M365AdminDomain                      | Retrieve domain inventory, records, DNS health, and dependency data        |
+| Get-M365AdminEdgeSiteList                | Retrieve Microsoft Edge enterprise site lists and notifications             |
 | Get-M365AdminEnhancedRestoreStatus       | Retrieve Enhanced Restore status by using the admin center Graph proxy      |
 | Get-M365AdminFeature                     | Retrieve feature metadata and startup configuration from the admin center   |
 | Get-M365AdminGroup                       | Retrieve group lists, labels, and group permission payloads                |
 | Get-M365AdminHomeData                    | Retrieve the home page ClassicModernAdminDataStream payload                |
+| Get-M365AdminIntegratedAppSetting        | Retrieve the Settings > Integrated apps landing-page payloads              |
+| Get-M365AdminMicrosoft365BackupSetting   | Retrieve the Settings > Microsoft 365 Backup landing-page payloads         |
+| Get-M365AdminMicrosoft365GroupSetting    | Retrieve Microsoft 365 Groups guest access and ownerless group policy data |
+| Get-M365AdminMicrosoft365InstallationOption | Retrieve Microsoft 365 installation options and release-management data |
+| Get-M365AdminMicrosoftEdgeSetting        | Retrieve the Settings > Microsoft Edge landing-page payloads               |
 | Get-M365AdminNavigation                  | Retrieve primary or asynchronous navigation payloads from the admin center |
+| Get-M365AdminPayAsYouGoService           | Retrieve pay-as-you-go billing, backup, and Content Understanding payloads |
 | Get-M365AdminPartnerClient               | Retrieve delegated partner client data for DAP and GDAP scenarios          |
+| Get-M365AdminPartnerRelationship         | Retrieve the Settings > Partner relationships payloads                     |
+| Get-M365AdminPeopleSetting               | Retrieve People settings such as profile card properties, name pronunciation, and pronouns |
 | Get-M365AdminRecommendation              | Retrieve recommendations, alerts, and suggestions from the admin center    |
 | Get-M365AdminReportSetting               | Retrieve reporting configuration and productivity score settings           |
+| Get-M365AdminSearchAndIntelligenceSetting | Retrieve the Settings > Search & intelligence landing-page sections       |
 | Get-M365AdminSearchSetting               | Retrieve search configuration, result types, QnA, news, and connector data |
 | Get-M365AdminSecuritySetting             | Retrieve security settings such as MFA, guest access, and security defaults |
+| Get-M365AdminSelfServicePurchaseSetting  | Retrieve self-service trials and purchases product policy data             |
 | Get-M365AdminService                     | Retrieve service configuration such as Modern Auth, Planner, and Viva data |
 | Get-M365AdminShellInfo                   | Retrieve coordinated bootstrap shell information from the admin center     |
 | Get-M365AdminTenantRelationship          | Retrieve multi-tenant organization and user sync relationship data         |
@@ -102,7 +116,7 @@ Connect-M365Portal -EstsAuthCookieValue $estsCookie
 
 ```powershell
 # Connect by using a local software passkey file
-Connect-M365PortalBySoftwarePasskey -KeyFilePath '.\secadmin.passkey'
+Connect-M365PortalBySoftwarePasskey -KeyFilePath '.\admin.passkey'
 ```
 
 ### Examples
@@ -119,6 +133,39 @@ Get-M365AdminFeature -All
 
 # Retrieve the company profile settings payload
 Get-M365AdminCompanySetting -Name Profile
+
+# Retrieve the summarized Bookings org settings
+Get-M365AdminBookingsSetting
+
+# Retrieve People settings org data
+Get-M365AdminPeopleSetting
+
+# Retrieve Microsoft 365 Groups org settings
+Get-M365AdminMicrosoft365GroupSetting
+
+# Retrieve Microsoft 365 installation options
+Get-M365AdminMicrosoft365InstallationOption
+
+# Retrieve pay-as-you-go service settings
+Get-M365AdminPayAsYouGoService
+
+# Retrieve the Search & intelligence landing-page sections
+Get-M365AdminSearchAndIntelligenceSetting
+
+# Retrieve the Integrated apps landing-page payloads
+Get-M365AdminIntegratedAppSetting
+
+# Retrieve the Microsoft 365 Backup landing-page payloads
+Get-M365AdminMicrosoft365BackupSetting
+
+# Retrieve the directory sync errors list
+Get-M365AdminDirectorySyncError
+
+# Retrieve the Partner relationships landing-page payloads
+Get-M365AdminPartnerRelationship
+
+# Retrieve the Microsoft Edge landing-page payloads
+Get-M365AdminMicrosoftEdgeSetting
 
 # Retrieve fresh shell information without using cache
 Get-M365AdminShellInfo -Force

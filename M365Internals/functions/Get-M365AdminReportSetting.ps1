@@ -24,7 +24,7 @@
     [CmdletBinding()]
     param (
         [Parameter()]
-        [ValidateSet('TenantConfiguration', 'ProductivityScoreConfig', 'ProductivityScoreCustomerOption')]
+        [ValidateSet('AdoptionScore', 'ProductivityScoreConfig', 'ProductivityScoreCustomerOption', 'Reports', 'TenantConfiguration')]
         [string]$Name = 'TenantConfiguration',
 
         [Parameter()]
@@ -32,10 +32,22 @@
     )
 
     process {
+        if ($Name -eq 'AdoptionScore') {
+            $productivityScoreConfig = Get-M365AdminPortalData -Path '/admin/api/reports/productivityScoreConfig/GetProductivityScoreConfig' -CacheKey 'M365AdminReportSetting:ProductivityScoreConfig' -Force:$Force
+            $productivityScoreCustomerOption = Get-M365AdminPortalData -Path '/admin/api/reports/productivityScoreCustomerOption' -CacheKey 'M365AdminReportSetting:ProductivityScoreCustomerOption' -Force:$Force
+
+            [pscustomobject]@{
+                ProductivityScoreConfig         = $productivityScoreConfig
+                ProductivityScoreCustomerOption = $productivityScoreCustomerOption
+            }
+            return
+        }
+
         $path = switch ($Name) {
             'TenantConfiguration' { '/admin/api/reports/config/GetTenantConfiguration' }
             'ProductivityScoreConfig' { '/admin/api/reports/productivityScoreConfig/GetProductivityScoreConfig' }
             'ProductivityScoreCustomerOption' { '/admin/api/reports/productivityScoreCustomerOption' }
+            'Reports' { '/admin/api/reports/config/GetTenantConfiguration' }
         }
 
         Get-M365AdminPortalData -Path $path -CacheKey "M365AdminReportSetting:$Name" -Force:$Force

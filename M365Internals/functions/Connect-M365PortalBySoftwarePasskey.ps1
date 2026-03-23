@@ -22,7 +22,7 @@
         Skips the admin portal validation probes after the session has been established.
 
     .EXAMPLE
-        Connect-M365PortalBySoftwarePasskey -KeyFilePath '.github\secadmin.passkey'
+        Connect-M365PortalBySoftwarePasskey -KeyFilePath '.\admin.passkey'
 
         Authenticates with the local software passkey file and establishes the admin portal
         session.
