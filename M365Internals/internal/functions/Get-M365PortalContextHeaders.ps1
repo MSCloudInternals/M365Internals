@@ -19,7 +19,9 @@
 
         Returns the homepage request headers.
     #>
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseSingularNouns', '', Justification = 'ContextHeaders is a fixed internal helper name used throughout the module')]
     [CmdletBinding()]
+    [OutputType([hashtable])]
     param (
         [Parameter(Mandatory)]
         [ValidateSet('Homepage', 'MicrosoftSearch', 'Viva', 'DataLocation')]

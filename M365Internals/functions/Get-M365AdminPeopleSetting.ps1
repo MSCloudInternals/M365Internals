@@ -34,6 +34,7 @@
 
     process {
         $tenantId = Get-M365PortalTenantId
+        $bypassCache = $Force.IsPresent
 
         function Get-PeopleSettingResult {
             param (
@@ -44,16 +45,12 @@
                 [string]$Path
             )
 
-            $result = Get-M365AdminPortalData -Path $Path -CacheKey "M365AdminPeopleSetting:$ResultName" -Force:$Force
+            $result = Get-M365AdminPortalData -Path $Path -CacheKey "M365AdminPeopleSetting:$ResultName" -Force:$bypassCache
             if ($null -ne $result) {
                 return $result
             }
 
-            [pscustomobject]@{
-                Name        = $ResultName
-                DataBacked  = $false
-                Description = 'The People settings endpoint returned no data for this setting in the current tenant.'
-            }
+            return New-M365AdminUnavailableResult -Name $ResultName -Description 'The People settings endpoint returned no data for this setting in the current tenant.' -Reason 'TenantSpecific'
         }
 
         switch ($Name) {
@@ -61,11 +58,12 @@
                 $profileCardProperties = Get-PeopleSettingResult -ResultName 'ProfileCardProperties' -Path ("/fd/peopleadminservice/{0}/profilecard/properties" -f $tenantId)
                 $connectorProperties = Get-PeopleSettingResult -ResultName 'ConnectorProperties' -Path ("/fd/peopleadminservice/{0}/connectorProperties" -f $tenantId)
 
-                [pscustomobject]@{
+                $result = [pscustomobject]@{
                     ProfileCardProperties = $profileCardProperties
                     ConnectorProperties   = $connectorProperties
                 }
-                return
+
+                return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.PeopleSetting.PersonInfoOnProfileCards'
             }
             'ProfileCardProperties' {
                 $path = "/fd/peopleadminservice/{0}/profilecard/properties" -f $tenantId

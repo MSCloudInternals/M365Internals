@@ -50,21 +50,18 @@
                 return $result
             }
 
-            [pscustomobject]@{
-                Name        = $ResultName
-                DataBacked  = $false
-                Description = 'The Viva endpoint returned no data for this setting in the current tenant.'
-            }
+            return New-M365AdminUnavailableResult -Name $ResultName -Description 'The Viva endpoint returned no data for this setting in the current tenant.' -Reason 'TenantSpecific'
         }
 
         if ($Name -eq 'All') {
-            [pscustomobject]@{
+            $result = [pscustomobject]@{
                 Modules     = Get-VivaSettingResult -ResultName 'Modules' -Path '/admin/api/viva/modules' -ResultHeaders (Get-M365PortalContextHeaders -Context Viva)
                 Roles       = Get-VivaSettingResult -ResultName 'Roles' -Path '/admin/api/viva/roles' -ResultHeaders (Get-M365PortalContextHeaders -Context Viva)
                 GlintClient = Get-VivaSettingResult -ResultName 'GlintClient' -Path '/admin/api/viva/glint/lookupClient' -ResultHeaders (Get-M365PortalContextHeaders -Context Viva)
                 AccountSkus = Get-M365AdminTenantSetting -Name AccountSkus -Force:$Force
             }
-            return
+
+            return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.VivaSetting'
         }
 
         $path = switch ($Name) {

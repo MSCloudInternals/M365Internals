@@ -33,26 +33,18 @@
     )
 
     process {
-        function Get-EdgeSiteListNotifications {
+        function Get-EdgeSiteListNotification {
             try {
                 $result = Get-M365AdminPortalData -Path '/fd/edgeenterprisesitemanagement/api/v2/notifications' -CacheKey 'M365AdminEdgeSiteList:Notifications' -Force:$Force
                 if ($null -ne $result) {
                     return $result
                 }
 
-                return [pscustomobject]@{
-                    Name        = 'Notifications'
-                    DataBacked  = $false
-                    Description = 'The Microsoft Edge site list notifications feed returned no data in the current tenant.'
-                }
+                return New-M365AdminUnavailableResult -Name 'Notifications' -Description 'The Microsoft Edge site list notifications feed returned no data in the current tenant.' -Reason 'TenantSpecific'
             }
             catch {
                 if ($_.Exception.Message -match '404') {
-                    return [pscustomobject]@{
-                        Name        = 'Notifications'
-                        DataBacked  = $false
-                        Description = 'The Microsoft Edge site list notifications feed is not available in the current tenant.'
-                    }
+                    return New-M365AdminUnavailableResult -Name 'Notifications' -Description 'The Microsoft Edge site list notifications feed is not available in the current tenant.' -Reason 'TenantSpecific'
                 }
 
                 throw
@@ -62,19 +54,20 @@
         switch ($Name) {
             'All' {
                 $siteLists = Get-M365AdminPortalData -Path '/fd/edgeenterprisesitemanagement/api/v2/emiesitelists' -CacheKey 'M365AdminEdgeSiteList:SiteLists' -Force:$Force
-                $notifications = Get-EdgeSiteListNotifications
+                $notifications = Get-EdgeSiteListNotification
 
-                [pscustomobject]@{
+                $result = [pscustomobject]@{
                     SiteLists     = $siteLists
                     Notifications = $notifications
                 }
-                return
+
+                return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.EdgeSiteList'
             }
             'SiteLists' {
                 $path = '/fd/edgeenterprisesitemanagement/api/v2/emiesitelists'
             }
             'Notifications' {
-                return Get-EdgeSiteListNotifications
+                return Get-EdgeSiteListNotification
             }
         }
 

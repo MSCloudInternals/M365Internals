@@ -131,6 +131,7 @@
             $null = Invoke-M365PortalPostLandingBootstrap -WebSession $WebSession -UserAgent $UserAgent
         }
         catch {
+            Write-Verbose "The first optional post-landing bootstrap attempt did not complete successfully: $($_.Exception.Message)"
         }
 
         Sync-PortalCookieValues
@@ -141,6 +142,7 @@
             $null = Invoke-M365PortalPostLandingBootstrap -WebSession $WebSession -UserAgent $UserAgent
         }
         catch {
+            Write-Verbose "The second optional post-landing bootstrap attempt did not complete successfully: $($_.Exception.Message)"
         }
 
         Sync-PortalCookieValues
@@ -151,6 +153,7 @@
             }
         }
         catch {
+            Write-Verbose "The optional data-location bootstrap validation request did not complete successfully: $($_.Exception.Message)"
         }
 
         if ([string]::IsNullOrWhiteSpace((Get-PortalCookieValue -Name 's.UserTenantId'))) {
@@ -158,6 +161,7 @@
                 $null = Invoke-WebRequest -MaximumRedirection 20 -ErrorAction Stop -WebSession $WebSession -Method Get -Uri 'https://admin.cloud.microsoft/adminportal/home/ClassicModernAdminDataStream?ref=/homepage' -Headers (Get-M365PortalContextHeaders -Context Homepage -AjaxSessionKey $script:m365PortalHeaders['AjaxSessionKey']) -UserAgent $UserAgent
             }
             catch {
+                Write-Verbose "The optional ClassicModernAdminDataStream validation request did not complete successfully: $($_.Exception.Message)"
             }
         }
 

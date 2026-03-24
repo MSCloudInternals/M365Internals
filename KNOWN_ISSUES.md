@@ -2,7 +2,7 @@
 
 This file tracks the currently known limitations, tenant-specific quirks, and follow-up items discovered while building and validating the Microsoft 365 admin-center cmdlets.
 
-Last updated: 2026-03-23
+Last updated: 2026-03-24
 
 ## Connection And Bootstrap
 
@@ -22,6 +22,14 @@ Last updated: 2026-03-23
 - Direct browser-cookie exports have been less reliable for PowerShell reuse than live passkey-backed sessions.
 - Live passkey-backed validation has been the most reliable test path so far for confirming real admin-center reads.
 - Cookie-based validation should continue to be treated as best-effort unless a more durable cookie import/bootstrap flow is implemented later.
+
+## Live Validation Status
+
+- The public cmdlet surface was exercised successfully in five authenticated live validation batches on 2026-03-24.
+- The most significant live issues uncovered during that sweep were fixed in the module rather than suppressed in the harness.
+- Validation scripts currently live under `TestResults/` because they are intended as repo-maintainer assets, not public module content.
+- The standard repository Pester run is now fully clean after the follow-on analyzer cleanup work.
+- A final rerun of all five live validation batches also completed successfully after the cleanup pass.
 
 ## Request Helper Limitations
 
@@ -98,6 +106,12 @@ Last updated: 2026-03-23
 - `GET` returns `400`.
 - Follow-up: if pagination or filtering becomes necessary later, capture the exact request body and paging semantics from the portal.
 
+### Domains
+
+- `Get-M365AdminDomain -Dependencies` can return `400` for valid domains in otherwise healthy sessions.
+- The cmdlet now returns a structured `M365Admin.UnavailableResult` for this tenant-specific behavior when the endpoint itself does not provide usable data.
+- Follow-up: validate whether other tenants expose broader `Dependencies` support or whether additional request context is required.
+
 ### Viva
 
 - The top-level Viva page successfully loads:
@@ -118,6 +132,23 @@ Last updated: 2026-03-23
 - The current grouped read model is valid and confirmed live.
 - Azure subscription permissions are per-subscription and require follow-on calls.
 - Follow-up: if broader backup-management surfaces are needed later, capture any additional settings pages beyond the currently modeled feature state and restore status.
+
+### Tenant relationships
+
+- `userSyncApps/outboundDetails` can return `400` when outbound synchronization is not configured for the tenant.
+- `Get-M365AdminTenantRelationship` now treats this as a tenant-specific unavailable sub-result instead of failing the grouped collaboration view.
+- Follow-up: validate the successful response shape in a tenant with outbound sync enabled.
+
+### User settings
+
+- `Get-M365AdminUserSetting` is not a uniform GET-based surface.
+- Live validation confirmed these POST-backed request shapes:
+  - `ContextualAlerts` with an empty object body
+  - `ListUsers` with the standard list payload body
+  - `Roles` with the current user principal body when available
+  - `TokenWithExpiry` with `application/x-www-form-urlencoded` audience data
+- `TokenWithExpiry` is audience-sensitive and now exposes `-TokenAudience` so callers can request a brokered token for the intended resource.
+- Follow-up: capture additional audiences that are consistently accepted across tenants.
 
 ### Microsoft Edge
 
@@ -161,6 +192,16 @@ These behaved as informational or static pages in the current tenant rather than
 - Some full-suite terminal captures were incomplete during interactive runs, even when targeted cmdlet validation passed.
 - Follow-up: improve deterministic scripted validation output for larger test batches so full-run results are easier to persist and review.
 
+## Output Model And UX Polish
+
+- Public output objects are more consistent now, but some families still differ in how much shaping they apply.
+- `PSTypeName` coverage and standardized unavailable results were expanded during the current polish pass.
+- Remaining follow-up is mostly about finishing consistency across older or still-raw cmdlets rather than establishing the pattern for the first time.
+- Follow-up: continue expanding `PSTypeName` coverage where outputs are still anonymous composites.
+- Follow-up: continue standardizing `All` behavior so each family is clearly either page-oriented or leaf-oriented.
+- Follow-up: expand `-Raw` only where a stable leaf payload bundle exists and improves discoverability.
+- Follow-up: continue reviewing `Name` values to prefer concise labels that still align with the portal mental model.
+
 ## Recommended Follow-Up Order
 
 1. Stabilize `Search & intelligence` `Configurations` endpoint access.
@@ -168,3 +209,4 @@ These behaved as informational or static pages in the current tenant rather than
 3. Capture the full `pay-as-you-go telemetry` request body and surrounding workflow.
 4. Improve cookie-import and non-passkey validation reliability for `Connect-M365Portal`.
 5. Continue validating tenant-dependent or informational pages across additional tenants before promoting them beyond informational wrappers.
+6. Continue polishing remaining older cmdlets so output shaping and custom formatting are consistent across the module.

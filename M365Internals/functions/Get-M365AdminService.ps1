@@ -45,12 +45,7 @@
                 return Get-M365AdminPortalData -Path $Path -CacheKey "M365AdminService:$ResultName" -Force:$Force
             }
             catch {
-                return [pscustomobject]@{
-                    Name        = $ResultName
-                    DataBacked  = $false
-                    Error       = $_.Exception.Message
-                    Description = 'This service configuration endpoint currently does not return a usable payload in the current tenant.'
-                }
+                return New-M365AdminUnavailableResult -Name $ResultName -Description 'This service configuration endpoint currently does not return a usable payload in the current tenant.' -Reason 'TenantSpecific' -ErrorMessage $_.Exception.Message
             }
         }
 
@@ -61,12 +56,7 @@
             'Microsoft365Groups' { return Get-M365AdminMicrosoft365GroupSetting -Force:$Force }
             'Microsoft365InstallationOptions' { return Get-M365AdminMicrosoft365InstallationOption -Force:$Force }
             'MicrosoftAzureInformationProtection' {
-                return [pscustomobject]@{
-                    Name       = 'Microsoft Azure Information Protection'
-                    Route      = 'RightsManagement'
-                    DataBacked = $false
-                    Description = 'This Org settings flyout is informational in the current tenant and did not issue a dedicated admin API request during live capture.'
-                }
+                return New-M365AdminUnavailableResult -Name 'Microsoft Azure Information Protection' -Description 'This Org settings flyout is informational in the current tenant and did not issue a dedicated admin API request during live capture.' -Reason 'Informational'
             }
             'MicrosoftEdgeSiteLists' { return Get-M365AdminEdgeSiteList -Force:$Force }
             'News' { return Get-M365AdminSearchSetting -Name News -Force:$Force }
@@ -74,22 +64,11 @@
             'PeopleSettings' { return Get-M365AdminPeopleSetting -Force:$Force }
             'Reports' { return Get-M365AdminReportSetting -Name Reports -Force:$Force }
             'Sales' {
-                return [pscustomobject]@{
-                    Name        = 'Sales'
-                    Route       = 'VivaSales'
-                    DataBacked  = $false
-                    Description = 'This Org settings flyout currently appears informational in the tenant. Live capture showed descriptive content but no stable dedicated settings endpoint.'
-                }
+                return New-M365AdminUnavailableResult -Name 'Sales' -Description 'This Org settings flyout currently appears informational in the tenant. Live capture showed descriptive content but no stable dedicated settings endpoint.' -Reason 'Informational'
             }
             'SelfServiceTrialsAndPurchases' { return Get-M365AdminSelfServicePurchaseSetting -Force:$Force }
             'WhatsNewInMicrosoft365' {
-                return [pscustomobject]@{
-                    Name        = "What's new in Microsoft 365"
-                    Route       = 'whatsnew'
-                    DataBacked  = $false
-                    Status      = 'UpdatesOnHold'
-                    Description = 'The current tenant shows an informational page stating that updates to this surface are on hold.'
-                }
+                return New-M365AdminUnavailableResult -Name "What's new in Microsoft 365" -Description 'The current tenant shows an informational page stating that updates to this surface are on hold.' -Status 'UpdatesOnHold' -Reason 'Informational'
             }
         }
 

@@ -21,6 +21,7 @@
         Completes the document navigation sequence after a successful /landing post.
     #>
     [CmdletBinding()]
+    [OutputType([Microsoft.PowerShell.Commands.WebRequestSession])]
     param (
         [Parameter(Mandatory)]
         [Microsoft.PowerShell.Commands.WebRequestSession]$WebSession,
@@ -43,7 +44,7 @@
         }
     }
 
-    function Copy-Headers {
+    function Copy-HeaderMap {
         param (
             [Parameter(Mandatory)]
             [hashtable]$Headers
@@ -92,18 +93,21 @@
             } -ContentType 'application/json' -Body '[{"TagId":"516290","LogLevel":"Info","Message":"Loading the initial bundle","Adhoc2":"{\"appName\":\"M365AdminPortal\",\"featureName\":\"\"}"}]' -UserAgent $UserAgent
         }
         catch {
+            Write-Verbose "The optional logclient bootstrap request did not complete successfully: $($_.Exception.Message)"
         }
 
         try {
-            $null = Invoke-WebRequest -MaximumRedirection 20 -ErrorAction Stop -WebSession $WebSession -Method Get -Uri 'https://admin.cloud.microsoft/adminportal/home/ClassicModernAdminDataStream?ref=/homepage' -Headers (Copy-Headers -Headers (Get-M365PortalContextHeaders -Context Homepage -AjaxSessionKey $ajaxSessionKey)) -UserAgent $UserAgent
+            $null = Invoke-WebRequest -MaximumRedirection 20 -ErrorAction Stop -WebSession $WebSession -Method Get -Uri 'https://admin.cloud.microsoft/adminportal/home/ClassicModernAdminDataStream?ref=/homepage' -Headers (Copy-HeaderMap -Headers (Get-M365PortalContextHeaders -Context Homepage -AjaxSessionKey $ajaxSessionKey)) -UserAgent $UserAgent
         }
         catch {
+            Write-Verbose "The optional ClassicModernAdminDataStream bootstrap request did not complete successfully: $($_.Exception.Message)"
         }
 
         try {
-            $null = Invoke-WebRequest -MaximumRedirection 20 -ErrorAction Stop -WebSession $WebSession -Method Get -Uri 'https://admin.cloud.microsoft/admin/api/tenant/datalocationandcommitments' -Headers (Copy-Headers -Headers (Get-M365PortalContextHeaders -Context DataLocation -AjaxSessionKey $ajaxSessionKey)) -UserAgent $UserAgent
+            $null = Invoke-WebRequest -MaximumRedirection 20 -ErrorAction Stop -WebSession $WebSession -Method Get -Uri 'https://admin.cloud.microsoft/admin/api/tenant/datalocationandcommitments' -Headers (Copy-HeaderMap -Headers (Get-M365PortalContextHeaders -Context DataLocation -AjaxSessionKey $ajaxSessionKey)) -UserAgent $UserAgent
         }
         catch {
+            Write-Verbose "The optional data-location bootstrap request did not complete successfully: $($_.Exception.Message)"
         }
     }
 

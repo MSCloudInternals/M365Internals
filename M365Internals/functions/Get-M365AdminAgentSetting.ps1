@@ -13,10 +13,20 @@
     .PARAMETER Force
         Bypasses the cache and forces a fresh retrieval.
 
+    .PARAMETER Raw
+        Returns the underlying shared or leaf payload bundle for the selected page composition
+        when it makes sense to do so.
+
     .EXAMPLE
         Get-M365AdminAgentSetting
 
         Retrieves the primary Agents settings payload set.
+
+    .EXAMPLE
+        Get-M365AdminAgentSetting -Raw
+
+        Retrieves the underlying shared settings payload and templates payload bundle without
+        reducing it to the default page-oriented view.
 
     .OUTPUTS
         Object
@@ -29,7 +39,10 @@
         [string]$Name = 'All',
 
         [Parameter()]
-        [switch]$Force
+        [switch]$Force,
+
+        [Parameter()]
+        [switch]$Raw
     )
 
     process {
@@ -52,34 +65,57 @@
                     return $result
                 }
 
-                [pscustomobject]@{
-                    Name        = $ResultName
-                    DataBacked  = $false
-                    Description = 'The Agents settings endpoint returned no data for this section in the current tenant.'
-                }
+                New-M365AdminUnavailableResult -Name $ResultName -Description 'The Agents settings endpoint returned no data for this section in the current tenant.' -Reason 'TenantSpecific'
             }
             catch {
-                [pscustomobject]@{
-                    Name        = $ResultName
-                    DataBacked  = $false
-                    Error       = $_.Exception.Message
-                    Description = 'The Agents settings endpoint failed during direct retrieval. The portal may be returning a transient error for this section.'
-                }
+                New-M365AdminUnavailableResult -Name $ResultName -Description 'The Agents settings endpoint failed during direct retrieval. The portal may be returning a transient error for this section.' -Reason 'Transient' -ErrorMessage $_.Exception.Message
             }
+        }
+
+        function Get-TemplatesPayload {
+            $result = [pscustomobject]@{
+                Templates                = Get-AgentSettingResult -ResultName 'Templates' -ScriptBlock { Get-M365AdminPortalData -Path '/admin/api/agenttemplates/getagenttemplates' -CacheKey 'M365AdminAgentSetting:Templates' -Force:$Force }
+                Policies                 = Get-AgentSettingResult -ResultName 'Policies' -ScriptBlock { Get-M365AdminPortalData -Path '/admin/api/agenttemplates/getpolicies?expand=true' -CacheKey 'M365AdminAgentSetting:TemplatePolicies' -Force:$Force }
+                BillingAccounts          = Get-AgentSettingResult -ResultName 'BillingAccounts' -ScriptBlock { Get-M365AdminPortalData -Path '/admin/api/tenant/billingAccountsWithShell' -CacheKey 'M365AdminAgentSetting:TemplateBillingAccounts' -Force:$Force }
+                AutoQuotaEnabled         = Get-AgentSettingResult -ResultName 'AutoQuotaEnabled' -ScriptBlock { Get-M365AdminPortalData -Path '/_api/SPOInternalUseOnly.TenantAdminSettings/AutoQuotaEnabled' -CacheKey 'M365AdminAgentSetting:AutoQuotaEnabled' -Force:$Force }
+                CustomViewFilterDefaults = Get-AgentSettingResult -ResultName 'CustomViewFilterDefaults' -ScriptBlock { Get-M365AdminPortalData -Path '/admin/api/tenant/customviewfilterdefaults' -CacheKey 'M365AdminAgentSetting:CustomViewFilterDefaults' -Force:$Force }
+                UserRoles                = Get-AgentSettingResult -ResultName 'UserRoles' -ScriptBlock { Invoke-M365RestMethod -Path '/admin/api/users/getuserroles' -Method Post -Body @{} }
+            }
+
+            return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.AgentSetting.Templates'
+        }
+
+        function Get-AllRawPayload {
+            $result = [pscustomobject]@{
+                SharedSettings = Get-AgentSettingsData
+                Templates      = Get-TemplatesPayload
+            }
+
+            return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.AgentSetting.Raw'
         }
 
         switch ($Name) {
             'All' {
-                return [pscustomobject]@{
+                if ($Raw) {
+                    return Get-AllRawPayload
+                }
+
+                $result = [pscustomobject]@{
                     AllowedAgentTypes = Get-M365AdminAgentSetting -Name AllowedAgentTypes -Force:$Force
                     Sharing = Get-M365AdminAgentSetting -Name Sharing -Force:$Force
                     Templates = Get-M365AdminAgentSetting -Name Templates -Force:$Force
                     UserAccess = Get-M365AdminAgentSetting -Name UserAccess -Force:$Force
                 }
+
+                return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.AgentSetting'
             }
             'AllowedAgentTypes' {
                 $settings = Get-AgentSettingsData
-                return [pscustomobject]@{
+                if ($Raw) {
+                    return $settings
+                }
+
+                $result = [pscustomobject]@{
                     AllowMicrosoftBuiltAgents = $settings.settings.areFirstPartyAppsAllowed
                     AllowExternalPublisherAgents = $settings.settings.areThirdPartyAppsAllowed
                     AllowOrgBuiltAgents = $settings.settings.areLOBAppsAllowed
@@ -87,34 +123,41 @@
                     Extensibility = $settings.settings.metaOSCopilotExtensibilitySettings
                     RawSettings = $settings
                 }
+
+                return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.AgentSetting.AllowedAgentTypes'
             }
             'Sharing' {
                 $settings = Get-AgentSettingsData
-                return [pscustomobject]@{
+                if ($Raw) {
+                    return $settings
+                }
+
+                $result = [pscustomobject]@{
                     IsSettingApplicable = $settings.settings.allowOrgWideSharing.isSettingApplicable
                     AssignmentCategory = $settings.settings.allowOrgWideSharing.userAssignmentCategory
                     Members = @($settings.settings.allowOrgWideSharing.members)
                     RawSettings = $settings
                 }
+
+                return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.AgentSetting.Sharing'
             }
             'Templates' {
-                return [pscustomobject]@{
-                    Templates = Get-AgentSettingResult -ResultName 'Templates' -ScriptBlock { Get-M365AdminPortalData -Path '/admin/api/agenttemplates/getagenttemplates' -CacheKey 'M365AdminAgentSetting:Templates' -Force:$Force }
-                    Policies = Get-AgentSettingResult -ResultName 'Policies' -ScriptBlock { Get-M365AdminPortalData -Path '/admin/api/agenttemplates/getpolicies?expand=true' -CacheKey 'M365AdminAgentSetting:TemplatePolicies' -Force:$Force }
-                    BillingAccounts = Get-AgentSettingResult -ResultName 'BillingAccounts' -ScriptBlock { Get-M365AdminPortalData -Path '/admin/api/tenant/billingAccountsWithShell' -CacheKey 'M365AdminAgentSetting:TemplateBillingAccounts' -Force:$Force }
-                    AutoQuotaEnabled = Get-AgentSettingResult -ResultName 'AutoQuotaEnabled' -ScriptBlock { Get-M365AdminPortalData -Path '/_api/SPOInternalUseOnly.TenantAdminSettings/AutoQuotaEnabled' -CacheKey 'M365AdminAgentSetting:AutoQuotaEnabled' -Force:$Force }
-                    CustomViewFilterDefaults = Get-AgentSettingResult -ResultName 'CustomViewFilterDefaults' -ScriptBlock { Get-M365AdminPortalData -Path '/admin/api/tenant/customviewfilterdefaults' -CacheKey 'M365AdminAgentSetting:CustomViewFilterDefaults' -Force:$Force }
-                    UserRoles = Get-AgentSettingResult -ResultName 'UserRoles' -ScriptBlock { Invoke-M365RestMethod -Path '/admin/api/users/getuserroles' -Method Post -Body @{} }
-                }
+                return Get-TemplatesPayload
             }
             'UserAccess' {
                 $settings = Get-AgentSettingsData
-                return [pscustomobject]@{
+                if ($Raw) {
+                    return $settings
+                }
+
+                $result = [pscustomobject]@{
                     IsApplicable = $settings.settings.metaOSCopilotExtensibilitySettings.isCopilotExtensibilityApplicable
                     AssignmentCategory = $settings.settings.metaOSCopilotExtensibilitySettings.userAssignmentCategory
                     Members = @($settings.settings.metaOSCopilotExtensibilitySettings.members)
                     RawSettings = $settings
                 }
+
+                return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.AgentSetting.UserAccess'
             }
         }
     }

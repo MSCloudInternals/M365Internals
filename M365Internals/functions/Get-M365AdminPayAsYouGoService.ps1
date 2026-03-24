@@ -35,7 +35,7 @@
     process {
         switch ($Name) {
             'All' {
-                [pscustomobject]@{
+                $result = [pscustomobject]@{
                     BillingFeature                = Get-M365AdminPortalData -Path "/_api/v2.1/billingFeatures('M365Backup')" -CacheKey 'M365AdminPayAsYouGoService:BillingFeature' -Force:$Force
                     AzureSubscriptions            = Get-M365AdminPortalData -Path '/admin/api/syntexbilling/azureSubscriptions' -CacheKey 'M365AdminPayAsYouGoService:AzureSubscriptions' -Force:$Force
                     EnhancedRestoreFeature        = Get-M365AdminPortalData -Path '/fd/enhancedRestorev2/v1/featureSetting' -CacheKey 'M365AdminPayAsYouGoService:EnhancedRestoreFeature' -Force:$Force
@@ -47,12 +47,10 @@
                     ESignature                    = Get-M365AdminPortalData -Path '/admin/api/contentunderstanding/esignaturesettings' -CacheKey 'M365AdminPayAsYouGoService:ESignature' -Force:$Force
                     TaxonomyTagging               = Get-M365AdminPortalData -Path '/admin/api/contentunderstanding/taxonomytaggingsetting' -CacheKey 'M365AdminPayAsYouGoService:TaxonomyTagging' -Force:$Force
                     PlaybackTranscriptTranslation = Get-M365AdminPortalData -Path '/admin/api/contentunderstanding/playbacktranscripttranslationsettings' -CacheKey 'M365AdminPayAsYouGoService:PlaybackTranscriptTranslation' -Force:$Force
-                    Telemetry                     = [pscustomobject]@{
-                        DataBacked  = $false
-                        Description = 'The telemetry endpoint currently requires an undiscovered API version and does not respond successfully to the direct read pattern used elsewhere in the module.'
-                    }
+                    Telemetry                     = New-M365AdminUnavailableResult -Name 'Telemetry' -Description 'The telemetry endpoint currently requires an undiscovered API version and does not respond successfully to the direct read pattern used elsewhere in the module.' -Reason 'UndiscoveredEndpoint'
                 }
-                return
+
+                return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.PayAsYouGoService'
             }
             'BillingFeature' {
                 $path = "/_api/v2.1/billingFeatures('M365Backup')"
@@ -88,10 +86,7 @@
                 $path = '/admin/api/contentunderstanding/playbacktranscripttranslationsettings'
             }
             'Telemetry' {
-                return [pscustomobject]@{
-                    DataBacked  = $false
-                    Description = 'The telemetry endpoint currently requires an undiscovered API version and does not respond successfully to the direct read pattern used elsewhere in the module.'
-                }
+                return New-M365AdminUnavailableResult -Name 'Telemetry' -Description 'The telemetry endpoint currently requires an undiscovered API version and does not respond successfully to the direct read pattern used elsewhere in the module.' -Reason 'UndiscoveredEndpoint'
             }
         }
 

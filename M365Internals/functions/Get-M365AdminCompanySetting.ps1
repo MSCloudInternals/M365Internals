@@ -46,32 +46,25 @@
                 return $result
             }
 
-            [pscustomobject]@{
-                Name        = $ResultName
-                DataBacked  = $false
-                Description = 'The portal did not return a settings payload for this company setting in the current tenant.'
-            }
+            return New-M365AdminUnavailableResult -Name $ResultName -Description 'The portal did not return a settings payload for this company setting in the current tenant.' -Reason 'TenantSpecific'
         }
 
         if ($Name -eq 'DataLocation') {
             $dataLocationAndCommitments = Get-M365AdminPortalData -Path '/admin/api/tenant/datalocationandcommitments' -CacheKey 'M365AdminCompanySetting:DataLocationAndCommitments' -Force:$Force
             $localDataLocation = Get-M365AdminPortalData -Path '/admin/api/tenant/localdatalocation' -CacheKey 'M365AdminCompanySetting:LocalDataLocation' -Force:$Force
 
-            [pscustomobject]@{
+            $result = [pscustomobject]@{
                 DataLocationAndCommitments = $dataLocationAndCommitments
                 LocalDataLocation          = $localDataLocation
             }
-            return
+
+            return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.CompanySetting.DataLocation'
         }
 
         if ($Name -eq 'KeyboardShortcuts') {
-            return [pscustomobject]@{
-                Name        = 'Keyboard shortcuts'
-                Route       = 'KeyboardShortcuts'
-                DataBacked  = $false
-                Description = 'The Org settings Keyboard shortcuts item appears to be a static help surface rather than a dedicated settings API.'
-                Shortcut    = 'Shift+?'
-            }
+            $result = New-M365AdminUnavailableResult -Name 'Keyboard shortcuts' -Description 'The Org settings Keyboard shortcuts item appears to be a static help surface rather than a dedicated settings API.' -Reason 'Informational'
+            Add-Member -InputObject $result -NotePropertyName Shortcut -NotePropertyValue 'Shift+?' -Force
+            return $result
         }
 
         $path = switch ($Name) {

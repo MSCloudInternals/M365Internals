@@ -39,6 +39,72 @@ Get-M365AdminShellInfo
 Get-M365AdminShellInfo -Force
 ```
 
+### Result Shapes
+
+Most cmdlets are designed to be useful interactively first, while still exposing the underlying portal-backed data.
+
+- Page and feature-family cmdlets often return grouped objects that mirror the major sections or tabs of the admin center.
+- Smaller cmdlets often return a direct payload or a small composite of related payloads.
+- When a tenant-specific section is unavailable, the cmdlet should return a structured informational object instead of failing the whole command when possible.
+
+In practice, this means `-Name All` is intended to help you explore an area quickly, while narrower `-Name` values let you retrieve one section at a time.
+
+### Standardized Unavailable Results
+
+When a tenant-specific, optional, or informational sub-surface does not return usable data, many cmdlets now return a standardized object instead of failing the full command.
+
+- These objects use the `M365Admin.UnavailableResult` type name.
+- Common fields include `Name`, `Status`, `Reason`, `Description`, and `Error`.
+- This makes it easier to script against partial results without parsing exception text.
+
+Example:
+```powershell
+$result = Get-M365AdminTenantRelationship -Name MultiTenantCollaboration
+
+$result.UserSyncAppOutboundDetails | Format-List Name, Status, Reason, Description
+```
+
+### Friendly Output And Raw Output
+
+When it makes sense, the module prefers a more user-friendly default output instead of returning the portal payload exactly as-is.
+
+- Friendly output is easier to scan and script against for common admin tasks.
+- Raw output is better when you need to inspect the original admin-center response shape.
+
+Several cmdlets now support `-Raw` and return a friendlier summarized or page-oriented object by default:
+
+```powershell
+# Friendly summarized output
+Get-M365AdminBookingsSetting
+
+# Original admin-center payload
+Get-M365AdminBookingsSetting -Raw
+
+# Page-oriented default output
+Get-M365AdminCopilotSetting
+
+# Underlying leaf payload bundle
+Get-M365AdminCopilotSetting -Raw
+
+# Page-oriented default output
+Get-M365AdminSearchAndIntelligenceSetting
+
+# Underlying leaf payload bundle
+Get-M365AdminSearchAndIntelligenceSetting -Raw
+```
+
+This same `friendly by default, raw on demand` pattern is the intended direction for more cmdlets as the module is polished further.
+
+### Validation Status
+
+The current publish-readiness pass included authenticated live validation against `admin.cloud.microsoft` by using a software passkey-backed session.
+
+- The public cmdlet surface was exercised in five live validation batches.
+- Validation confirmed the current request shapes for mixed GET and POST cmdlets such as `Get-M365AdminUserSetting`.
+- Software passkey-backed validation is currently more reliable than saved-cookie reuse for broad live testing.
+
+Known tenant-specific or optional sections should still be expected to return structured informational results instead of hard failures when the live portal behaves the same way.
+
 ## Available Cmdlets
 
 | Cmdlet                                   | Description                                                                |
@@ -85,7 +151,7 @@ Get-M365AdminShellInfo -Force
 | Get-M365AdminShellInfo                   | Retrieve coordinated bootstrap shell information from the admin center     |
 | Get-M365AdminTenantRelationship          | Retrieve multi-tenant organization and user sync relationship data         |
 | Get-M365AdminTenantSetting               | Retrieve tenant settings such as account SKUs, data location, and privacy state |
-| Get-M365AdminUserSetting                 | Retrieve current-user, role, product, and dashboard-layout admin data      |
+| Get-M365AdminUserSetting                 | Retrieve current-user, role, product, dashboard-layout, and token-broker admin data |
 | Get-M365AdminVivaSetting                 | Retrieve Viva module, role, and Glint client lookup settings               |
 | Invoke-M365RestMethod                    | Invoke authenticated REST requests against `admin.cloud.microsoft`         |
 
@@ -148,11 +214,20 @@ Get-M365AdminCopilotOverview
 # Retrieve the Copilot connectors payloads
 Get-M365AdminCopilotConnector
 
+# Retrieve the raw Copilot connectors payload bundle
+Get-M365AdminCopilotConnector -Raw
+
 # Retrieve the Copilot Billing & usage payloads
 Get-M365AdminCopilotBillingUsage
 
+# Retrieve the raw Copilot Billing & usage payload bundle
+Get-M365AdminCopilotBillingUsage -Raw
+
 # Retrieve the Copilot settings payloads
 Get-M365AdminCopilotSetting
+
+# Retrieve the raw Copilot settings payload bundle
+Get-M365AdminCopilotSetting -Raw
 
 # Retrieve the Agents overview payloads
 Get-M365AdminAgentOverview
@@ -166,11 +241,26 @@ Get-M365AdminAgentTool
 # Retrieve the Agents settings payloads
 Get-M365AdminAgentSetting
 
+# Retrieve the raw Agents settings payload bundle
+Get-M365AdminAgentSetting -Raw
+
 # Retrieve the summarized Bookings org settings
 Get-M365AdminBookingsSetting
 
+# Retrieve the raw Bookings org settings payload
+Get-M365AdminBookingsSetting -Raw
+
 # Retrieve People settings org data
 Get-M365AdminPeopleSetting
+
+# Retrieve an admin-center brokered token for Azure Resource Manager
+Get-M365AdminUserSetting -Name TokenWithExpiry -TokenAudience 'https://management.azure.com/'
+
+# Retrieve grouped tenant relationship data and inspect any tenant-specific unavailable sections
+Get-M365AdminTenantRelationship -Name MultiTenantCollaboration
+
+# Retrieve domain dependencies for a specific domain
+Get-M365AdminDomain -Dependencies -DomainName 'contoso.com' -DependencyKind 1
 
 # Retrieve Microsoft 365 Groups org settings
 Get-M365AdminMicrosoft365GroupSetting
@@ -183,6 +273,9 @@ Get-M365AdminPayAsYouGoService
 
 # Retrieve the Search & intelligence landing-page sections
 Get-M365AdminSearchAndIntelligenceSetting
+
+# Retrieve the raw Search & intelligence payload bundle
+Get-M365AdminSearchAndIntelligenceSetting -Raw
 
 # Retrieve the Integrated apps landing-page payloads
 Get-M365AdminIntegratedAppSetting

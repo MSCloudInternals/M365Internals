@@ -46,11 +46,7 @@
                 & $ScriptBlock
             }
             catch {
-                [pscustomobject]@{
-                    Name = $ResultName
-                    DataBacked = $false
-                    Error = $_.Exception.Message
-                }
+                New-M365AdminUnavailableResult -Name $ResultName -Description 'The Copilot overview section did not return a usable payload.' -Reason 'TenantSpecific' -ErrorMessage $_.Exception.Message
             }
         }
 
@@ -90,15 +86,17 @@
 
         switch ($Name) {
             'All' {
-                return [pscustomobject]@{
+                $result = [pscustomobject]@{
                     Overview = Get-M365AdminCopilotOverview -Name Overview -Force:$Force
                     Security = Get-M365AdminCopilotOverview -Name Security -Force:$Force
                     Usage = Get-M365AdminCopilotOverview -Name Usage -Force:$Force
                     About = Get-M365AdminCopilotOverview -Name About -Force:$Force
                 }
+
+                return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.CopilotOverview'
             }
             'Overview' {
-                return [pscustomobject]@{
+                $result = [pscustomobject]@{
                     CopilotSettings = Get-M365AdminPortalData -Path '/admin/api/copilotsettings/settings' -CacheKey 'M365AdminCopilotOverview:CopilotSettings' -Force:$Force
                     PinPolicy = Get-M365AdminPortalData -Path '/admin/api/settings/company/copilotpolicy/pin' -CacheKey 'M365AdminCopilotOverview:PinPolicy' -Force:$Force
                     LicenseAssignmentDate = Get-M365AdminPortalData -Path '/admin/api/Copilot/getcopilotlicenseassignmentdate' -CacheKey 'M365AdminCopilotOverview:LicenseAssignmentDate' -Force:$Force
@@ -114,9 +112,11 @@
                     ActiveAgents = Get-M365AdminPortalData -Path '/admin/api/reports/GetReportData?entityName=getCopilotAgentActiveAgentRL30Metrics' -CacheKey 'M365AdminCopilotOverview:ActiveAgents' -Force:$Force
                     SubscribedSkus = Get-M365AdminPortalData -Path '/fd/MSGraph/v1.0/subscribedSkus' -CacheKey 'M365AdminCopilotOverview:SubscribedSkus' -Force:$Force
                 }
+
+                return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.CopilotOverview.Overview'
             }
             'Security' {
-                return [pscustomobject]@{
+                $result = [pscustomobject]@{
                     PurviewBootInfo = Get-CopilotResult -ResultName 'PurviewBootInfo' -ScriptBlock { Get-M365AdminPortalData -Path '/fd/purview/api/boot/getNexusBootInfo' -CacheKey 'M365AdminCopilotOverview:PurviewBootInfo' -Force:$Force }
                     PurviewRoles = Get-CopilotResult -ResultName 'PurviewRoles' -ScriptBlock { Get-M365AdminPortalData -Path '/fd/purview/api/v2/auth/GetCachedRoles?refreshCache=false' -CacheKey 'M365AdminCopilotOverview:PurviewRoles' -Force:$Force }
                     PurviewSettings = Get-CopilotResult -ResultName 'PurviewSettings' -ScriptBlock { Get-M365AdminPortalData -Path "/fd/purview/apiproxy/di/find/PurviewForAISetting?tenantId=$tenantId" -CacheKey 'M365AdminCopilotOverview:PurviewSettings' -Force:$Force }
@@ -127,9 +127,11 @@
                     ComplianceRecommendation = Get-CopilotResult -ResultName 'ComplianceRecommendation' -ScriptBlock { Get-M365AdminPortalData -Path "/fd/purview/apiproxy/di/find/PurviewForAI?tenantId=$tenantId&filter=$purviewFilter14&startTime=$startTime&endTime=$endTime" -CacheKey 'M365AdminCopilotOverview:ComplianceRecommendation' -Force:$Force }
                     DataLeakRecommendation = Get-CopilotResult -ResultName 'DataLeakRecommendation' -ScriptBlock { Get-M365AdminPortalData -Path "/fd/purview/apiproxy/di/find/PurviewForAI?tenantId=$tenantId&filter=$purviewFilter15&startTime=$startTime&endTime=$endTime" -CacheKey 'M365AdminCopilotOverview:DataLeakRecommendation' -Force:$Force }
                 }
+
+                return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.CopilotOverview.Security'
             }
             'Usage' {
-                return [pscustomobject]@{
+                $result = [pscustomobject]@{
                     Readiness = Get-M365AdminPortalData -Path '/fd/IDEAsKnowledgeService/api/odata/v1.0.0/OrganizationM365CopilotReadiness' -CacheKey 'M365AdminCopilotOverview:Readiness' -Force:$Force
                     AdoptionByProducts = Get-M365AdminPortalData -Path '/admin/api/reports/GetSummaryDataV3?ServiceId=MicrosoftOffice&CategoryId=MicrosoftCopilot&Report=CopilotActivityReport&active_view=CopilotAdoptionByProductsV2' -CacheKey 'M365AdminCopilotOverview:UsageAdoptionByProducts' -Force:$Force
                     AdoptionByDate = Get-M365AdminPortalData -Path '/admin/api/reports/GetSummaryDataV3?ServiceId=MicrosoftOffice&CategoryId=MicrosoftCopilot&Report=CopilotActivityReport&active_view=CopilotAdoptionByDateV2' -CacheKey 'M365AdminCopilotOverview:UsageAdoptionByDate' -Force:$Force
@@ -142,9 +144,11 @@
                     PinPolicy = Get-M365AdminPortalData -Path '/admin/api/settings/company/copilotpolicy/pin' -CacheKey 'M365AdminCopilotOverview:UsagePinPolicy' -Force:$Force
                     LicenseAssignmentDate = Get-M365AdminPortalData -Path '/admin/api/Copilot/getcopilotlicenseassignmentdate' -CacheKey 'M365AdminCopilotOverview:UsageLicenseAssignmentDate' -Force:$Force
                 }
+
+                return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.CopilotOverview.Usage'
             }
             'About' {
-                return [pscustomobject]@{
+                $result = [pscustomobject]@{
                     Discover = Get-M365AdminPortalData -Path '/admin/api/copilotsettings/copilot/discover' -CacheKey 'M365AdminCopilotOverview:Discover' -Force:$Force
                     OfferRecommendations = Get-M365AdminPortalData -Path '/admin/api/offerrec/copilotagentsoffers/CopilotDiscoverPage' -CacheKey 'M365AdminCopilotOverview:OfferRecommendations' -Force:$Force
                     MarketplaceSeatSize = Get-M365AdminPortalData -Path '/admin/api/tenant/marketplaceSeatSize' -CacheKey 'M365AdminCopilotOverview:MarketplaceSeatSize' -Force:$Force
@@ -152,6 +156,8 @@
                     PinPolicy = Get-M365AdminPortalData -Path '/admin/api/settings/company/copilotpolicy/pin' -CacheKey 'M365AdminCopilotOverview:AboutPinPolicy' -Force:$Force
                     LicenseAssignmentDate = Get-M365AdminPortalData -Path '/admin/api/Copilot/getcopilotlicenseassignmentdate' -CacheKey 'M365AdminCopilotOverview:AboutLicenseAssignmentDate' -Force:$Force
                 }
+
+                return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.CopilotOverview.About'
             }
         }
     }

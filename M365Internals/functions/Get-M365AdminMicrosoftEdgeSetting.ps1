@@ -47,15 +47,11 @@
                 return $result
             }
 
-            [pscustomobject]@{
-                Name        = 'ExtensionFeedback'
-                DataBacked  = $false
-                Description = 'The Microsoft Edge extension feedback feed returned no data in the current tenant.'
-            }
+            New-M365AdminUnavailableResult -Name 'ExtensionFeedback' -Description 'The Microsoft Edge extension feedback feed returned no data in the current tenant.' -Reason 'TenantSpecific'
         }
 
         if ($Name -eq 'All') {
-            [pscustomobject]@{
+            $result = [pscustomobject]@{
                 ConfigurationPolicies = Get-M365AdminPortalData -Path '/fd/OfficePolicyAdmin/v1.0/edge/policies' -CacheKey 'M365AdminMicrosoftEdgeSetting:ConfigurationPolicies' -Force:$Force
                 DeviceCount           = Get-EdgeDeviceSummary
                 FeatureProfiles       = Get-M365AdminPortalData -Path '/fd/edgeenterpriseextensionsmanagement/api/featureManagement/profiles' -CacheKey 'M365AdminMicrosoftEdgeSetting:FeatureProfiles' -Force:$Force
@@ -63,7 +59,8 @@
                 ExtensionFeedback     = Get-EdgeExtensionFeedback
                 SiteLists             = Get-M365AdminEdgeSiteList -Force:$Force
             }
-            return
+
+            return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.MicrosoftEdgeSetting'
         }
 
         if ($Name -eq 'DeviceCount') {

@@ -46,6 +46,24 @@ Get-M365AdminShellInfo
 Get-M365AdminShellInfo -Force
 ```
 
+### Result Shapes And Availability
+
+The module favors interactive, page-oriented outputs where that better matches the admin center.
+
+- Many `-Name All` experiences return grouped objects that mirror major portal sections.
+- Some cmdlets offer `-Raw` to return the underlying leaf payload bundle instead.
+- Tenant-specific, optional, or informational sub-results increasingly use the `M365Admin.UnavailableResult` type instead of throwing or returning ad hoc placeholder objects.
+
+This keeps broad exploratory commands useful even when one part of a page is unavailable in the current tenant.
+
+### Validation Notes
+
+Current validation work has confirmed the public cmdlet surface live by using software passkey-backed sessions against `admin.cloud.microsoft`.
+
+- Passkey-backed sessions are the most reliable validation path so far.
+- Cookie-based reuse remains best-effort and can still fail during admin portal bootstrap or handoff.
+- Mixed GET and POST surfaces, including `Get-M365AdminUserSetting`, were validated against live request shapes.
+
 ## Available Cmdlets
 
 | Cmdlet                                   | Description                                                                |
@@ -92,7 +110,7 @@ Get-M365AdminShellInfo -Force
 | Get-M365AdminShellInfo                   | Retrieve coordinated bootstrap shell information from the admin center     |
 | Get-M365AdminTenantRelationship          | Retrieve multi-tenant organization and user sync relationship data         |
 | Get-M365AdminTenantSetting               | Retrieve tenant settings such as account SKUs, data location, and privacy state |
-| Get-M365AdminUserSetting                 | Retrieve current-user, role, product, and dashboard-layout admin data      |
+| Get-M365AdminUserSetting                 | Retrieve current-user, role, product, dashboard-layout, and token-broker admin data |
 | Get-M365AdminVivaSetting                 | Retrieve Viva module, role, and Glint client lookup settings               |
 | Invoke-M365RestMethod                    | Invoke authenticated REST requests against `admin.cloud.microsoft`         |
 
@@ -161,8 +179,20 @@ Get-M365AdminAgentTool
 # Retrieve the Agents settings payloads
 Get-M365AdminAgentSetting
 
+# Retrieve the raw Agents settings payload bundle
+Get-M365AdminAgentSetting -Raw
+
 # Retrieve the summarized Bookings org settings
 Get-M365AdminBookingsSetting
+
+# Retrieve an admin-center brokered token for Azure Resource Manager
+Get-M365AdminUserSetting -Name TokenWithExpiry -TokenAudience 'https://management.azure.com/'
+
+# Retrieve grouped tenant relationship data
+Get-M365AdminTenantRelationship -Name MultiTenantCollaboration
+
+# Retrieve domain dependencies for a specific domain
+Get-M365AdminDomain -Dependencies -DomainName 'contoso.com' -DependencyKind 1
 
 # Retrieve People settings org data
 Get-M365AdminPeopleSetting

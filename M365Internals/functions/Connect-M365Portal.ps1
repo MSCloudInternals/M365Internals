@@ -394,6 +394,7 @@
                                 $authorizeConfig = Get-LoginPageConfig -Content $authorizeResponse.Content
                             }
                             catch {
+                                Write-Verbose 'Could not parse the authorize response page config while diagnosing the admin portal handoff.'
                             }
                         }
 

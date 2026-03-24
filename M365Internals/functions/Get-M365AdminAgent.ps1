@@ -35,12 +35,14 @@
     process {
         switch ($Name) {
             'All' {
-                return [pscustomobject]@{
-                    Registry = Get-M365AdminAgent -Name Registry -Force:$Force
+                $result = [pscustomobject]@{
+                    Registry    = Get-M365AdminAgent -Name Registry -Force:$Force
                     MapFrontier = Get-M365AdminAgent -Name MapFrontier -Force:$Force
-                    Requests = Get-M365AdminAgent -Name Requests -Force:$Force
-                    Catalog = Get-M365AdminAgent -Name Catalog -Force:$Force
+                    Requests    = Get-M365AdminAgent -Name Requests -Force:$Force
+                    Catalog     = Get-M365AdminAgent -Name Catalog -Force:$Force
                 }
+
+                return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.Agent'
             }
             'SharedSettings' {
                 return Get-M365AdminPortalData -Path '/fd/addins/api/v2/settings?keys=IsTenantEligibleForEntireOrgEmail,AreFirstPartyAppsAllowed,AreThirdPartyAppsAllowed,AreLOBAppsAllowed,AreMicrosoftCertified3PAppsAllowed,MetaOSCopilotExtensibilitySettings' -CacheKey 'M365AdminAgent:SharedSettings' -Force:$Force
@@ -58,35 +60,43 @@
                 return Get-M365AdminPortalData -Path '/fd/addins/api/agents?workloads=SharedAgent&scopes=Shared&limit=200&creatorId=none' -CacheKey 'M365AdminAgent:Agents' -Force:$Force
             }
             'Registry' {
-                return [pscustomobject]@{
-                    Settings = Get-M365AdminAgent -Name SharedSettings -Force:$Force
+                $result = [pscustomobject]@{
+                    Settings      = Get-M365AdminAgent -Name SharedSettings -Force:$Force
                     AgentInsights = Get-M365AdminAgent -Name AgentInsights -Force:$Force
-                    RiskyAgents = Get-M365AdminAgent -Name RiskyAgents -Force:$Force
-                    Agents = Get-M365AdminAgent -Name Agents -Force:$Force
+                    RiskyAgents   = Get-M365AdminAgent -Name RiskyAgents -Force:$Force
+                    Agents        = Get-M365AdminAgent -Name Agents -Force:$Force
                 }
+
+                return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.Agent.Registry'
             }
             'MapFrontier' {
-                return [pscustomobject]@{
-                    Settings = Get-M365AdminAgent -Name SharedSettings -Force:$Force
+                $result = [pscustomobject]@{
+                    Settings      = Get-M365AdminAgent -Name SharedSettings -Force:$Force
                     AgentInsights = Get-M365AdminAgent -Name AgentInsights -Force:$Force
-                    RiskyAgents = Get-M365AdminAgent -Name RiskyAgents -Force:$Force
+                    RiskyAgents   = Get-M365AdminAgent -Name RiskyAgents -Force:$Force
                 }
+
+                return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.Agent.MapFrontier'
             }
             'Requests' {
-                return [pscustomobject]@{
-                    Settings = Get-M365AdminAgent -Name SharedSettings -Force:$Force
+                $result = [pscustomobject]@{
+                    Settings        = Get-M365AdminAgent -Name SharedSettings -Force:$Force
                     RequestSettings = Get-M365AdminAgent -Name RequestSettings -Force:$Force
-                    AgentInsights = Get-M365AdminAgent -Name AgentInsights -Force:$Force
-                    RiskyAgents = Get-M365AdminAgent -Name RiskyAgents -Force:$Force
+                    AgentInsights   = Get-M365AdminAgent -Name AgentInsights -Force:$Force
+                    RiskyAgents     = Get-M365AdminAgent -Name RiskyAgents -Force:$Force
                 }
+
+                return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.Agent.Requests'
             }
             'Catalog' {
-                return [pscustomobject]@{
-                    Settings = Get-M365AdminAgent -Name SharedSettings -Force:$Force
+                $result = [pscustomobject]@{
+                    Settings      = Get-M365AdminAgent -Name SharedSettings -Force:$Force
                     AgentInsights = Get-M365AdminAgent -Name AgentInsights -Force:$Force
-                    RiskyAgents = Get-M365AdminAgent -Name RiskyAgents -Force:$Force
-                    CatalogItems = Get-M365AdminPortalData -Path '/fd/addins/api/actionableApps?workloads=MetaOS%2CSharedAgent&limit=200' -CacheKey 'M365AdminAgent:CatalogItems' -Force:$Force
+                    RiskyAgents   = Get-M365AdminAgent -Name RiskyAgents -Force:$Force
+                    CatalogItems  = Get-M365AdminPortalData -Path '/fd/addins/api/actionableApps?workloads=MetaOS%2CSharedAgent&limit=200' -CacheKey 'M365AdminAgent:CatalogItems' -Force:$Force
                 }
+
+                return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.Agent.Catalog'
             }
         }
     }

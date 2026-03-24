@@ -38,11 +38,12 @@
                 $configuration = Get-M365AdminPortalData -Path '/_api/spo.tenant/GetBrandCenterConfiguration' -CacheKey 'M365AdminBrandCenterSetting:Configuration' -Force:$Force
                 $siteUrl = Get-M365AdminPortalData -Path "/_api/GroupSiteManager/GetValidSiteUrlFromAlias?alias='BrandGuide'&managedPath='sites'" -CacheKey 'M365AdminBrandCenterSetting:SiteUrl' -Force:$Force
 
-                [pscustomobject]@{
+                $result = [pscustomobject]@{
                     Configuration = $configuration
                     SiteUrl        = $siteUrl
                 }
-                return
+
+                return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.BrandCenterSetting'
             }
             'Configuration' {
                 $path = '/_api/spo.tenant/GetBrandCenterConfiguration'

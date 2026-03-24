@@ -34,9 +34,11 @@
     process {
         switch ($Name) {
             'All' {
-                return [pscustomobject]@{
+                $result = [pscustomobject]@{
                     McpServers = Get-M365AdminAgentTool -Name McpServers -Force:$Force
                 }
+
+                return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.AgentTool'
             }
             'McpServers' {
                 return Get-M365AdminPortalData -Path '/admin/api/agentssettings/mcpservers' -CacheKey 'M365AdminAgentTool:McpServers' -Force:$Force

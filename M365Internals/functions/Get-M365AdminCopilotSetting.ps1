@@ -13,10 +13,20 @@
     .PARAMETER Force
         Bypasses the cache and forces a fresh retrieval.
 
+    .PARAMETER Raw
+        Returns the underlying leaf payload bundle for the selected page composition when it
+        makes sense to do so.
+
     .EXAMPLE
         Get-M365AdminCopilotSetting
 
         Retrieves the primary Copilot settings payload set.
+
+    .EXAMPLE
+        Get-M365AdminCopilotSetting -Raw
+
+        Retrieves the underlying Copilot settings leaf payload bundle instead of the default
+        Optimize and ViewAll page composition.
 
     .OUTPUTS
         Object
@@ -29,7 +39,10 @@
         [string]$Name = 'All',
 
         [Parameter()]
-        [switch]$Force
+        [switch]$Force,
+
+        [Parameter()]
+        [switch]$Raw
     )
 
     process {
@@ -46,12 +59,54 @@
                 & $ScriptBlock
             }
             catch {
-                [pscustomobject]@{
-                    Name = $ResultName
-                    DataBacked = $false
-                    Error = $_.Exception.Message
-                }
+                New-M365AdminUnavailableResult -Name $ResultName -Description 'The Copilot settings section did not return a usable payload.' -Reason 'TenantSpecific' -ErrorMessage $_.Exception.Message
             }
+        }
+
+        function Get-OptimizeLeafPayload {
+            $result = [pscustomobject]@{
+                Recommendations          = Get-M365AdminCopilotSetting -Name Recommendations -Force:$Force
+                Dismissed                = Get-M365AdminCopilotSetting -Name Dismissed -Force:$Force
+                SecurityCopilotAuth      = Get-M365AdminCopilotSetting -Name SecurityCopilotAuth -Force:$Force
+                AzureSubscriptions       = Get-M365AdminCopilotSetting -Name AzureSubscriptions -Force:$Force
+                CopilotChatBillingPolicy = Get-M365AdminCopilotSetting -Name CopilotChatBillingPolicy -Force:$Force
+                AuditEnabled             = Get-CopilotResult -ResultName 'AuditEnabled' -ScriptBlock { Get-M365AdminCopilotSetting -Name AuditEnabled -Force:$Force }
+                AIBaselineSummary        = Get-M365AdminCopilotSetting -Name AIBaselineSummary -Force:$Force
+                PurviewForAISetting      = Get-M365AdminCopilotSetting -Name PurviewForAISetting -Force:$Force
+                ComplianceRecommendation = Get-CopilotResult -ResultName 'ComplianceRecommendation' -ScriptBlock { Get-M365AdminPortalData -Path "/fd/purview/apiproxy/di/find/PurviewForAI?tenantId=$tenantId&filter=$purviewFilter14&startTime=$startTime&endTime=$endTime" -CacheKey 'M365AdminCopilotSetting:ComplianceRecommendation' -Force:$Force }
+                DefaultDlpPolicy         = Get-M365AdminCopilotSetting -Name DefaultDlpPolicy -Force:$Force
+            }
+
+            return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.CopilotSetting.Optimize'
+        }
+
+        function Get-ViewAllLeafPayload {
+            $result = [pscustomobject]@{
+                Recommendations          = Get-M365AdminCopilotSetting -Name Recommendations -Force:$Force
+                Dismissed                = Get-M365AdminCopilotSetting -Name Dismissed -Force:$Force
+                SecurityCopilotAuth      = Get-M365AdminCopilotSetting -Name SecurityCopilotAuth -Force:$Force
+                AzureSubscriptions       = Get-M365AdminCopilotSetting -Name AzureSubscriptions -Force:$Force
+                CopilotChatBillingPolicy = Get-M365AdminCopilotSetting -Name CopilotChatBillingPolicy -Force:$Force
+            }
+
+            return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.CopilotSetting.ViewAll'
+        }
+
+        function Get-AllRawPayload {
+            $result = [pscustomobject]@{
+                Recommendations          = Get-M365AdminCopilotSetting -Name Recommendations -Force:$Force
+                Dismissed                = Get-M365AdminCopilotSetting -Name Dismissed -Force:$Force
+                SecurityCopilotAuth      = Get-M365AdminCopilotSetting -Name SecurityCopilotAuth -Force:$Force
+                AzureSubscriptions       = Get-M365AdminCopilotSetting -Name AzureSubscriptions -Force:$Force
+                CopilotChatBillingPolicy = Get-M365AdminCopilotSetting -Name CopilotChatBillingPolicy -Force:$Force
+                AuditEnabled             = Get-CopilotResult -ResultName 'AuditEnabled' -ScriptBlock { Get-M365AdminCopilotSetting -Name AuditEnabled -Force:$Force }
+                AIBaselineSummary        = Get-M365AdminCopilotSetting -Name AIBaselineSummary -Force:$Force
+                PurviewForAISetting      = Get-M365AdminCopilotSetting -Name PurviewForAISetting -Force:$Force
+                ComplianceRecommendation = Get-CopilotResult -ResultName 'ComplianceRecommendation' -ScriptBlock { Get-M365AdminPortalData -Path "/fd/purview/apiproxy/di/find/PurviewForAI?tenantId=$tenantId&filter=$purviewFilter14&startTime=$startTime&endTime=$endTime" -CacheKey 'M365AdminCopilotSetting:ComplianceRecommendation' -Force:$Force }
+                DefaultDlpPolicy         = Get-M365AdminCopilotSetting -Name DefaultDlpPolicy -Force:$Force
+            }
+
+            return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.CopilotSetting.Raw'
         }
 
         function Get-PurviewAIBaselineSummary {
@@ -87,10 +142,16 @@
 
         switch ($Name) {
             'All' {
-                return [pscustomobject]@{
+                if ($Raw) {
+                    return Get-AllRawPayload
+                }
+
+                $result = [pscustomobject]@{
                     Optimize = Get-M365AdminCopilotSetting -Name Optimize -Force:$Force
                     ViewAll = Get-M365AdminCopilotSetting -Name ViewAll -Force:$Force
                 }
+
+                return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.CopilotSetting'
             }
             'Recommendations' {
                 return Get-M365AdminPortalData -Path '/admin/api/recommendations/m365/ccs' -CacheKey 'M365AdminCopilotSetting:Recommendations' -Force:$Force
@@ -120,27 +181,10 @@
                 return Get-CopilotResult -ResultName 'DefaultDlpPolicy' -ScriptBlock { Get-M365AdminPortalData -Path "/fd/purview/apiproxy/di/find/DlpCompliancePolicy?tenantId=$tenantId&filter=$policyFilter" -CacheKey 'M365AdminCopilotSetting:DefaultDlpPolicy' -Force:$Force }
             }
             'Optimize' {
-                return [pscustomobject]@{
-                    Recommendations = Get-M365AdminCopilotSetting -Name Recommendations -Force:$Force
-                    Dismissed = Get-M365AdminCopilotSetting -Name Dismissed -Force:$Force
-                    SecurityCopilotAuth = Get-M365AdminCopilotSetting -Name SecurityCopilotAuth -Force:$Force
-                    AzureSubscriptions = Get-M365AdminCopilotSetting -Name AzureSubscriptions -Force:$Force
-                    CopilotChatBillingPolicy = Get-M365AdminCopilotSetting -Name CopilotChatBillingPolicy -Force:$Force
-                    AuditEnabled = Get-CopilotResult -ResultName 'AuditEnabled' -ScriptBlock { Get-M365AdminCopilotSetting -Name AuditEnabled -Force:$Force }
-                    AIBaselineSummary = Get-M365AdminCopilotSetting -Name AIBaselineSummary -Force:$Force
-                    PurviewForAISetting = Get-M365AdminCopilotSetting -Name PurviewForAISetting -Force:$Force
-                    ComplianceRecommendation = Get-CopilotResult -ResultName 'ComplianceRecommendation' -ScriptBlock { Get-M365AdminPortalData -Path "/fd/purview/apiproxy/di/find/PurviewForAI?tenantId=$tenantId&filter=$purviewFilter14&startTime=$startTime&endTime=$endTime" -CacheKey 'M365AdminCopilotSetting:ComplianceRecommendation' -Force:$Force }
-                    DefaultDlpPolicy = Get-M365AdminCopilotSetting -Name DefaultDlpPolicy -Force:$Force
-                }
+                return Get-OptimizeLeafPayload
             }
             'ViewAll' {
-                return [pscustomobject]@{
-                    Recommendations = Get-M365AdminCopilotSetting -Name Recommendations -Force:$Force
-                    Dismissed = Get-M365AdminCopilotSetting -Name Dismissed -Force:$Force
-                    SecurityCopilotAuth = Get-M365AdminCopilotSetting -Name SecurityCopilotAuth -Force:$Force
-                    AzureSubscriptions = Get-M365AdminCopilotSetting -Name AzureSubscriptions -Force:$Force
-                    CopilotChatBillingPolicy = Get-M365AdminCopilotSetting -Name CopilotChatBillingPolicy -Force:$Force
-                }
+                return Get-ViewAllLeafPayload
             }
         }
     }

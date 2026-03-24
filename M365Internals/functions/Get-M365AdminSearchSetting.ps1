@@ -55,12 +55,7 @@
         }
 
         if ($Name -eq 'AccountLinking') {
-            return [pscustomobject]@{
-                Name        = 'Account Linking'
-                Route       = 'EnterpriseMicrosoftRewards'
-                DataBacked  = $false
-                Description = 'The Org settings Account Linking flyout issued an internal browser request during live capture, but a stable same-origin GET could not be reproduced outside the portal interaction flow.'
-            }
+            return New-M365AdminUnavailableResult -Name 'Account Linking' -Description 'The Org settings Account Linking flyout issued an internal browser request during live capture, but a stable same-origin GET could not be reproduced outside the portal interaction flow.' -Reason 'InteractiveOnly'
         }
 
         if ($Name -eq 'Configurations') {
@@ -68,12 +63,7 @@
                 return Get-SearchPortalData -Path '/admin/api/searchadminapi/configurations' -CacheKey 'M365AdminSearchSetting:Configurations' -Force:$Force
             }
             catch {
-                return [pscustomobject]@{
-                    Name        = 'Configurations'
-                    DataBacked  = $false
-                    Error       = $_.Exception.Message
-                    Description = 'The Search configurations endpoint is currently unavailable in this tenant and returns the same 503 response seen in the live portal.'
-                }
+                return New-M365AdminUnavailableResult -Name 'Configurations' -Description 'The Search configurations endpoint is currently unavailable in this tenant and returns the same 503 response seen in the live portal.' -Reason 'TenantSpecific' -ErrorMessage $_.Exception.Message
             }
         }
 
@@ -88,12 +78,7 @@
                 ) -Force:$Force
             }
             catch {
-                return [pscustomobject]@{
-                    Name        = 'FirstRunExperience'
-                    DataBacked  = $false
-                    Error       = $_.Exception.Message
-                    Description = 'The Search first-run experience payload could not be retrieved, even though the live portal uses a POST-backed request shape for this surface.'
-                }
+                return New-M365AdminUnavailableResult -Name 'FirstRunExperience' -Description 'The Search first-run experience payload could not be retrieved, even though the live portal uses a POST-backed request shape for this surface.' -Reason 'TenantSpecific' -ErrorMessage $_.Exception.Message
             }
         }
 
@@ -105,22 +90,18 @@
                 } -Force:$Force
             }
             catch {
-                return [pscustomobject]@{
-                    Name        = 'Qnas'
-                    DataBacked  = $false
-                    Error       = $_.Exception.Message
-                    Description = 'The live portal uses a POST-backed QnAs request, but this tenant currently returns 404 for the published Bing payload.'
-                }
+                return New-M365AdminUnavailableResult -Name 'Qnas' -Description 'The live portal uses a POST-backed QnAs request, but this tenant currently returns 404 for the published Bing payload.' -Reason 'TenantSpecific' -ErrorMessage $_.Exception.Message
             }
         }
 
         if ($Name -eq 'News') {
-            [pscustomobject]@{
+            $result = [pscustomobject]@{
                 NewsOptions    = Get-SearchPortalData -Path '/admin/api/searchadminapi/news/options/Bing' -CacheKey 'M365AdminSearchSetting:NewsOptions' -Force:$Force
                 NewsIndustry   = Get-SearchPortalData -Path '/admin/api/searchadminapi/news/industry/Bing' -CacheKey 'M365AdminSearchSetting:NewsIndustry' -Force:$Force
                 NewsMsbEnabled = Get-SearchPortalData -Path '/admin/api/searchadminapi/news/msbenabled/Bing' -CacheKey 'M365AdminSearchSetting:NewsMsbEnabled' -Force:$Force
             }
-            return
+
+            return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.SearchSetting.News'
         }
 
         $path = switch ($Name) {

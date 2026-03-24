@@ -13,10 +13,20 @@
     .PARAMETER Force
         Bypasses the cache and forces a fresh retrieval.
 
+    .PARAMETER Raw
+        Returns the underlying leaf payload bundle for the selected page composition when it
+        makes sense to do so.
+
     .EXAMPLE
         Get-M365AdminCopilotConnector
 
         Retrieves the primary Copilot Connectors payload set.
+
+    .EXAMPLE
+        Get-M365AdminCopilotConnector -Raw
+
+        Retrieves the underlying connectors summary, statistics, connections, and gallery leaf
+        payload bundle instead of the default grouped page view.
 
     .OUTPUTS
         Object
@@ -29,18 +39,37 @@
         [string]$Name = 'All',
 
         [Parameter()]
-        [switch]$Force
+        [switch]$Force,
+
+        [Parameter()]
+        [switch]$Raw
     )
 
     process {
+        function Get-ConnectorRawPayload {
+            $result = [pscustomobject]@{
+                Summary         = Get-M365AdminCopilotConnector -Name Summary -Force:$Force
+                Statistics      = Get-M365AdminCopilotConnector -Name Statistics -Force:$Force
+                Connections     = Get-M365AdminCopilotConnector -Name Connections -Force:$Force
+                AdminUxOptions  = Get-M365AdminCopilotConnector -Name AdminUxOptions -Force:$Force
+                GallerySettings = Get-M365AdminCopilotConnector -Name GallerySettings -Force:$Force
+            }
+
+            return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.CopilotConnector.Raw'
+        }
+
         switch ($Name) {
             'All' {
-                return [pscustomobject]@{
-                    Summary = Get-M365AdminCopilotConnector -Name Summary -Force:$Force
-                    Statistics = Get-M365AdminCopilotConnector -Name Statistics -Force:$Force
+                if ($Raw) {
+                    return Get-ConnectorRawPayload
+                }
+
+                $result = [pscustomobject]@{
                     YourConnections = Get-M365AdminCopilotConnector -Name YourConnections -Force:$Force
                     Gallery = Get-M365AdminCopilotConnector -Name Gallery -Force:$Force
                 }
+
+                return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.CopilotConnector'
             }
             'Summary' {
                 return Get-M365AdminPortalData -Path '/admin/api/searchadminapi/UDTConnectorsSummary' -CacheKey 'M365AdminCopilotConnector:Summary' -Force:$Force
@@ -58,19 +87,23 @@
                 return Get-M365AdminPortalData -Path "/fd/ssms/api/v1.0/'MSS'/Collection('VT')/Settings(Path='',LogicalId='all')" -CacheKey 'M365AdminCopilotConnector:GallerySettings' -Force:$Force
             }
             'YourConnections' {
-                return [pscustomobject]@{
+                $result = [pscustomobject]@{
                     Summary = Get-M365AdminCopilotConnector -Name Summary -Force:$Force
                     Statistics = Get-M365AdminCopilotConnector -Name Statistics -Force:$Force
                     Connections = Get-M365AdminCopilotConnector -Name Connections -Force:$Force
                 }
+
+                return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.CopilotConnector.YourConnections'
             }
             'Gallery' {
-                return [pscustomobject]@{
+                $result = [pscustomobject]@{
                     Summary = Get-M365AdminCopilotConnector -Name Summary -Force:$Force
                     Statistics = Get-M365AdminCopilotConnector -Name Statistics -Force:$Force
                     AdminUxOptions = Get-M365AdminCopilotConnector -Name AdminUxOptions -Force:$Force
                     GallerySettings = Get-M365AdminCopilotConnector -Name GallerySettings -Force:$Force
                 }
+
+                return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.CopilotConnector.Gallery'
             }
         }
     }

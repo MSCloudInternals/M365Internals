@@ -23,6 +23,8 @@
         Returns the selected Microsoft 365 Backup payload.
     #>
     [CmdletBinding()]
+    [OutputType([pscustomobject])]
+    [OutputType([object[]])]
     param (
         [Parameter()]
         [ValidateSet('All', 'AzureSubscriptionPermissions', 'AzureSubscriptions', 'BillingFeature', 'EnhancedRestoreFeature', 'EnhancedRestoreStatus')]
@@ -43,14 +45,15 @@
                 }
             }
 
-            [pscustomobject]@{
+            $result = [pscustomobject]@{
                 BillingFeature             = Get-M365AdminPortalData -Path "/_api/v2.1/billingFeatures('M365Backup')" -CacheKey 'M365AdminMicrosoft365BackupSetting:BillingFeature' -Force:$Force
                 AzureSubscriptions         = $azureSubscriptions
                 AzureSubscriptionPermissions = @($permissions)
                 EnhancedRestoreFeature     = Get-M365AdminPortalData -Path '/fd/enhancedRestorev2/v1/featureSetting' -CacheKey 'M365AdminMicrosoft365BackupSetting:EnhancedRestoreFeature' -Force:$Force
                 EnhancedRestoreStatus      = Get-M365AdminEnhancedRestoreStatus -Force:$Force
             }
-            return
+
+            return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.Microsoft365BackupSetting'
         }
 
         if ($Name -eq 'AzureSubscriptionPermissions') {

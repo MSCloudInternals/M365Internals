@@ -33,11 +33,12 @@
 
     process {
         if ($Name -eq 'All') {
-            [pscustomobject]@{
+            $result = [pscustomobject]@{
                 DAP  = Get-M365AdminPartnerClient -PartnerType DAP -Force:$Force
                 GDAP = Get-M365AdminPartnerClient -PartnerType GDAP -Force:$Force
             }
-            return
+
+            return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.PartnerRelationship'
         }
 
         Get-M365AdminPartnerClient -PartnerType $Name -Force:$Force

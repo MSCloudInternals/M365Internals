@@ -77,6 +77,12 @@
 
         Retrieves DNS records for contoso.com.
 
+    .EXAMPLE
+        Get-M365AdminDomain -Dependencies -DomainName contoso.com -DependencyKind 1
+
+        Retrieves domain dependency data when available. If the tenant-specific endpoint does not
+        return usable data, the cmdlet returns a standardized unavailable result object.
+
     .OUTPUTS
         Object
         Returns the selected domain payload.
@@ -176,6 +182,23 @@
         }
 
         $cacheKey = 'M365AdminDomain:{0}:{1}' -f $PSCmdlet.ParameterSetName, ($path -replace '[^A-Za-z0-9:/?=&-]', '_')
+
+        if ($PSCmdlet.ParameterSetName -eq 'Dependencies') {
+            try {
+                return Get-M365AdminPortalData -Path $path -CacheKey $cacheKey -Force:$Force
+            }
+            catch {
+                if ($_.Exception.Message -match '400' -or $_.Exception.Message -match 'Bad Request') {
+                    $result = New-M365AdminUnavailableResult -Name 'Dependencies' -Description 'The domain dependency endpoint did not return data for this domain in the current tenant.' -Reason 'TenantSpecific' -ErrorMessage $_.Exception.Message
+                    $result | Add-Member -NotePropertyName DomainName -NotePropertyValue $DomainName
+                    $result | Add-Member -NotePropertyName DependencyKind -NotePropertyValue $DependencyKind
+                    return $result
+                }
+
+                throw
+            }
+        }
+
         Get-M365AdminPortalData -Path $path -CacheKey $cacheKey -Force:$Force
     }
 }

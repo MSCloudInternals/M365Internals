@@ -39,7 +39,7 @@
             $counts = $insights.data.titlesInsight.Counts
             $metrics = $counts.AgentAggregatedMetricsResponse
 
-            [pscustomobject]@{
+            $result = [pscustomobject]@{
                 TotalAgents = $metrics.summary.totalAgents
                 TotalAgentsLastWeek = $metrics.summary.totalAgentsLastWeek
                 BlockedAgents = $metrics.summary.blockedAgents
@@ -49,11 +49,13 @@
                 CountsByBuilder = @($metrics.countsByBuilder)
                 RiskyAgentsDetails = @($riskyAgents.riskyAgentsDetails)
             }
+
+            return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.AgentOverview.Summary'
         }
 
         switch ($Name) {
             'All' {
-                return [pscustomobject]@{
+                $result = [pscustomobject]@{
                     Summary = Get-M365AdminAgentOverview -Name Summary -Force:$Force
                     Products = Get-M365AdminAgentOverview -Name Products -Force:$Force
                     OfferRecommendations = Get-M365AdminAgentOverview -Name OfferRecommendations -Force:$Force
@@ -67,6 +69,8 @@
                     FrontierAccess = Get-M365AdminAgentOverview -Name FrontierAccess -Force:$Force
                     RiskyAgents = Get-M365AdminAgentOverview -Name RiskyAgents -Force:$Force
                 }
+
+                return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.AgentOverview'
             }
             'Products' {
                 return Get-M365AdminPortalData -Path '/admin/api/users/products' -CacheKey 'M365AdminAgentOverview:Products' -Force:$Force
@@ -75,10 +79,12 @@
                 return Get-AgentSummary
             }
             'OfferRecommendations' {
-                return [pscustomobject]@{
+                $result = [pscustomobject]@{
                     Offer48 = Get-M365AdminPortalData -Path '/admin/api/offerrec/offer/48' -CacheKey 'M365AdminAgentOverview:Offer48' -Force:$Force
                     Offer49 = Get-M365AdminPortalData -Path '/admin/api/offerrec/offer/49' -CacheKey 'M365AdminAgentOverview:Offer49' -Force:$Force
                 }
+
+                return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.AgentOverview.OfferRecommendations'
             }
             'UsageMetrics' {
                 return Get-M365AdminPortalData -Path '/admin/api/reports/GetReportData?entityname=getCopilotAgentActiveUserRL30Metrics&pagesize=100' -CacheKey 'M365AdminAgentOverview:UsageMetrics' -Force:$Force

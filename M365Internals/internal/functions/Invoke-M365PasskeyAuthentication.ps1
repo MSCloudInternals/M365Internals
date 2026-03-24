@@ -303,10 +303,10 @@
         function Get-EncodedCredentialList {
             param (
                 [Parameter(Mandatory)]
-                [string[]]$CredentialIds
+                [string[]]$PasskeyIds
             )
 
-            $encodedValues = foreach ($credentialId in $CredentialIds) {
+            $encodedValues = foreach ($credentialId in $PasskeyIds) {
                 [Convert]::ToBase64String((ConvertFrom-Base64UrlString -Value $credentialId))
             }
 
@@ -322,7 +322,7 @@
                 [pscustomobject]$LoginState,
 
                 [Parameter(Mandatory)]
-                [string[]]$CredentialIds,
+                [string[]]$PasskeyIds,
 
                 [Parameter(Mandatory)]
                 [string]$Username,
@@ -355,7 +355,7 @@
                 cancelUrl                     = $cancelUrl
                 resumeUrl                     = $resumeUrl
                 correlationId                 = $config.correlationId
-                credentialsJson               = Get-EncodedCredentialList -CredentialIds $CredentialIds
+                credentialsJson               = Get-EncodedCredentialList -PasskeyIds $PasskeyIds
                 ctx                           = $config.sCtx
                 username                      = $Username
                 hasMsftAuthAppPasskey         = 1
@@ -396,7 +396,7 @@
         function Get-AssertionPayload {
             param (
                 [Parameter(Mandatory)]
-                [pscustomobject]$Credential,
+                [pscustomobject]$PasskeyCredential,
 
                 [Parameter(Mandatory)]
                 [string]$Challenge,
@@ -408,19 +408,19 @@
             $clientData = [ordered]@{
                 type        = 'webauthn.get'
                 challenge   = ConvertTo-Base64UrlString -Bytes $challengeBytes
-                origin      = $Credential.url.TrimEnd('/')
+                origin      = $PasskeyCredential.url.TrimEnd('/')
                 crossOrigin = $false
             } | ConvertTo-Json -Compress
 
             $clientDataBytes = [System.Text.Encoding]::UTF8.GetBytes($clientData)
             $clientDataHash = Get-Sha256Hash -Bytes $clientDataBytes
-            $authenticatorData = Get-AuthenticatorData -RpId $Credential.relyingParty -SignatureCounter $SignatureCounter
+            $authenticatorData = Get-AuthenticatorData -RpId $PasskeyCredential.relyingParty -SignatureCounter $SignatureCounter
             $signedBytes = [byte[]]::new($authenticatorData.Length + $clientDataHash.Length)
             [System.Array]::Copy($authenticatorData, 0, $signedBytes, 0, $authenticatorData.Length)
             [System.Array]::Copy($clientDataHash, 0, $signedBytes, $authenticatorData.Length, $clientDataHash.Length)
             $ecdsa = [System.Security.Cryptography.ECDsa]::Create()
             try {
-                $ecdsa.ImportFromPem($Credential.privateKey)
+                $ecdsa.ImportFromPem($PasskeyCredential.privateKey)
                 try {
                     $signature = $ecdsa.SignData($signedBytes, [System.Security.Cryptography.HashAlgorithmName]::SHA256, [System.Security.Cryptography.DSASignatureFormat]::Rfc3279DerSequence)
                 }
@@ -433,11 +433,11 @@
             }
 
             [ordered]@{
-                id                = $Credential.credentialId
+                id                = $PasskeyCredential.credentialId
                 clientDataJSON    = ConvertTo-Base64UrlString -Bytes $clientDataBytes
                 authenticatorData = ConvertTo-Base64UrlString -Bytes $authenticatorData
                 signature         = ConvertTo-Base64UrlString -Bytes $signature
-                userHandle        = if ($Credential.userHandle) { $Credential.userHandle } else { '' }
+                userHandle        = if ($PasskeyCredential.userHandle) { $PasskeyCredential.userHandle } else { '' }
             } | ConvertTo-Json -Compress
         }
 
@@ -574,6 +574,7 @@
                             $authorizeConfig = Get-LoginPageConfig -Content $authorizeResponse.Content
                         }
                         catch {
+                            Write-Verbose 'Could not parse the authorize response page config while diagnosing the passkey handoff.'
                         }
                     }
 
@@ -631,7 +632,7 @@
         $loginState = Get-PasskeyRequestState -Session $webSession -Agent $UserAgent
         Invoke-GetCredentialTypeRequest -Session $webSession -LoginState $loginState -Username $credential.username -Agent $UserAgent
 
-        $fidoState = Get-FidoChallengeState -Session $webSession -LoginState $loginState -CredentialIds @([string]$credential.credentialId) -Username $credential.username -Agent $UserAgent
+        $fidoState = Get-FidoChallengeState -Session $webSession -LoginState $loginState -PasskeyIds @([string]$credential.credentialId) -Username $credential.username -Agent $UserAgent
         $allowedCredentials = @($fidoState.Config.arrFidoAllowList)
         $credentialIdStandardBase64 = [Convert]::ToBase64String((ConvertFrom-Base64UrlString -Value $credential.credentialId))
         if ($allowedCredentials.Count -gt 0 -and $allowedCredentials -notcontains $credentialIdStandardBase64) {
@@ -646,7 +647,7 @@
             $signatureCounter = [int]$credential.signCount
         }
 
-        $assertion = Get-AssertionPayload -Credential $credential -Challenge $fidoState.Config.sFidoChallenge -SignatureCounter $signatureCounter
+        $assertion = Get-AssertionPayload -PasskeyCredential $credential -Challenge $fidoState.Config.sFidoChallenge -SignatureCounter $signatureCounter
         $assertionResult = Submit-FidoAssertion -Session $webSession -FidoState $fidoState -Assertion $assertion -Agent $UserAgent
         Complete-AdminPortalSignIn -Session $webSession -Agent $UserAgent -InitialHiddenFields $assertionResult.HiddenFields -InitialFormAction $assertionResult.FormAction
     }

@@ -38,7 +38,7 @@
 
         switch ($Name) {
             'All' {
-                [pscustomobject]@{
+                $result = [pscustomobject]@{
                     UserSoftware        = Get-M365AdminPortalData -Path '/admin/api/settings/apps/usersoftware' -CacheKey 'M365AdminMicrosoft365InstallationOption:UserSoftware' -Force:$Force
                     TenantInfo          = Get-M365AdminPortalData -Path ("/fd/dms/odata/TenantInfo({0})" -f $tenantId) -CacheKey 'M365AdminMicrosoft365InstallationOption:TenantInfo' -Force:$Force
                     DefaultReleaseRule  = Get-M365AdminPortalData -Path "/fd/dms/odata/C2RReleaseRule?$filter=FFN eq 55336b82-a18d-4dd6-b5f6-9e5095c314a6 and IsDefault eq true" -CacheKey 'M365AdminMicrosoft365InstallationOption:DefaultReleaseRule' -Force:$Force
@@ -48,7 +48,8 @@
                     MonthlyReleaseInfo  = Get-M365AdminPortalData -Path "/fd/dms/odata/C2RReleaseInfo?$filter=ServicingChannel eq 'Monthly'&$orderby=ReleaseVersion desc&$top=1" -CacheKey 'M365AdminMicrosoft365InstallationOption:MonthlyReleaseInfo' -Force:$Force
                     EligibleToRemoveSac = Get-M365AdminPortalData -Path '/admin/api/tenant/isTenantEligibleToRemoveSAC' -CacheKey 'M365AdminMicrosoft365InstallationOption:EligibleToRemoveSac' -Force:$Force
                 }
-                return
+
+                return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.Microsoft365InstallationOption'
             }
             'UserSoftware' {
                 $path = '/admin/api/settings/apps/usersoftware'

@@ -13,10 +13,20 @@
     .PARAMETER Force
         Bypasses the cache and forces a fresh retrieval.
 
+    .PARAMETER Raw
+        Returns the underlying leaf payload bundle for the selected page composition when it
+        makes sense to do so.
+
     .EXAMPLE
         Get-M365AdminCopilotBillingUsage
 
         Retrieves the primary Copilot Billing & usage payload set.
+
+    .EXAMPLE
+        Get-M365AdminCopilotBillingUsage -Raw
+
+        Retrieves the underlying Billing & usage leaf payload bundle instead of the default
+        grouped page view.
 
     .OUTPUTS
         Object
@@ -25,65 +35,86 @@
     [CmdletBinding()]
     param (
         [Parameter()]
-        [ValidateSet('All', 'AzureSubscriptions', 'BillingAccounts', 'BillingPolicies', 'BillingPolicyBudgets', 'BillingTabs', 'HighUsageUsers', 'PayAsYouGoServices')]
+        [ValidateSet('All', 'AzureSubscriptions', 'BillingAccounts', 'BillingPolicies', 'BillingPolicyBudgets', 'HighUsageUsers', 'PayAsYouGoServices')]
         [string]$Name = 'All',
 
         [Parameter()]
-        [switch]$Force
+        [switch]$Force,
+
+        [Parameter()]
+        [switch]$Raw
     )
 
     process {
+        function Get-BillingUsageRawPayload {
+            $result = [pscustomobject]@{
+                BillingPolicies     = Get-M365AdminCopilotBillingUsage -Name BillingPolicies -Force:$Force
+                BillingPolicyBudgets = Get-M365AdminCopilotBillingUsage -Name BillingPolicyBudgets -Force:$Force
+                PayAsYouGoServices  = Get-M365AdminCopilotBillingUsage -Name PayAsYouGoServices -Force:$Force
+                HighUsageUsers      = Get-M365AdminCopilotBillingUsage -Name HighUsageUsers -Force:$Force
+                BillingAccounts     = Get-M365AdminCopilotBillingUsage -Name BillingAccounts -Force:$Force
+                AzureSubscriptions  = Get-M365AdminCopilotBillingUsage -Name AzureSubscriptions -Force:$Force
+            }
+
+            return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.CopilotBillingUsage.Raw'
+        }
+
         switch ($Name) {
             'All' {
-                return [pscustomobject]@{
-                    BillingTabs = [pscustomobject]@{
-                        BillingPolicies = Get-M365AdminCopilotBillingUsage -Name BillingPolicies -Force:$Force
-                        PayAsYouGoServices = Get-M365AdminCopilotBillingUsage -Name PayAsYouGoServices -Force:$Force
-                        HighUsageUsers = Get-M365AdminCopilotBillingUsage -Name HighUsageUsers -Force:$Force
-                    }
-                    BillingAccounts = Get-M365AdminCopilotBillingUsage -Name BillingAccounts -Force:$Force
-                    AzureSubscriptions = Get-M365AdminCopilotBillingUsage -Name AzureSubscriptions -Force:$Force
+                if ($Raw) {
+                    return Get-BillingUsageRawPayload
                 }
-            }
-            'BillingTabs' {
-                return [pscustomobject]@{
+
+                $result = [pscustomobject]@{
                     BillingPolicies = Get-M365AdminCopilotBillingUsage -Name BillingPolicies -Force:$Force
                     PayAsYouGoServices = Get-M365AdminCopilotBillingUsage -Name PayAsYouGoServices -Force:$Force
                     HighUsageUsers = Get-M365AdminCopilotBillingUsage -Name HighUsageUsers -Force:$Force
+                    BillingAccounts = Get-M365AdminCopilotBillingUsage -Name BillingAccounts -Force:$Force
+                    AzureSubscriptions = Get-M365AdminCopilotBillingUsage -Name AzureSubscriptions -Force:$Force
                 }
+
+                return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.CopilotBillingUsage'
             }
             'BillingPolicies' {
-                return [pscustomobject]@{
+                $result = [pscustomobject]@{
                     Policies = Get-M365AdminPortalData -Path '/_api/v2.1/billingPolicies' -CacheKey 'M365AdminCopilotBillingUsage:BillingPolicies' -Force:$Force
                     PolicyBudgets = Get-M365AdminCopilotBillingUsage -Name BillingPolicyBudgets -Force:$Force
                     BillingAccounts = Get-M365AdminCopilotBillingUsage -Name BillingAccounts -Force:$Force
                     AzureSubscriptions = Get-M365AdminCopilotBillingUsage -Name AzureSubscriptions -Force:$Force
                 }
+
+                return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.CopilotBillingUsage.BillingPolicies'
             }
             'BillingPolicyBudgets' {
                 return Get-M365AdminPortalData -Path '/_api/v2.1/billingPolicies?budgets=true' -CacheKey 'M365AdminCopilotBillingUsage:BillingPolicyBudgets' -Force:$Force
             }
             'BillingAccounts' {
-                return [pscustomobject]@{
+                $result = [pscustomobject]@{
                     ShellBillingAccounts = Get-M365AdminPortalData -Path '/admin/api/tenant/billingAccountsWithShell' -CacheKey 'M365AdminCopilotBillingUsage:ShellBillingAccounts' -Force:$Force
                     ArmBillingAccounts = Get-M365AdminPortalData -Path '/fd/arm/providers/Microsoft.Billing/billingAccounts?api-version=2020-05-01' -CacheKey 'M365AdminCopilotBillingUsage:ArmBillingAccounts' -Force:$Force
                 }
+
+                return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.CopilotBillingUsage.BillingAccounts'
             }
             'AzureSubscriptions' {
                 return Get-M365AdminPortalData -Path '/admin/api/tenant/azureSubscriptions' -CacheKey 'M365AdminCopilotBillingUsage:AzureSubscriptions' -Force:$Force
             }
             'PayAsYouGoServices' {
-                return [pscustomobject]@{
+                $result = [pscustomobject]@{
                     Policies = Get-M365AdminPortalData -Path '/_api/v2.1/billingPolicies' -CacheKey 'M365AdminCopilotBillingUsage:PayAsYouGoPolicies' -Force:$Force
                     CopilotChatPolicy = Get-M365AdminPortalData -Path '/_api/v2.1/billingPolicies?feature=M365CopilotChat' -CacheKey 'M365AdminCopilotBillingUsage:PayAsYouGoCopilotChatPolicy' -Force:$Force
                 }
+
+                return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.CopilotBillingUsage.PayAsYouGoServices'
             }
             'HighUsageUsers' {
-                return [pscustomobject]@{
+                $result = [pscustomobject]@{
                     Policies = Get-M365AdminPortalData -Path '/_api/v2.1/billingPolicies' -CacheKey 'M365AdminCopilotBillingUsage:HighUsagePolicies' -Force:$Force
                     DataBacked = $false
                     Description = 'The High-usage users tab shows a prerequisite message until at least one Copilot billing policy is connected. No separate high-usage user feed was requested by the current tenant state.'
                 }
+
+                return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.CopilotBillingUsage.HighUsageUsers'
             }
         }
     }

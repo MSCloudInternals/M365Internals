@@ -18,6 +18,12 @@
 
         Retrieves the multi-tenant organization tenant list.
 
+    .EXAMPLE
+        Get-M365AdminTenantRelationship -Name MultiTenantCollaboration
+
+        Retrieves the grouped collaboration view. Tenant-disabled sub-sections are returned as
+        standardized unavailable result objects instead of failing the full result.
+
     .OUTPUTS
         Object
         Returns the selected tenant relationship payload.
@@ -33,19 +39,39 @@
     )
 
     process {
-        if ($Name -eq 'MultiTenantCollaboration') {
-            $multiTenantOrganization = Get-M365AdminPortalData -Path '/admin/api/tenantRelationships/multiTenantOrganization' -CacheKey 'M365AdminTenantRelationship:MultiTenantOrganization' -Force:$Force
-            $tenants = Get-M365AdminPortalData -Path '/admin/api/tenantRelationships/multiTenantOrganization/tenants' -CacheKey 'M365AdminTenantRelationship:Tenants' -Force:$Force
-            $removedTenants = Get-M365AdminPortalData -Path '/admin/api/tenantRelationships/multiTenantOrganization/removedTenants' -CacheKey 'M365AdminTenantRelationship:RemovedTenants' -Force:$Force
-            $userSyncAppOutboundDetails = Get-M365AdminPortalData -Path '/admin/api/tenantRelationships/userSyncApps/outboundDetails' -CacheKey 'M365AdminTenantRelationship:UserSyncAppOutboundDetails' -Force:$Force
+        $bypassCache = $Force.IsPresent
 
-            [pscustomobject]@{
+        function Get-TenantRelationshipResult {
+            param (
+                [Parameter(Mandatory)]
+                [string]$ResultName,
+
+                [Parameter(Mandatory)]
+                [string]$Path
+            )
+
+            try {
+                Get-M365AdminPortalData -Path $Path -CacheKey "M365AdminTenantRelationship:$ResultName" -Force:$bypassCache
+            }
+            catch {
+                return New-M365AdminUnavailableResult -Name $ResultName -Description 'The tenant relationship endpoint did not return data for this tenant configuration.' -Reason 'TenantSpecific' -ErrorMessage $_.Exception.Message
+            }
+        }
+
+        if ($Name -eq 'MultiTenantCollaboration') {
+            $multiTenantOrganization = Get-TenantRelationshipResult -ResultName 'MultiTenantOrganization' -Path '/admin/api/tenantRelationships/multiTenantOrganization'
+            $tenants = Get-TenantRelationshipResult -ResultName 'Tenants' -Path '/admin/api/tenantRelationships/multiTenantOrganization/tenants'
+            $removedTenants = Get-TenantRelationshipResult -ResultName 'RemovedTenants' -Path '/admin/api/tenantRelationships/multiTenantOrganization/removedTenants'
+            $userSyncAppOutboundDetails = Get-TenantRelationshipResult -ResultName 'UserSyncAppOutboundDetails' -Path '/admin/api/tenantRelationships/userSyncApps/outboundDetails'
+
+            $result = [pscustomobject]@{
                 MultiTenantOrganization   = $multiTenantOrganization
                 Tenants                   = $tenants
                 RemovedTenants            = $removedTenants
                 UserSyncAppOutboundDetails = $userSyncAppOutboundDetails
             }
-            return
+
+            return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.TenantRelationship.MultiTenantCollaboration'
         }
 
         $path = switch ($Name) {
@@ -56,6 +82,6 @@
             'UserSyncAppOutboundDetails' { '/admin/api/tenantRelationships/userSyncApps/outboundDetails' }
         }
 
-        Get-M365AdminPortalData -Path $path -CacheKey "M365AdminTenantRelationship:$Name" -Force:$Force
+        Get-TenantRelationshipResult -ResultName $Name -Path $path
     }
 }

@@ -48,11 +48,7 @@
                 }
             }
 
-            [pscustomobject]@{
-                Name        = 'OwnerlessGroupPolicy'
-                DataBacked  = $false
-                Description = 'The ownerless groups policy has not been initialized in the current tenant.'
-            }
+            New-M365AdminUnavailableResult -Name 'OwnerlessGroupPolicy' -Description 'The ownerless groups policy has not been initialized in the current tenant.' -Reason 'Optional'
         }
 
         switch ($Name) {
@@ -61,12 +57,13 @@
                 $guestUserPolicy = Get-M365AdminPortalData -Path '/admin/api/Settings/security/guestUserPolicy' -CacheKey 'M365AdminMicrosoft365GroupSetting:GuestUserPolicy' -Force:$Force
                 $ownerlessGroupPolicy = Get-OwnerlessGroupPolicyResult
 
-                [pscustomobject]@{
+                $result = [pscustomobject]@{
                     GuestAccess          = $guestAccess
                     GuestUserPolicy      = $guestUserPolicy
                     OwnerlessGroupPolicy = $ownerlessGroupPolicy
                 }
-                return
+
+                return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.Microsoft365GroupSetting'
             }
             'GuestAccess' {
                 $path = '/admin/api/settings/security/o365guestuser'
