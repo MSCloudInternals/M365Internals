@@ -39,7 +39,7 @@
             Clear-M365Cache -CacheKey $cacheKey
         }
 
-        $result = Invoke-M365RestMethod -Path '/admin/api/dirsyncerrors/listdirsyncerrors' -Method Post
+        $result = Invoke-M365AdminRestMethod -Path '/admin/api/dirsyncerrors/listdirsyncerrors' -Method Post
         Set-M365Cache -CacheKey $cacheKey -Value $result -TTLMinutes 15 | Out-Null
         return $result
     }

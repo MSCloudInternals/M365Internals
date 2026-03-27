@@ -33,7 +33,7 @@ Last updated: 2026-03-24
 
 ## Request Helper Limitations
 
-- `Invoke-M365RestMethod` was updated to handle omitted `-Headers` and `POST` requests with no body.
+- `Invoke-M365AdminRestMethod` was updated to handle omitted `-Headers` and `POST` requests with no body.
 - Additional `fd/msgraph` endpoints may still require extra headers beyond the default same-origin request shape.
   - Known example: Microsoft Edge device inventory is reliable with `ConsistencyLevel=eventual` and `?$count=true&$top=1`.
   - Future Graph-proxy work should validate whether `x-adminapp-request`, `ConsistencyLevel`, or other specialized headers are required.

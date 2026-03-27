@@ -153,7 +153,7 @@ Known tenant-specific or optional sections should still be expected to return st
 | Get-M365AdminTenantSetting               | Retrieve tenant settings such as account SKUs, data location, and privacy state |
 | Get-M365AdminUserSetting                 | Retrieve current-user, role, product, dashboard-layout, and token-broker admin data |
 | Get-M365AdminVivaSetting                 | Retrieve Viva module, role, and Glint client lookup settings               |
-| Invoke-M365RestMethod                    | Invoke authenticated REST requests against `admin.cloud.microsoft`         |
+| Invoke-M365AdminRestMethod               | Invoke authenticated REST requests against `admin.cloud.microsoft`         |
 
 ## Installation
 
@@ -296,7 +296,7 @@ Get-M365AdminMicrosoftEdgeSetting
 Get-M365AdminShellInfo -Force
 
 # Invoke a direct authenticated request to the admin center
-Invoke-M365RestMethod -Path '/admin/api/coordinatedbootstrap/shellinfo'
+Invoke-M365AdminRestMethod -Path '/admin/api/coordinatedbootstrap/shellinfo'
 ```
 
 ## License

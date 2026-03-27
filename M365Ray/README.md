@@ -6,7 +6,7 @@ M365Ray is a DevTools extension for the Microsoft 365 admin portal that watches 
 
 - Captures `admin.cloud.microsoft` requests for `/admin/api/`, `/adminportal/home/ClassicModernAdminDataStream`, and `fd/msgraph`.
 - Maps recognized requests to the exported `M365Internals` cmdlets by using `CmdletApiMapping.json`.
-- Falls back to `Invoke-M365RestMethod` when no native cmdlet match is available.
+- Falls back to `Invoke-M365AdminRestMethod` when no native cmdlet match is available.
 - Stores request bodies through the background script so payloads remain visible in the panel.
 - Provides guarded access to the admin portal cookies required by `Connect-M365Portal`.
 

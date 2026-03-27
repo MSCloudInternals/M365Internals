@@ -79,7 +79,7 @@
                 BillingAccounts          = Get-AgentSettingResult -ResultName 'BillingAccounts' -ScriptBlock { Get-M365AdminPortalData -Path '/admin/api/tenant/billingAccountsWithShell' -CacheKey 'M365AdminAgentSetting:TemplateBillingAccounts' -Force:$Force }
                 AutoQuotaEnabled         = Get-AgentSettingResult -ResultName 'AutoQuotaEnabled' -ScriptBlock { Get-M365AdminPortalData -Path '/_api/SPOInternalUseOnly.TenantAdminSettings/AutoQuotaEnabled' -CacheKey 'M365AdminAgentSetting:AutoQuotaEnabled' -Force:$Force }
                 CustomViewFilterDefaults = Get-AgentSettingResult -ResultName 'CustomViewFilterDefaults' -ScriptBlock { Get-M365AdminPortalData -Path '/admin/api/tenant/customviewfilterdefaults' -CacheKey 'M365AdminAgentSetting:CustomViewFilterDefaults' -Force:$Force }
-                UserRoles                = Get-AgentSettingResult -ResultName 'UserRoles' -ScriptBlock { Invoke-M365RestMethod -Path '/admin/api/users/getuserroles' -Method Post -Body @{} }
+                UserRoles                = Get-AgentSettingResult -ResultName 'UserRoles' -ScriptBlock { Invoke-M365AdminRestMethod -Path '/admin/api/users/getuserroles' -Method Post -Body @{} }
             }
 
             return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.AgentSetting.Templates'

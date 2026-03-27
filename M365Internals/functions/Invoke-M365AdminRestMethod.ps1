@@ -1,4 +1,4 @@
-﻿function Invoke-M365RestMethod {
+﻿function Invoke-M365AdminRestMethod {
     <#
     .SYNOPSIS
         Invokes a REST API call to the Microsoft 365 admin center.
@@ -31,17 +31,17 @@
         The request body, if applicable.
 
     .EXAMPLE
-        Invoke-M365RestMethod -Path '/admin/api/coordinatedbootstrap/shellinfo'
+        Invoke-M365AdminRestMethod -Path '/admin/api/coordinatedbootstrap/shellinfo'
 
         Makes a GET request to the shell info endpoint by using the active admin portal session.
 
     .EXAMPLE
-        Invoke-M365RestMethod -Uri 'https://admin.cloud.microsoft/adminportal/home/ClassicModernAdminDataStream' -Headers @{ 'x-adminapp-request' = '/homepage' }
+        Invoke-M365AdminRestMethod -Uri 'https://admin.cloud.microsoft/adminportal/home/ClassicModernAdminDataStream' -Headers @{ 'x-adminapp-request' = '/homepage' }
 
         Makes a GET request to a fully qualified admin portal endpoint with an additional header.
 
     .EXAMPLE
-        Invoke-M365RestMethod -Path '/admin/api/example' -Method Post -Body @{ enabled = $true }
+        Invoke-M365AdminRestMethod -Path '/admin/api/example' -Method Post -Body @{ enabled = $true }
 
         Makes a POST request and serializes the body as JSON.
 

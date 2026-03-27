@@ -34,7 +34,7 @@
 
     process {
         function Get-EdgeDeviceSummary {
-            $deviceResult = Invoke-M365RestMethod -Path '/fd/msgraph/v1.0/devices?$count=true&$top=1' -Headers @{ ConsistencyLevel = 'eventual' }
+            $deviceResult = Invoke-M365AdminRestMethod -Path '/fd/msgraph/v1.0/devices?$count=true&$top=1' -Headers @{ ConsistencyLevel = 'eventual' }
             [pscustomobject]@{
                 Count  = $deviceResult.'@odata.count'
                 Sample = @($deviceResult.value)

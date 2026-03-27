@@ -1,7 +1,7 @@
 ﻿let cmdletMapping = [];
 const capturedRequests = [];
 const compiledMappingCache = new Map();
-const fallbackCmdlet = 'Invoke-M365RestMethod';
+const fallbackCmdlet = 'Invoke-M365AdminRestMethod';
 const trackedPrefixes = [
     '/admin/api/',
     '/adminportal/home/ClassicModernAdminDataStream',
@@ -386,7 +386,7 @@ function addDisclaimerToUI() {
     summary.appendChild(iconSpan);
 
     const titleSpan = document.createElement('span');
-    titleSpan.textContent = 'M365Ray maps captured admin.cloud.microsoft requests to M365Internals cmdlets when possible and falls back to Invoke-M365RestMethod otherwise. Verify generated code before running it.';
+    titleSpan.textContent = 'M365Ray maps captured admin.cloud.microsoft requests to M365Internals cmdlets when possible and falls back to Invoke-M365AdminRestMethod otherwise. Verify generated code before running it.';
     titleSpan.style.color = '#cccccc';
     titleSpan.style.fontSize = '11px';
     summary.appendChild(titleSpan);

@@ -22,7 +22,7 @@ USE AT YOUR OWN RISK. The authors and contributors are not responsible for any i
 
 The module follows the same high-level structure as XDRInternals, adapted for Microsoft 365 admin-center APIs:
 
-- `functions/` contains exported cmdlets such as `Connect-M365Portal`, `Connect-M365PortalBySoftwarePasskey`, the `Get-M365Admin*` family, and `Invoke-M365RestMethod`
+- `functions/` contains exported cmdlets such as `Connect-M365Portal`, `Connect-M365PortalBySoftwarePasskey`, the `Get-M365Admin*` family, and `Invoke-M365AdminRestMethod`
 - `internal/functions/` contains helper functions for cache management, session state, portal request handling, Graph proxy access, and software-passkey authentication
 - `internal/scripts/` contains support script space for future initialization or helper workflows
 - `M365Internals.psd1` is the module manifest
@@ -112,7 +112,7 @@ Current validation work has confirmed the public cmdlet surface live by using so
 | Get-M365AdminTenantSetting               | Retrieve tenant settings such as account SKUs, data location, and privacy state |
 | Get-M365AdminUserSetting                 | Retrieve current-user, role, product, dashboard-layout, and token-broker admin data |
 | Get-M365AdminVivaSetting                 | Retrieve Viva module, role, and Glint client lookup settings               |
-| Invoke-M365RestMethod                    | Invoke authenticated REST requests against `admin.cloud.microsoft`         |
+| Invoke-M365AdminRestMethod               | Invoke authenticated REST requests against `admin.cloud.microsoft`         |
 
 ## Installation
 
@@ -225,7 +225,7 @@ Get-M365AdminPartnerRelationship
 Get-M365AdminMicrosoftEdgeSetting
 
 # Invoke an authenticated admin-center request directly
-Invoke-M365RestMethod -Path '/admin/api/coordinatedbootstrap/shellinfo'
+Invoke-M365AdminRestMethod -Path '/admin/api/coordinatedbootstrap/shellinfo'
 ```
 
 ## License
