@@ -155,6 +155,8 @@ Known tenant-specific or optional sections should still be expected to return st
 | Get-M365AdminUserSetting                 | Retrieve current-user, role, product, dashboard-layout, and token-broker admin data |
 | Get-M365AdminVivaSetting                 | Retrieve Viva module, role, and Glint client lookup settings               |
 | Invoke-M365AdminRestMethod               | Invoke authenticated REST requests against `admin.cloud.microsoft`         |
+| Set-M365AdminAppSetting                  | Update an app settings payload by merging provided values into the current admin-center payload |
+| Set-M365AdminUserOwnedAppSetting         | Update Office Store access, trials, and auto-claim settings for user-owned apps and services |
 
 ## Installation
 
@@ -272,8 +274,14 @@ Get-M365AdminMicrosoft365InstallationOption
 # Retrieve Office Scripts settings
 Get-M365AdminAppSetting -Name OfficeScripts
 
+# Update Office Scripts settings and return the refreshed payload
+Set-M365AdminAppSetting -Name OfficeScripts -Settings @{ EnabledOption = 1 } -PassThru -Confirm:$false
+
 # Retrieve grouped user-owned apps and services settings
 Get-M365AdminUserOwnedAppSetting
+
+# Disable trials while leaving the other user-owned app settings unchanged
+Set-M365AdminUserOwnedAppSetting -LetUsersStartTrials $false -PassThru -Confirm:$false
 
 # Retrieve pay-as-you-go service settings
 Get-M365AdminPayAsYouGoService

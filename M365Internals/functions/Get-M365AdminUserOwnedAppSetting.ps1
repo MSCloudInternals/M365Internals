@@ -55,24 +55,16 @@
         switch ($Name) {
             'All' {
                 $result = [pscustomobject]@{
-                    StoreAccess           = Get-UserOwnedAppSettingResult -ResultName 'StoreAccess' -Path '/admin/api/settings/apps/store'
-                    InAppPurchasesAllowed = Get-UserOwnedAppSettingResult -ResultName 'InAppPurchasesAllowed' -Path '/admin/api/storesettings/iwpurchaseallowed'
-                    AutoClaimPolicy       = Get-UserOwnedAppSettingResult -ResultName 'AutoClaimPolicy' -Path '/fd/m365licensing/v1/policies/autoclaim'
+                    StoreAccess           = Get-UserOwnedAppSettingResult -ResultName 'StoreAccess' -Path (Get-M365AdminUserOwnedAppSettingPath -Name StoreAccess)
+                    InAppPurchasesAllowed = Get-UserOwnedAppSettingResult -ResultName 'InAppPurchasesAllowed' -Path (Get-M365AdminUserOwnedAppSettingPath -Name InAppPurchasesAllowed)
+                    AutoClaimPolicy       = Get-UserOwnedAppSettingResult -ResultName 'AutoClaimPolicy' -Path (Get-M365AdminUserOwnedAppSettingPath -Name AutoClaimPolicy)
                 }
 
                 return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.UserOwnedAppSetting'
             }
-            'StoreAccess' {
-                $path = '/admin/api/settings/apps/store'
-            }
-            'InAppPurchasesAllowed' {
-                $path = '/admin/api/storesettings/iwpurchaseallowed'
-            }
-            'AutoClaimPolicy' {
-                $path = '/fd/m365licensing/v1/policies/autoclaim'
-            }
         }
 
+        $path = Get-M365AdminUserOwnedAppSettingPath -Name $Name
         Get-UserOwnedAppSettingResult -ResultName $Name -Path $path
     }
 }
