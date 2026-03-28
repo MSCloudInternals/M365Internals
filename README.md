@@ -115,7 +115,7 @@ Known tenant-specific or optional sections should still be expected to return st
 | Get-M365AdminAgentOverview               | Retrieve Agents overview inventory, adoption, and risky-agent payloads     |
 | Get-M365AdminAgentSetting                | Retrieve Agents settings, sharing, templates, and user-access payloads     |
 | Get-M365AdminAgentTool                   | Retrieve Agents tools payloads such as the MCP server inventory            |
-| Get-M365AdminAppSetting                  | Retrieve app settings such as Bookings, Mail, Office Online, Store, and Whiteboard |
+| Get-M365AdminAppSetting                  | Retrieve app settings such as Bookings, Mail, Office Online, Office Scripts, Project, Store, and Whiteboard |
 | Get-M365AdminBrandCenterSetting          | Retrieve Brand center configuration and BrandGuide site URL data            |
 | Get-M365AdminBookingsSetting             | Retrieve the Bookings org settings flyout with friendly property names      |
 | Get-M365AdminCompanySetting              | Retrieve company settings such as profile, help desk, release track, and theme |
@@ -147,6 +147,7 @@ Known tenant-specific or optional sections should still be expected to return st
 | Get-M365AdminSearchSetting               | Retrieve search configuration, result types, QnA, news, and connector data |
 | Get-M365AdminSecuritySetting             | Retrieve security settings such as MFA, guest access, and security defaults |
 | Get-M365AdminSelfServicePurchaseSetting  | Retrieve self-service trials and purchases product policy data             |
+| Get-M365AdminUserOwnedAppSetting         | Retrieve user-owned apps and services settings such as store access, in-app purchases, and auto-claim policy |
 | Get-M365AdminService                     | Retrieve service configuration such as Modern Auth, Planner, and Viva data |
 | Get-M365AdminShellInfo                   | Retrieve coordinated bootstrap shell information from the admin center     |
 | Get-M365AdminTenantRelationship          | Retrieve multi-tenant organization and user sync relationship data         |
@@ -267,6 +268,12 @@ Get-M365AdminMicrosoft365GroupSetting
 
 # Retrieve Microsoft 365 installation options
 Get-M365AdminMicrosoft365InstallationOption
+
+# Retrieve Office Scripts settings
+Get-M365AdminAppSetting -Name OfficeScripts
+
+# Retrieve grouped user-owned apps and services settings
+Get-M365AdminUserOwnedAppSetting
 
 # Retrieve pay-as-you-go service settings
 Get-M365AdminPayAsYouGoService

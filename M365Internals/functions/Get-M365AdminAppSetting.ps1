@@ -25,7 +25,7 @@
     [CmdletBinding()]
     param (
         [Parameter(Mandatory)]
-        [ValidateSet('Bookings', 'Calendar', 'CalendarSharing', 'DirectorySynchronization', 'Dynamics365CustomerVoice', 'DynamicsCrm', 'EndUserCommunications', 'Learning', 'LoopPolicy', 'Mail', 'Microsoft365OnTheWeb', 'MicrosoftCommunicationToUsers', 'MicrosoftForms', 'MicrosoftGraphDataConnect', 'MicrosoftLoop', 'MicrosoftTeams', 'O365DataPlan', 'OfficeForms', 'OfficeFormsPro', 'OfficeOnline', 'SharePoint', 'SitesSharing', 'SkypeTeams', 'Store', 'Sway', 'UserOwnedAppsAndServices', 'UserSoftware', 'VivaLearning', 'Whiteboard')]
+        [ValidateSet('Bookings', 'Calendar', 'CalendarSharing', 'DirectorySynchronization', 'Dynamics365ConnectionGraph', 'Dynamics365CustomerVoice', 'Dynamics365SalesInsights', 'DynamicsCrm', 'EndUserCommunications', 'Learning', 'LoopPolicy', 'Mail', 'Microsoft365OnTheWeb', 'MicrosoftCommunicationToUsers', 'MicrosoftForms', 'MicrosoftGraphDataConnect', 'MicrosoftLoop', 'MicrosoftTeams', 'O365DataPlan', 'OfficeForms', 'OfficeFormsPro', 'OfficeOnline', 'OfficeScripts', 'Project', 'SharePoint', 'SitesSharing', 'SkypeTeams', 'Store', 'Sway', 'UserOwnedAppsAndServices', 'UserSoftware', 'VivaLearning', 'Whiteboard')]
         [string]$Name,
 
         [Parameter()]
@@ -38,7 +38,9 @@
             'Calendar' { '/admin/api/settings/apps/calendarsharing' }
             'CalendarSharing' { '/admin/api/settings/apps/calendarsharing' }
             'DirectorySynchronization' { '/admin/api/settings/apps/dirsync' }
+            'Dynamics365ConnectionGraph' { '/admin/api/settings/apps/dcg' }
             'Dynamics365CustomerVoice' { '/admin/api/settings/apps/officeformspro' }
+            'Dynamics365SalesInsights' { '/admin/api/settings/apps/dci' }
             'DynamicsCrm' { '/admin/api/settings/apps/dynamicscrm' }
             'EndUserCommunications' { '/admin/api/settings/apps/EndUserCommunications' }
             'MicrosoftCommunicationToUsers' { '/admin/api/settings/apps/EndUserCommunications' }
@@ -53,6 +55,8 @@
             'OfficeForms' { '/admin/api/settings/apps/officeforms' }
             'OfficeFormsPro' { '/admin/api/settings/apps/officeformspro' }
             'OfficeOnline' { '/admin/api/settings/apps/officeonline' }
+            'OfficeScripts' { '/admin/api/settings/apps/officescripts' }
+            'Project' { '/admin/api/settings/apps/projectonline' }
             'SharePoint' { '/admin/api/settings/apps/sitessharing' }
             'SitesSharing' { '/admin/api/settings/apps/sitessharing' }
             'MicrosoftTeams' { '/admin/api/settings/apps/skypeteams' }
