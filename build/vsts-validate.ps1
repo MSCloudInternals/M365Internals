@@ -1,2 +1,4 @@
 ﻿# Run internal pester tests
-& "$PSScriptRoot\..\tests\pester.ps1"
+$repositoryRoot = Join-Path $PSScriptRoot '..'
+$testScriptPath = Join-Path (Join-Path $repositoryRoot 'tests') 'pester.ps1'
+& $testScriptPath

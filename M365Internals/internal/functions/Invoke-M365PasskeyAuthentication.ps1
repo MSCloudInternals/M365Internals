@@ -34,7 +34,7 @@
         [Parameter(Mandatory)]
         [string]$KeyFilePath,
 
-        [string]$UserAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 Edg/142.0.0.0'
+        [string]$UserAgent = (Get-M365DefaultUserAgent)
     )
 
     process {
@@ -88,24 +88,6 @@
             }
 
             "https://login.microsoftonline.com$Url"
-        }
-
-        function Get-AdminBootstrapLoginUrl {
-            param (
-                [Parameter(Mandatory)]
-                [Microsoft.PowerShell.Commands.WebRequestSession]$Session,
-
-                [Parameter(Mandatory)]
-                [string]$Agent
-            )
-
-            $bootstrapResponse = Invoke-WebRequest -Uri 'https://admin.cloud.microsoft/' -WebSession $Session -UserAgent $Agent
-            $loginUrlMatch = [regex]::Match($bootstrapResponse.Content, "var loginURL = '(?<value>(?:\\.|[^'])+)'")
-            if (-not $loginUrlMatch.Success) {
-                throw 'Failed to determine the admin.cloud.microsoft sign-in URL.'
-            }
-
-            [System.Text.RegularExpressions.Regex]::Unescape($loginUrlMatch.Groups['value'].Value)
         }
 
         function Get-LoginPageConfig {
@@ -241,14 +223,7 @@
                 [string]$Agent
             )
 
-            $loginUrl = Get-AdminBootstrapLoginUrl -Session $Session -Agent $Agent
-            $loginResponse = Invoke-WebRequest -Uri $loginUrl -WebSession $Session -MaximumRedirection 5 -UserAgent $Agent
-            $loginConfig = Get-LoginPageConfig -Content $loginResponse.Content
-
-            [pscustomobject]@{
-                LoginUrl = $loginUrl
-                Config   = $loginConfig
-            }
+            Get-M365AdminLoginState -WebSession $Session -UserAgent $Agent
         }
 
         function Invoke-GetCredentialTypeRequest {
@@ -297,7 +272,7 @@
                 hpgrequestid        = ([guid]::NewGuid().Guid)
             }
 
-            $null = Invoke-RestMethod -Method Post -Uri (Resolve-EstsUrl -Url $config.urlGetCredentialType) -Headers $requestHeaders -ContentType 'application/json; charset=UTF-8' -Body $requestBody -WebSession $Session -UserAgent $Agent
+            $null = Invoke-RestMethod -Method Post -Uri (Resolve-M365EstsUrl -Url $config.urlGetCredentialType) -Headers $requestHeaders -ContentType 'application/json; charset=UTF-8' -Body $requestBody -WebSession $Session -UserAgent $Agent
         }
 
         function Get-EncodedCredentialList {
@@ -333,25 +308,25 @@
 
             $config = $LoginState.Config
             $resumeUrl = if ($config.PSObject.Properties['urlResume'] -and $config.urlResume) {
-                Resolve-EstsUrl -Url $config.urlResume
+                Resolve-M365EstsUrl -Url $config.urlResume
             }
             else {
                 'https://login.microsoftonline.com/common/resume?ctx=' + [uri]::EscapeDataString([string]$config.sCtx)
             }
 
             $cancelUrl = if ($config.PSObject.Properties['urlLogin'] -and $config.urlLogin) {
-                Resolve-EstsUrl -Url $config.urlLogin
+                Resolve-M365EstsUrl -Url $config.urlLogin
             }
             else {
-                Resolve-EstsUrl -Url $config.urlCancel
+                Resolve-M365EstsUrl -Url $config.urlCancel
             }
 
             $formFields = [ordered]@{
                 allowedIdentities             = 2
                 canary                        = $config.sFT
                 serverChallenge               = $config.sFT
-                postBackUrl                   = Resolve-EstsUrl -Url $config.urlPost
-                postBackUrlAad                = if ($config.PSObject.Properties['urlPostAad']) { Resolve-EstsUrl -Url $config.urlPostAad } else { Resolve-EstsUrl -Url $config.urlPost }
+                postBackUrl                   = Resolve-M365EstsUrl -Url $config.urlPost
+                postBackUrlAad                = if ($config.PSObject.Properties['urlPostAad']) { Resolve-M365EstsUrl -Url $config.urlPostAad } else { Resolve-M365EstsUrl -Url $config.urlPost }
                 cancelUrl                     = $cancelUrl
                 resumeUrl                     = $resumeUrl
                 correlationId                 = $config.correlationId
@@ -364,7 +339,7 @@
             }
 
             $fidoResponse = Invoke-WebRequest -Method Post -Uri 'https://login.microsoft.com/common/fido/get?uiflavor=Web' -Body $formFields -ContentType 'application/x-www-form-urlencoded' -WebSession $Session -UserAgent $Agent -Headers @{ Origin = 'https://login.microsoftonline.com'; Referer = 'https://login.microsoftonline.com/' }
-            $fidoConfig = Get-LoginPageConfig -Content $fidoResponse.Content
+            $fidoConfig = Get-M365LoginPageConfig -Content $fidoResponse.Content
 
             [pscustomobject]@{
                 Config   = $fidoConfig
@@ -457,7 +432,7 @@
             )
 
             $config = $FidoState.Config
-            $submitResponse = Invoke-WebRequest -Method Post -Uri (Resolve-EstsUrl -Url $config.urlPost) -Body ([ordered]@{
+            $submitResponse = Invoke-WebRequest -Method Post -Uri (Resolve-M365EstsUrl -Url $config.urlPost) -Body ([ordered]@{
                 type         = 23
                 ps           = 23
                 assertion    = $Assertion
@@ -481,124 +456,6 @@
                 HiddenFields = $submitFields
                 FormAction   = $submitAction
             }
-        }
-
-        function Complete-AdminPortalSignIn {
-            param (
-                [Parameter(Mandatory)]
-                [Microsoft.PowerShell.Commands.WebRequestSession]$Session,
-
-                [Parameter(Mandatory)]
-                [string]$Agent,
-
-                [hashtable]$InitialHiddenFields,
-
-                [string]$InitialFormAction
-            )
-
-            $requiredFields = 'code', 'id_token', 'state', 'session_state'
-            $hiddenFields = if ($InitialHiddenFields) { $InitialHiddenFields } else { @{} }
-            $missingFields = @($requiredFields | Where-Object { -not $hiddenFields.ContainsKey($_) })
-
-            if ($missingFields.Count -eq 0) {
-                $landingUri = if ([string]::IsNullOrWhiteSpace($InitialFormAction)) { 'https://admin.cloud.microsoft/landing' } else { $InitialFormAction }
-                $null = Invoke-WebRequest -MaximumRedirection 20 -WebSession $Session -Method Post -Uri $landingUri -Body $hiddenFields -UserAgent $Agent
-                return (Invoke-M365PortalPostLandingBootstrap -WebSession $Session -UserAgent $Agent)
-            }
-
-            $portalBootstrapResponse = $null
-            try {
-                $portalBootstrapResponse = Invoke-WebRequest -MaximumRedirection 0 -WebSession $Session -Method Get -Uri 'https://admin.cloud.microsoft/login?ru=%2Fadminportal%3F' -UserAgent $Agent -ErrorAction Stop
-            }
-            catch {
-                if (-not $_.Exception.Response) {
-                    throw
-                }
-
-                $portalBootstrapResponse = $_.Exception.Response
-            }
-
-            $portalBootstrapContent = if ($portalBootstrapResponse.PSObject.Properties['Content']) {
-                [string]$portalBootstrapResponse.Content
-            }
-            else {
-                $null
-            }
-
-            $hiddenFields = @{}
-            if ($portalBootstrapContent) {
-                $hiddenFields = Get-HiddenFormFieldMap -Html $portalBootstrapContent
-            }
-
-            $missingFields = @($requiredFields | Where-Object { -not $hiddenFields.ContainsKey($_) })
-            if ($missingFields.Count -gt 0) {
-                $locationHeader = $null
-                if ($portalBootstrapResponse.Headers) {
-                    $locationHeader = $portalBootstrapResponse.Headers.Location
-                    if (-not $locationHeader -and $portalBootstrapResponse.Headers['Location']) {
-                        $locationHeader = $portalBootstrapResponse.Headers['Location']
-                    }
-                }
-
-                $authorizeUrl = if ($locationHeader -is [string]) {
-                    $locationHeader
-                }
-                elseif ($locationHeader) {
-                    [string](@($locationHeader)[0])
-                }
-                else {
-                    $null
-                }
-
-                if (-not [string]::IsNullOrWhiteSpace($authorizeUrl) -and $authorizeUrl -notmatch '^https?://') {
-                    $authorizeUrl = 'https://login.microsoftonline.com' + $authorizeUrl
-                }
-
-                if ([string]::IsNullOrWhiteSpace($authorizeUrl) -and $portalBootstrapContent) {
-                    $portalConfig = Get-LoginPageConfig -Content $portalBootstrapContent
-                    $tenantSegment = if ($portalConfig.sTenantId) { [string]$portalConfig.sTenantId } else { 'common' }
-                    $authorizeUrl = $portalConfig.urlTenantedEndpointFormat.Replace('{0}', $tenantSegment)
-                }
-
-                if ([string]::IsNullOrWhiteSpace($authorizeUrl)) {
-                    throw 'Failed to determine the admin portal authorize URL.'
-                }
-
-                $authorizeResponse = Invoke-WebRequest -MaximumRedirection 20 -WebSession $Session -Method Get -Uri $authorizeUrl -UserAgent $Agent
-                $hiddenFields = Get-HiddenFormFieldMap -Html $authorizeResponse.Content
-                $missingFields = @($requiredFields | Where-Object { -not $hiddenFields.ContainsKey($_) })
-                if ($missingFields.Count -gt 0) {
-                    $authorizeConfig = $null
-                    if ($authorizeResponse.Content -match '\$Config\s*=\s*\{') {
-                        try {
-                            $authorizeConfig = Get-LoginPageConfig -Content $authorizeResponse.Content
-                        }
-                        catch {
-                            Write-Verbose 'Could not parse the authorize response page config while diagnosing the passkey handoff.'
-                        }
-                    }
-
-                    $responseTitle = if ($authorizeResponse.Content) { Get-HtmlTitle -Html $authorizeResponse.Content } else { $null }
-                    $diagnosticParts = @("Missing response fields: $($missingFields -join ', ')")
-                    if ($responseTitle) {
-                        $diagnosticParts += "Title: $responseTitle"
-                    }
-                    if ($authorizeConfig -and $authorizeConfig.PSObject.Properties['sErrorCode'] -and $authorizeConfig.sErrorCode) {
-                        $diagnosticParts += "sErrorCode: $($authorizeConfig.sErrorCode)"
-                    }
-                    if ($authorizeConfig -and $authorizeConfig.PSObject.Properties['arrSessions'] -and $authorizeConfig.arrSessions) {
-                        $diagnosticParts += "arrSessions: $(@($authorizeConfig.arrSessions).Count)"
-                    }
-                    if ($authorizeConfig -and $authorizeConfig.PSObject.Properties['sTenantId'] -and $authorizeConfig.sTenantId) {
-                        $diagnosticParts += "sTenantId: $($authorizeConfig.sTenantId)"
-                    }
-
-                    throw "Failed to complete the admin portal authorization handoff. $($diagnosticParts -join '; ')."
-                }
-            }
-
-            $null = Invoke-WebRequest -MaximumRedirection 20 -WebSession $Session -Method Post -Uri 'https://admin.cloud.microsoft/landing' -Body $hiddenFields -UserAgent $Agent
-            Invoke-M365PortalPostLandingBootstrap -WebSession $Session -UserAgent $Agent
         }
 
         if ($PSVersionTable.PSVersion.Major -lt 7) {
@@ -649,6 +506,6 @@
 
         $assertion = Get-AssertionPayload -PasskeyCredential $credential -Challenge $fidoState.Config.sFidoChallenge -SignatureCounter $signatureCounter
         $assertionResult = Submit-FidoAssertion -Session $webSession -FidoState $fidoState -Assertion $assertion -Agent $UserAgent
-        Complete-AdminPortalSignIn -Session $webSession -Agent $UserAgent -InitialHiddenFields $assertionResult.HiddenFields -InitialFormAction $assertionResult.FormAction
+        Complete-M365AdminPortalSignIn -WebSession $webSession -UserAgent $UserAgent -InitialHiddenFields $assertionResult.HiddenFields -InitialFormAction $assertionResult.FormAction
     }
 }
