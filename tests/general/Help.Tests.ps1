@@ -36,20 +36,24 @@ param (
 	$SkipTest,
 	
 	[string[]]
-	$CommandPath = @("$global:testroot\..\M365Internals\functions", "$global:testroot\..\M365Internals\internal\functions"),
+	$CommandPath = @(
+		(Join-Path (Join-Path (Join-Path $global:testroot '..') 'M365Internals') 'functions'),
+		(Join-Path (Join-Path (Join-Path (Join-Path $global:testroot '..') 'M365Internals') 'internal') 'functions')
+	),
 	
 	[string]
 	$ModuleName = "M365Internals",
 	
 	[string]
-	$ExceptionsFile = "$global:testroot\general\Help.Exceptions.ps1"
+	$ExceptionsFile = (Join-Path (Join-Path $global:testroot 'general') 'Help.Exceptions.ps1')
 )
 if ($SkipTest) { return }
 . $ExceptionsFile
 
+$moduleRoot = Join-Path (Join-Path $global:testroot '..') 'M365Internals'
 $CommandPath = @(
-	"$global:testroot\..\M365Internals\functions"
-	"$global:testroot\..\M365Internals\internal\functions"
+	(Join-Path $moduleRoot 'functions')
+	(Join-Path (Join-Path $moduleRoot 'internal') 'functions')
 )
 
 $includedNames = foreach ($path in $CommandPath) { (Get-ChildItem $path -Recurse -File | Where-Object Name -Like "*.ps1").BaseName }

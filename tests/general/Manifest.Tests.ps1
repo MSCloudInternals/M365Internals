@@ -1,6 +1,6 @@
 ﻿Describe "Validating the module manifest" {
-	$moduleRoot = (Resolve-Path "$global:testroot\..\M365Internals").Path
-	$manifest = Import-PowerShellDataFile "$moduleRoot\M365Internals.psd1"
+	$moduleRoot = (Resolve-Path (Join-Path (Join-Path $global:testroot '..') 'M365Internals')).Path
+	$manifest = Import-PowerShellDataFile (Join-Path $moduleRoot 'M365Internals.psd1')
 	Context "Basic resources validation" {
 		It "Exports all functions in the public folder" -TestCases @{ moduleRoot = $moduleRoot; manifest = $manifest } {
 			$publicFunctionPath = Join-Path $moduleRoot 'functions'

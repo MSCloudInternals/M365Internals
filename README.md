@@ -109,8 +109,14 @@ Known tenant-specific or optional sections should still be expected to return st
 
 | Cmdlet                                   | Description                                                                |
 | ---------------------------------------- | -------------------------------------------------------------------------- |
-| Connect-M365Portal                       | Authenticate to the Microsoft 365 admin center by using cookies or a session |
-| Connect-M365PortalBySoftwarePasskey      | Authenticate to the Microsoft 365 admin center by using a local software passkey |
+| Connect-M365Portal                       | Connect to the Microsoft 365 admin center by using cookies, existing sessions, or built-in auth flows |
+| Connect-M365PortalByBrowser              | Connect to the Microsoft 365 admin center by using an interactive browser sign-in |
+| Connect-M365PortalByCredential           | Connect to the Microsoft 365 admin center by using username/password and optional MFA |
+| Connect-M365PortalByEstsCookie           | Connect to the Microsoft 365 admin center by exchanging an ESTS authentication cookie |
+| Connect-M365PortalByPhoneSignIn          | Connect to the Microsoft 365 admin center by using Microsoft Authenticator phone sign-in |
+| Connect-M365PortalBySoftwarePasskey      | Connect to the Microsoft 365 admin center by using a local software passkey |
+| Connect-M365PortalBySSO                  | Connect to the Microsoft 365 admin center by using browser-based single sign-on |
+| Connect-M365PortalByTemporaryAccessPass  | Connect to the Microsoft 365 admin center by using a Temporary Access Pass |
 | Get-M365AdminAgent                       | Retrieve the Agents > All agents route-family payloads                     |
 | Get-M365AdminAgentOverview               | Retrieve Agents overview inventory, adoption, and risky-agent payloads     |
 | Get-M365AdminAgentSetting                | Retrieve Agents settings, sharing, templates, and user-access payloads     |
@@ -181,14 +187,34 @@ Import-Module .\M365Internals\M365Internals.psd1
 
 ## Usage
 
-### Connect to the Microsoft 365 admin center
+### Authentication examples
+
+- `Connect-M365Portal` defaults to the interactive browser sign-in flow for interactive use.
+- `Connect-M365PortalBySSO` currently supports Windows only for now.
 
 ```powershell
-# Connect by exchanging an ESTSAUTHPERSISTENT cookie
+# Preferred: connect by launching the interactive browser sign-in flow
+Connect-M365Portal
+
+# Connect by exchanging an ESTS authentication cookie
 Connect-M365Portal -EstsAuthCookieValue $estsCookie
-```
 
-```powershell
+# Connect by using Entra credentials with automatic Authenticator OTP handling
+Connect-M365Portal -Credential (Get-Credential) -TotpSecret 'JBSWY3DPEHPK3PXP'
+
+# Connect by using a Temporary Access Pass
+$tap = ConvertTo-SecureString 'ABC12345' -AsPlainText -Force
+Connect-M365PortalByTemporaryAccessPass -Username 'admin@contoso.com' -TAP $tap
+
+# Connect by using Microsoft Authenticator phone sign-in
+Connect-M365PortalByPhoneSignIn -Username 'admin@contoso.com'
+
+# Connect by using an interactive browser session
+Connect-M365PortalByBrowser -PrivateSession
+
+# Connect by using browser-based SSO on Windows for now
+Connect-M365PortalBySSO -Visible
+
 # Connect by using a local software passkey file
 Connect-M365PortalBySoftwarePasskey -KeyFilePath '.\admin.passkey'
 ```

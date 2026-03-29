@@ -18,16 +18,21 @@ Write-Host "Importing Module"
 
 $global:testroot = $PSScriptRoot
 $global:__pester_data = @{ }
+$repositoryRoot = Join-Path $PSScriptRoot '..'
+$moduleRoot = Join-Path $repositoryRoot 'M365Internals'
+$testResultsPath = Join-Path $repositoryRoot 'TestResults'
+$generalTestPath = Join-Path $PSScriptRoot 'general'
+$functionTestPath = Join-Path $PSScriptRoot 'functions'
 
 Remove-Module M365Internals -ErrorAction Ignore
-Import-Module "$PSScriptRoot\..\M365Internals\M365Internals.psd1"
-Import-Module "$PSScriptRoot\..\M365Internals\M365Internals.psm1" -Force
+Import-Module (Join-Path $moduleRoot 'M365Internals.psd1')
+Import-Module (Join-Path $moduleRoot 'M365Internals.psm1') -Force
 
 # Need to import explicitly so we can use the configuration class
 Import-Module Pester
 
 Write-Host  "Creating test result folder"
-$null = New-Item -Path "$PSScriptRoot\.." -Name TestResults -ItemType Directory -Force
+$null = New-Item -Path $testResultsPath -ItemType Directory -Force
 
 $totalFailed = 0
 $totalRun = 0
@@ -40,13 +45,13 @@ $config.TestResult.Enabled = $true
 if ($TestGeneral)
 {
 	Write-Host  "Modules imported, proceeding with general tests"
-	foreach ($file in (Get-ChildItem "$PSScriptRoot\general" | Where-Object Name -like "*.Tests.ps1"))
+	foreach ($file in (Get-ChildItem $generalTestPath | Where-Object Name -like "*.Tests.ps1"))
 	{
 		if ($file.Name -notlike $Include) { continue }
 		if ($file.Name -like $Exclude) { continue }
 
 		Write-Host  "  Executing $($file.Name)"
-		$config.TestResult.OutputPath = Join-Path "$PSScriptRoot\..\TestResults" "TEST-$($file.BaseName).xml"
+		$config.TestResult.OutputPath = Join-Path $testResultsPath "TEST-$($file.BaseName).xml"
 		$config.Run.Path = $file.FullName
 		$config.Run.PassThru = $true
 		$config.Output.Verbosity = $Output
@@ -74,13 +79,13 @@ $global:__pester_data.ScriptAnalyzer | Out-Host
 if ($TestFunctions)
 {
 	Write-Host "Proceeding with individual tests"
-	foreach ($file in (Get-ChildItem "$PSScriptRoot\functions" -Recurse -File | Where-Object Name -like "*Tests.ps1"))
+	foreach ($file in (Get-ChildItem $functionTestPath -Recurse -File | Where-Object Name -like "*Tests.ps1"))
 	{
 		if ($file.Name -notlike $Include) { continue }
 		if ($file.Name -like $Exclude) { continue }
 		
 		Write-Host "  Executing $($file.Name)"
-		$config.TestResult.OutputPath = Join-Path "$PSScriptRoot\..\TestResults" "TEST-$($file.BaseName).xml"
+		$config.TestResult.OutputPath = Join-Path $testResultsPath "TEST-$($file.BaseName).xml"
 		$config.Run.Path = $file.FullName
 		$config.Run.PassThru = $true
 		$config.Output.Verbosity = $Output
