@@ -5,7 +5,7 @@
         Mock -ModuleName M365Internals Clear-M365Cache { }
         Mock -ModuleName M365Internals Get-M365AdminUserOwnedAppSetting {
             [pscustomobject]@{
-                StoreAccess           = [pscustomobject]@{ Enabled = $true }
+                StoreAccess           = $true
                 InAppPurchasesAllowed = $false
                 AutoClaimPolicy       = [pscustomobject]@{ tenantPolicyValue = 'Disabled' }
             }
@@ -45,7 +45,7 @@
             $Force.IsPresent
         }
 
-        $result.StoreAccess.Enabled | Should -Be $true
+        $result.StoreAccess | Should -Be $true
         $result.InAppPurchasesAllowed | Should -Be $false
     }
 

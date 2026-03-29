@@ -22,9 +22,16 @@
         $result = Get-M365AdminUserOwnedAppSetting
 
         $result.PSObject.TypeNames | Should -Contain 'M365Admin.UserOwnedAppSetting'
-        $result.StoreAccess.Enabled | Should -Be $true
+        $result.StoreAccess | Should -Be $true
         $result.InAppPurchasesAllowed | Should -Be $true
         $result.AutoClaimPolicy.tenantPolicyValue | Should -Be 'Enabled'
+    }
+
+    It 'normalizes StoreAccess to a Boolean for direct reads' {
+        $result = Get-M365AdminUserOwnedAppSetting -Name StoreAccess
+
+        $result | Should -BeOfType ([bool])
+        $result | Should -Be $true
     }
 
     It 'maps <Name> to <ExpectedPath>' -TestCases @(

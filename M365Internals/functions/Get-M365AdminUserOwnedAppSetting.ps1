@@ -52,12 +52,40 @@
             }
         }
 
+        function Convert-UserOwnedAppSettingResult {
+            param (
+                [Parameter(Mandatory)]
+                [string]$ResultName,
+
+                [Parameter(Mandatory)]
+                $ResultValue
+            )
+
+            if ($ResultValue.PSObject.TypeNames -contains 'M365Admin.UnavailableResult') {
+                return $ResultValue
+            }
+
+            switch ($ResultName) {
+                'StoreAccess' {
+                    if ($ResultValue -is [bool]) {
+                        return [bool]$ResultValue
+                    }
+
+                    if ($ResultValue.PSObject.Properties.Name -contains 'Enabled') {
+                        return [bool]$ResultValue.Enabled
+                    }
+                }
+            }
+
+            return $ResultValue
+        }
+
         switch ($Name) {
             'All' {
                 $result = [pscustomobject]@{
-                    StoreAccess           = Get-UserOwnedAppSettingResult -ResultName 'StoreAccess' -Path (Get-M365AdminUserOwnedAppSettingPath -Name StoreAccess)
-                    InAppPurchasesAllowed = Get-UserOwnedAppSettingResult -ResultName 'InAppPurchasesAllowed' -Path (Get-M365AdminUserOwnedAppSettingPath -Name InAppPurchasesAllowed)
-                    AutoClaimPolicy       = Get-UserOwnedAppSettingResult -ResultName 'AutoClaimPolicy' -Path (Get-M365AdminUserOwnedAppSettingPath -Name AutoClaimPolicy)
+                    StoreAccess           = Convert-UserOwnedAppSettingResult -ResultName 'StoreAccess' -ResultValue (Get-UserOwnedAppSettingResult -ResultName 'StoreAccess' -Path (Get-M365AdminUserOwnedAppSettingPath -Name StoreAccess))
+                    InAppPurchasesAllowed = Convert-UserOwnedAppSettingResult -ResultName 'InAppPurchasesAllowed' -ResultValue (Get-UserOwnedAppSettingResult -ResultName 'InAppPurchasesAllowed' -Path (Get-M365AdminUserOwnedAppSettingPath -Name InAppPurchasesAllowed))
+                    AutoClaimPolicy       = Convert-UserOwnedAppSettingResult -ResultName 'AutoClaimPolicy' -ResultValue (Get-UserOwnedAppSettingResult -ResultName 'AutoClaimPolicy' -Path (Get-M365AdminUserOwnedAppSettingPath -Name AutoClaimPolicy))
                 }
 
                 return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.UserOwnedAppSetting'
@@ -65,6 +93,6 @@
         }
 
         $path = Get-M365AdminUserOwnedAppSettingPath -Name $Name
-        Get-UserOwnedAppSettingResult -ResultName $Name -Path $path
+        Convert-UserOwnedAppSettingResult -ResultName $Name -ResultValue (Get-UserOwnedAppSettingResult -ResultName $Name -Path $path)
     }
 }

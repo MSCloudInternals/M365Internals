@@ -56,6 +56,18 @@
         Assert-MockCalled Get-M365AdminAppSetting -ModuleName M365Internals -Exactly 2
     }
 
+    It 'wraps primitive Boolean payloads in a writable body' {
+        Mock -ModuleName M365Internals Get-M365AdminAppSetting { $true }
+
+        Set-M365AdminAppSetting -Name Store -Settings @{ Enabled = $false } -Confirm:$false | Out-Null
+
+        Assert-MockCalled Invoke-M365AdminRestMethod -ModuleName M365Internals -Exactly 1 -ParameterFilter {
+            $Path -eq '/admin/api/settings/apps/store' -and
+            $Method -eq 'Post' -and
+            $Body.Enabled -eq $false
+        }
+    }
+
     It 'throws when the current payload is unavailable' {
         $unavailableResult = [pscustomobject]@{
             Name        = 'Bookings'
