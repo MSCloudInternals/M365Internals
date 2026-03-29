@@ -297,11 +297,11 @@ Get-M365AdminMicrosoft365GroupSetting
 # Retrieve Microsoft 365 installation options
 Get-M365AdminMicrosoft365InstallationOption
 
-# Retrieve Office Scripts settings
-Get-M365AdminAppSetting -Name OfficeScripts
+# Retrieve Project settings
+Get-M365AdminAppSetting -Name Project
 
-# Update Office Scripts settings and return the refreshed payload
-Set-M365AdminAppSetting -Name OfficeScripts -Settings @{ EnabledOption = 1 } -PassThru -Confirm:$false
+# Update Project settings and return the refreshed payload
+Set-M365AdminAppSetting -Name Project -Settings @{ IsRoadmapEnabled = $false } -PassThru -Confirm:$false
 
 # Retrieve grouped user-owned apps and services settings
 Get-M365AdminUserOwnedAppSetting

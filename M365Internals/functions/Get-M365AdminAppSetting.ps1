@@ -33,8 +33,34 @@
     )
 
     process {
-        $path = Get-M365AdminAppSettingPath -Name $Name
+        $bypassCache = $Force.IsPresent
 
-        Get-M365AdminPortalData -Path $path -CacheKey "M365AdminAppSetting:$Name" -Force:$Force
+        function Get-AppSettingResult {
+            param (
+                [Parameter(Mandatory)]
+                [string]$ResultName,
+
+                [Parameter(Mandatory)]
+                [string]$Path
+            )
+
+            try {
+                return Get-M365AdminPortalData -Path $Path -CacheKey "M365AdminAppSetting:$ResultName" -Force:$bypassCache
+            }
+            catch {
+                $fallbackNames = @('Dynamics365ConnectionGraph', 'Dynamics365SalesInsights', 'OfficeScripts')
+                $isKnownUnavailableSurface = $fallbackNames -contains $ResultName
+                $isUnavailableStatus = $_.Exception.Message -match '400 \(Bad Request\)|404 \(Not Found\)'
+
+                if ($isKnownUnavailableSurface -and $isUnavailableStatus) {
+                    return New-M365AdminUnavailableResult -Name $ResultName -Description 'This app setting endpoint currently does not return a usable payload in the current tenant.' -Reason 'TenantSpecific' -ErrorMessage $_.Exception.Message
+                }
+
+                throw
+            }
+        }
+
+        $path = Get-M365AdminAppSettingPath -Name $Name
+        Get-AppSettingResult -ResultName $Name -Path $path
     }
 }

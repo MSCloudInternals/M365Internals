@@ -22,4 +22,32 @@
             $Path -eq $ExpectedPath -and $CacheKey -eq $expectedCacheKey
         }
     }
+
+    It 'wraps known unavailable live surfaces in standardized objects' -TestCases @(
+        @{ Name = 'OfficeScripts'; ErrorMessage = 'Response status code does not indicate success: 400 (Bad Request).' }
+        @{ Name = 'Dynamics365ConnectionGraph'; ErrorMessage = 'Response status code does not indicate success: 404 (Not Found).' }
+        @{ Name = 'Dynamics365SalesInsights'; ErrorMessage = 'Response status code does not indicate success: 400 (Bad Request).' }
+    ) {
+        param (
+            $Name,
+            $ErrorMessage
+        )
+
+        Mock -ModuleName M365Internals Get-M365AdminPortalData {
+            throw $ErrorMessage
+        }
+
+        $result = Get-M365AdminAppSetting -Name $Name
+
+        $result.PSObject.TypeNames | Should -Contain 'M365Admin.UnavailableResult'
+        $result.Name | Should -Be $Name
+    }
+
+    It 'continues to throw for non-fallback app-setting errors' {
+        Mock -ModuleName M365Internals Get-M365AdminPortalData {
+            throw 'Response status code does not indicate success: 404 (Not Found).'
+        }
+
+        { Get-M365AdminAppSetting -Name Project } | Should -Throw 'Response status code does not indicate success: 404 (Not Found).'
+    }
 }
