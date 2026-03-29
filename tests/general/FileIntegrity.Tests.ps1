@@ -1,6 +1,19 @@
-﻿$moduleRoot = (Resolve-Path "$global:testroot\..").Path
+﻿$moduleRoot = (Resolve-Path (Join-Path $global:testroot '..')).Path
+$testRoot = Join-Path $moduleRoot 'tests'
+$relativePathTrimChars = [char[]]@([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar)
 
-. "$global:testroot\general\FileIntegrity.Exceptions.ps1"
+. (Join-Path (Join-Path $global:testroot 'general') 'FileIntegrity.Exceptions.ps1')
+
+function Get-RelativeModulePath {
+	[CmdletBinding()]
+	param(
+		[Parameter(Mandatory)]
+		[string]
+		$Path
+	)
+
+	return $Path.Substring($moduleRoot.Length).TrimStart($relativePathTrimChars)
+}
 
 Describe "Verifying integrity of module files" {
 	BeforeAll {
@@ -42,11 +55,11 @@ Describe "Verifying integrity of module files" {
 	}
 
 	Context "Validating PS1 Script files" {
-		$allFiles = Get-ChildItem -Path $moduleRoot -Recurse | Where-Object Name -like "*.ps1" | Where-Object FullName -NotLike "$moduleRoot\tests\*"
+		$allFiles = Get-ChildItem -Path $moduleRoot -Recurse | Where-Object Name -like "*.ps1" | Where-Object { $_.FullName -notlike "$testRoot*" }
 		
 		foreach ($file in $allFiles)
 		{
-			$name = $file.FullName.Replace("$moduleRoot\", '')
+			$name = Get-RelativeModulePath -Path $file.FullName
 			
 			It "[$name] Should have UTF8 encoding with Byte Order Mark" -TestCases @{ file = $file } {
 				Get-FileEncoding -Path $file.FullName | Should -Be 'UTF8 BOM'
@@ -77,11 +90,11 @@ Describe "Verifying integrity of module files" {
 	}
 	
 	Context "Validating help.txt help files" {
-		$allFiles = Get-ChildItem -Path $moduleRoot -Recurse | Where-Object Name -like "*.help.txt" | Where-Object FullName -NotLike "$moduleRoot\tests\*"
+		$allFiles = Get-ChildItem -Path $moduleRoot -Recurse | Where-Object Name -like "*.help.txt" | Where-Object { $_.FullName -notlike "$testRoot*" }
 		
 		foreach ($file in $allFiles)
 		{
-			$name = $file.FullName.Replace("$moduleRoot\", '')
+			$name = Get-RelativeModulePath -Path $file.FullName
 			
 			It "[$name] Should have UTF8 encoding" -TestCases @{ file = $file } {
 				Get-FileEncoding -Path $file.FullName | Should -Be 'UTF8 BOM'

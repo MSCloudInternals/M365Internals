@@ -4,7 +4,10 @@ Param (
 	$SkipTest,
 
 	[string[]]
-	$CommandPath = @("$global:testroot\..\M365Internals\functions", "$global:testroot\..\M365Internals\internal\functions")
+	$CommandPath = @(
+		(Join-Path (Join-Path (Join-Path $global:testroot '..') 'M365Internals') 'functions'),
+		(Join-Path (Join-Path (Join-Path (Join-Path $global:testroot '..') 'M365Internals') 'internal') 'functions')
+	)
 )
 
 BeforeDiscovery {

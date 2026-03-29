@@ -716,7 +716,7 @@ function Invoke-M365PhoneSignInAuthentication {
         This is an internal function used by Connect-M365PortalByPhoneSignIn.
 
     .PARAMETER Username
-        Optional username to display to the user while they complete the sign-in.
+        Username to display to the user while they complete the sign-in. This parameter is required.
 
     .PARAMETER TimeoutSeconds
         Maximum time to wait for the phone sign-in to complete.

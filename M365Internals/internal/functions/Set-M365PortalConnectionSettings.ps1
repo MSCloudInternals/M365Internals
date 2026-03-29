@@ -303,8 +303,8 @@
         $connection = [System.Management.Automation.PSObject]::new()
         $connection | Add-Member -NotePropertyName PortalHost -NotePropertyValue 'admin.cloud.microsoft'
         $connection | Add-Member -NotePropertyName TenantId -NotePropertyValue $resolvedTenantId
-    # Keep both property names: Username is canonical, while UserId preserves the
-    # historical field used by existing callers and the default connection view.
+        # Keep both property names: Username is canonical, while UserId preserves the
+        # historical field used by existing callers and the default connection view.
         $connection | Add-Member -NotePropertyName Username -NotePropertyValue $resolvedUsername
         $connection | Add-Member -NotePropertyName UserId -NotePropertyValue $resolvedUsername
         $connection | Add-Member -NotePropertyName SessionId -NotePropertyValue $cookieValues['s.SessID']

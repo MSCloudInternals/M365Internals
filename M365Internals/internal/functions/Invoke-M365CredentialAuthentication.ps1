@@ -671,7 +671,7 @@ function Invoke-M365CredentialAuthentication {
         if (-not $supportedMethods) {
             $offeredMethods = @($authState.arrUserProofs | ForEach-Object authMethodId | Sort-Object -Unique)
             $offeredMethodsText = if ($offeredMethods) { $offeredMethods -join ', ' } else { 'none returned by service' }
-            throw "No supported inline MFA methods were offered for this sign-in. Offered methods: $offeredMethodsText. Use Connect-M365BySoftwarePasskey for passkey-based methods."
+            throw "No supported inline MFA methods were offered for this sign-in. Offered methods: $offeredMethodsText. Use Connect-M365PortalBySoftwarePasskey for passkey-based methods."
         }
 
         $selectedMethod = Select-M365MfaMethod -SupportedMethods $supportedMethods -PreferredMethod $MfaMethod -TotpSecret $TotpSecret
@@ -690,7 +690,7 @@ function Invoke-M365CredentialAuthentication {
             'PhoneAppOTP' {
                 if ($TotpSecret) {
                     $verificationCode = Get-M365TotpCode -Secret $TotpSecret
-                    Write-Verbose "Computed TOTP code: $verificationCode"
+                    Write-Verbose 'Computed TOTP code for PhoneAppOTP method.'
                 } else {
                     Write-Host "Enter the code from your authenticator app:"
                     $verificationCode = Read-Host "Code"
