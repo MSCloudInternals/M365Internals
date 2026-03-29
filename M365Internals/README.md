@@ -265,4 +265,4 @@ Invoke-M365AdminRestMethod -Path '/admin/api/coordinatedbootstrap/shellinfo'
 
 ## License
 
-See LICENSE file for details.
+See the LICENSE file for more details.

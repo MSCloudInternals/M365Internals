@@ -162,7 +162,9 @@
 
     .OUTPUTS
         M365Portal.Connection
-        Returns details about the active admin portal connection.
+        Returns details about the active admin portal connection. Username is the canonical
+        sign-in name. UserId carries the same value for compatibility with existing callers
+        and the default connection view.
     #>
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', '', Justification = 'Portal cookie parameters are consumed through local helper closures inside the cmdlet process block')]
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '', Justification = 'Updates only the in-memory session state for the current PowerShell session')]
