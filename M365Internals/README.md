@@ -22,7 +22,7 @@ USE AT YOUR OWN RISK. The authors and contributors are not responsible for any i
 
 The module follows the same high-level structure as XDRInternals, adapted for Microsoft 365 admin-center APIs:
 
-- `functions/` contains exported cmdlets such as `Connect-M365Portal`, `Connect-M365PortalBySoftwarePasskey`, the `Get-M365Admin*` family, and `Invoke-M365AdminRestMethod`
+- `functions/` contains exported cmdlets such as `Connect-M365Portal`, the `Connect-M365PortalBy*` authentication helpers, the `Get-M365Admin*` family, and `Invoke-M365AdminRestMethod`
 - `internal/functions/` contains helper functions for cache management, session state, portal request handling, Graph proxy access, and software-passkey authentication
 - `internal/scripts/` contains support script space for future initialization or helper workflows
 - `M365Internals.psd1` is the module manifest
@@ -64,12 +64,24 @@ Current validation work has confirmed the public cmdlet surface live by using so
 - Cookie-based reuse remains best-effort and can still fail during admin portal bootstrap or handoff.
 - Mixed GET and POST surfaces, including `Get-M365AdminUserSetting`, were validated against live request shapes.
 
+### Authentication Notes
+
+- `Connect-M365Portal` defaults to the interactive browser sign-in flow for interactive use.
+- `Connect-M365PortalBySSO` currently supports Windows only for now.
+- `Connect-M365PortalBySoftwarePasskey` requires PowerShell 7.0 or later.
+
 ## Available Cmdlets
 
 | Cmdlet                                   | Description                                                                |
 | ---------------------------------------- | -------------------------------------------------------------------------- |
-| Connect-M365Portal                       | Authenticate to the Microsoft 365 admin center by using cookies or a session |
-| Connect-M365PortalBySoftwarePasskey      | Authenticate to the Microsoft 365 admin center by using a local software passkey |
+| Connect-M365Portal                       | Connect to the Microsoft 365 admin center by using cookies, existing sessions, or built-in auth flows |
+| Connect-M365PortalByBrowser              | Connect to the Microsoft 365 admin center by using an interactive browser sign-in |
+| Connect-M365PortalByCredential           | Connect to the Microsoft 365 admin center by using username/password and optional MFA |
+| Connect-M365PortalByEstsCookie           | Connect to the Microsoft 365 admin center by exchanging an ESTS authentication cookie |
+| Connect-M365PortalByPhoneSignIn          | Connect to the Microsoft 365 admin center by using Microsoft Authenticator phone sign-in |
+| Connect-M365PortalBySoftwarePasskey      | Connect to the Microsoft 365 admin center by using a local software passkey |
+| Connect-M365PortalBySSO                  | Connect to the Microsoft 365 admin center by using browser-based single sign-on |
+| Connect-M365PortalByTemporaryAccessPass  | Connect to the Microsoft 365 admin center by using a Temporary Access Pass |
 | Get-M365AdminAgent                       | Retrieve the Agents > All agents route-family payloads                     |
 | Get-M365AdminAgentOverview               | Retrieve Agents overview inventory, adoption, and risky-agent payloads     |
 | Get-M365AdminAgentSetting                | Retrieve Agents settings, sharing, templates, and user-access payloads     |
@@ -143,15 +155,38 @@ Import-Module .\M365Internals.psd1
 Import-Module .\M365Internals.psd1
 ```
 
-### Examples
+### Authentication examples
 
 ```powershell
-# Connect by exchanging an ESTSAUTHPERSISTENT cookie
+# Preferred: connect by launching the interactive browser sign-in flow
+Connect-M365Portal
+
+# Connect by exchanging an ESTS authentication cookie
 Connect-M365Portal -EstsAuthCookieValue $estsCookie
+
+# Connect by using Entra credentials with automatic Authenticator OTP handling
+Connect-M365Portal -Credential (Get-Credential) -TotpSecret 'JBSWY3DPEHPK3PXP'
+
+# Connect by using a Temporary Access Pass
+$tap = ConvertTo-SecureString 'ABC12345' -AsPlainText -Force
+Connect-M365PortalByTemporaryAccessPass -Username 'admin@contoso.com' -TAP $tap
+
+# Connect by using Microsoft Authenticator phone sign-in
+Connect-M365PortalByPhoneSignIn -Username 'admin@contoso.com'
+
+# Connect by using an interactive browser session
+Connect-M365PortalByBrowser -PrivateSession
+
+# Connect by using browser-based SSO on Windows for now
+Connect-M365PortalBySSO -Visible
 
 # Connect by using a local software passkey file
 Connect-M365PortalBySoftwarePasskey -KeyFilePath '.\admin.passkey'
+```
 
+### Examples
+
+```powershell
 # Retrieve company profile settings
 Get-M365AdminCompanySetting -Name Profile
 

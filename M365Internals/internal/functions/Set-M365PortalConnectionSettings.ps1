@@ -14,6 +14,9 @@
     .PARAMETER AuthSource
         A short label describing how the session was obtained.
 
+    .PARAMETER AuthFlow
+        A short label describing the higher-level authentication flow that established the session.
+
     .PARAMETER UserAgent
         The user agent to set on the session when provided.
 
@@ -33,6 +36,8 @@
         [Microsoft.PowerShell.Commands.WebRequestSession]$WebSession,
 
         [string]$AuthSource = 'PortalCookies',
+
+        [string]$AuthFlow,
 
         [string]$UserAgent,
 
@@ -82,6 +87,23 @@
         }
 
         return $null
+    }
+
+    function Resolve-UsernameFromCookieValue {
+        param (
+            [string]$Value
+        )
+
+        if ([string]::IsNullOrWhiteSpace($Value)) {
+            return $null
+        }
+
+        try {
+            return [uri]::UnescapeDataString(($Value -replace '\+', ' '))
+        }
+        catch {
+            return $Value
+        }
     }
 
     function Test-IsGuidValue {
@@ -266,13 +288,27 @@
             }
         }
 
+        $resolvedAuthFlow = if (-not [string]::IsNullOrWhiteSpace($AuthFlow)) {
+            $AuthFlow
+        }
+        elseif ($previousConnection -and $previousConnection.PSObject.Properties['AuthFlow'] -and -not [string]::IsNullOrWhiteSpace([string]$previousConnection.AuthFlow)) {
+            [string]$previousConnection.AuthFlow
+        }
+        else {
+            $AuthSource
+        }
+
+        $resolvedUsername = Resolve-UsernameFromCookieValue -Value $cookieValues['s.userid']
+
         $connection = [System.Management.Automation.PSObject]::new()
         $connection | Add-Member -NotePropertyName PortalHost -NotePropertyValue 'admin.cloud.microsoft'
         $connection | Add-Member -NotePropertyName TenantId -NotePropertyValue $resolvedTenantId
-        $connection | Add-Member -NotePropertyName UserId -NotePropertyValue $cookieValues['s.userid']
+        $connection | Add-Member -NotePropertyName Username -NotePropertyValue $resolvedUsername
+        $connection | Add-Member -NotePropertyName UserId -NotePropertyValue $resolvedUsername
         $connection | Add-Member -NotePropertyName SessionId -NotePropertyValue $cookieValues['s.SessID']
         $connection | Add-Member -NotePropertyName RouteKeyPresent -NotePropertyValue (-not [string]::IsNullOrWhiteSpace($cookieValues['x-portal-routekey']))
         $connection | Add-Member -NotePropertyName Source -NotePropertyValue $AuthSource
+        $connection | Add-Member -NotePropertyName AuthFlow -NotePropertyValue $resolvedAuthFlow
         $connection | Add-Member -NotePropertyName ConnectedAt -NotePropertyValue (Get-Date)
         $connection | Add-Member -NotePropertyName Validated -NotePropertyValue (-not $SkipValidation)
         $connection | Add-Member -NotePropertyName Validation -NotePropertyValue ([object[]]$validationResults.ToArray())
