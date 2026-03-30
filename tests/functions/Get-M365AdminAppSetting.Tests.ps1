@@ -41,6 +41,10 @@
 
         $result.PSObject.TypeNames | Should -Contain 'M365Admin.UnavailableResult'
         $result.Name | Should -Be $Name
+        $result.Reason | Should -Be 'ProvisioningOrLicensing'
+        $result.HttpStatusCode | Should -Be ([int]($ErrorMessage -replace '.*?(400|404).*', '$1'))
+        $result.Description | Should -Match 'licensed|provisioned'
+        $result.SuggestedAction | Should -Match 'license|provision'
     }
 
     It 'continues to throw for non-fallback app-setting errors' {

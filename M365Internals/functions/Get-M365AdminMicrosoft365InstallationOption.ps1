@@ -14,6 +14,12 @@
     .PARAMETER Force
         Bypasses the cache and forces a fresh retrieval.
 
+    .PARAMETER Raw
+        Returns the raw installation options payload for the selected section.
+
+    .PARAMETER RawJson
+        Returns the raw installation options payload serialized as formatted JSON.
+
     .EXAMPLE
         Get-M365AdminMicrosoft365InstallationOption
 
@@ -30,7 +36,13 @@
         [string]$Name = 'All',
 
         [Parameter()]
-        [switch]$Force
+        [switch]$Force,
+
+        [Parameter()]
+        [switch]$Raw,
+
+        [Parameter()]
+        [switch]$RawJson
     )
 
     process {
@@ -49,7 +61,8 @@
                     EligibleToRemoveSac = Get-M365AdminPortalData -Path '/admin/api/tenant/isTenantEligibleToRemoveSAC' -CacheKey 'M365AdminMicrosoft365InstallationOption:EligibleToRemoveSac' -Force:$Force
                 }
 
-                return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.Microsoft365InstallationOption'
+                $result = Add-M365TypeName -InputObject $result -TypeName 'M365Admin.Microsoft365InstallationOption'
+                return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
             }
             'UserSoftware' {
                 $path = '/admin/api/settings/apps/usersoftware'
@@ -77,6 +90,7 @@
             }
         }
 
-        Get-M365AdminPortalData -Path $path -CacheKey "M365AdminMicrosoft365InstallationOption:$Name" -Force:$Force
+        $result = Get-M365AdminPortalData -Path $path -CacheKey "M365AdminMicrosoft365InstallationOption:$Name" -Force:$Force
+        return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
     }
 }

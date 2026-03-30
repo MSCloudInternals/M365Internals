@@ -9,6 +9,12 @@
     .PARAMETER Force
         Bypasses the cache and forces a fresh retrieval.
 
+    .PARAMETER Raw
+        Returns the raw directory sync errors payload.
+
+    .PARAMETER RawJson
+        Returns the raw directory sync errors payload serialized as formatted JSON.
+
     .EXAMPLE
         Get-M365AdminDirectorySyncError
 
@@ -21,7 +27,13 @@
     [CmdletBinding()]
     param (
         [Parameter()]
-        [switch]$Force
+        [switch]$Force,
+
+        [Parameter()]
+        [switch]$Raw,
+
+        [Parameter()]
+        [switch]$RawJson
     )
 
     begin {
@@ -33,7 +45,7 @@
         $currentCacheValue = Get-M365Cache -CacheKey $cacheKey -ErrorAction SilentlyContinue
         if (-not $Force -and $currentCacheValue -and $currentCacheValue.NotValidAfter -gt (Get-Date)) {
             Write-Verbose "Using cached $cacheKey data"
-            return $currentCacheValue.Value
+            return Resolve-M365AdminOutput -DefaultValue $currentCacheValue.Value -Raw:$Raw -RawJson:$RawJson
         }
         elseif ($Force) {
             Clear-M365Cache -CacheKey $cacheKey
@@ -41,6 +53,6 @@
 
         $result = Invoke-M365AdminRestMethod -Path '/admin/api/dirsyncerrors/listdirsyncerrors' -Method Post
         Set-M365Cache -CacheKey $cacheKey -Value $result -TTLMinutes 15 | Out-Null
-        return $result
+        return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
     }
 }

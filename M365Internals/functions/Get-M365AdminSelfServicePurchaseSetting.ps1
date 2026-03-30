@@ -10,6 +10,12 @@
     .PARAMETER Force
         Bypasses the cache and forces a fresh retrieval.
 
+    .PARAMETER Raw
+        Returns the raw self-service purchase payload.
+
+    .PARAMETER RawJson
+        Returns the raw self-service purchase payload serialized as formatted JSON.
+
     .EXAMPLE
         Get-M365AdminSelfServicePurchaseSetting
 
@@ -22,10 +28,17 @@
     [CmdletBinding()]
     param (
         [Parameter()]
-        [switch]$Force
+        [switch]$Force,
+
+        [Parameter()]
+        [switch]$Raw,
+
+        [Parameter()]
+        [switch]$RawJson
     )
 
     process {
-        Get-M365AdminPortalData -Path '/admin/api/selfServicePurchasePolicy/products' -CacheKey 'M365AdminSelfServicePurchaseSetting:Products' -Force:$Force
+        $result = Get-M365AdminPortalData -Path '/admin/api/selfServicePurchasePolicy/products' -CacheKey 'M365AdminSelfServicePurchaseSetting:Products' -Force:$Force
+        return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
     }
 }

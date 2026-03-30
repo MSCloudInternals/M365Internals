@@ -13,6 +13,12 @@
     .PARAMETER Force
         Bypasses the cache and forces a fresh retrieval.
 
+    .PARAMETER Raw
+        Returns the raw Edge site list payload for the selected section.
+
+    .PARAMETER RawJson
+        Returns the raw Edge site list payload serialized as formatted JSON.
+
     .EXAMPLE
         Get-M365AdminEdgeSiteList
 
@@ -29,7 +35,13 @@
         [string]$Name = 'All',
 
         [Parameter()]
-        [switch]$Force
+        [switch]$Force,
+
+        [Parameter()]
+        [switch]$Raw,
+
+        [Parameter()]
+        [switch]$RawJson
     )
 
     process {
@@ -61,16 +73,18 @@
                     Notifications = $notifications
                 }
 
-                return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.EdgeSiteList'
+                $result = Add-M365TypeName -InputObject $result -TypeName 'M365Admin.EdgeSiteList'
+                return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
             }
             'SiteLists' {
                 $path = '/fd/edgeenterprisesitemanagement/api/v2/emiesitelists'
             }
             'Notifications' {
-                return Get-EdgeSiteListNotification
+                return Resolve-M365AdminOutput -DefaultValue (Get-EdgeSiteListNotification) -Raw:$Raw -RawJson:$RawJson
             }
         }
 
-        Get-M365AdminPortalData -Path $path -CacheKey "M365AdminEdgeSiteList:$Name" -Force:$Force
+        $result = Get-M365AdminPortalData -Path $path -CacheKey "M365AdminEdgeSiteList:$Name" -Force:$Force
+        return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
     }
 }

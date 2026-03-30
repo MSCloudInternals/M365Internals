@@ -2,7 +2,7 @@
 
 This file tracks the currently known limitations, tenant-specific quirks, and follow-up items discovered while building and validating the Microsoft 365 admin-center cmdlets.
 
-Last updated: 2026-03-24
+Last updated: 2026-03-30
 
 ## Connection And Bootstrap
 
@@ -20,6 +20,7 @@ Last updated: 2026-03-24
 ## Session Reuse And Validation
 
 - Direct browser-cookie exports have been less reliable for PowerShell reuse than live passkey-backed sessions.
+- `Connect-M365Portal` and `Set-M365PortalConnectionSettings` now accept cookie imports that start without `s.AjaxSessionKey` and let the post-landing bootstrap recover it when the rest of the portal session is valid.
 - Live passkey-backed validation has been the most reliable test path so far for confirming real admin-center reads.
 - Cookie-based validation should continue to be treated as best-effort unless a more durable cookie import/bootstrap flow is implemented later.
 
@@ -90,6 +91,7 @@ Last updated: 2026-03-24
 ### Search & intelligence
 
 - `/admin/api/searchadminapi/configurations` still returns `503` in both direct PowerShell reads and live in-browser fetches.
+- `Get-M365AdminSearchSetting -Name Configurations` now falls back to the stable `/admin/api/searchadminapi/ConfigurationSettings` inventory while preserving the direct failure details through `-Raw` and `-RawJson`.
 - `/admin/api/searchadminapi/firstrunexperience/get` is a POST-backed endpoint. The live portal sends an array of feature names and returns `200` in this tenant when that body is preserved.
 - `/admin/api/searchadminapi/Qnas` is also POST-backed. The live portal sends `{"ServiceType":"Bing","Filter":"Published"}` and the current tenant returns `404` for that published Bing payload.
 - The grouped cmdlet should preserve those POST request shapes and only surface tenant-specific unavailability when the portal itself does.
@@ -173,12 +175,14 @@ These behaved as informational or static pages in the current tenant rather than
 - `Account Linking / EnterpriseMicrosoftRewards`
   - Route is known.
   - A stable reproducible same-origin read has not been found outside the live portal interaction flow.
+  - `Get-M365AdminSearchSetting -Name AccountLinking` now returns the route and discovery metadata together with a structured `InteractiveOnly` unavailable result.
 - `News`
   - The stable implementation should continue using the three search-admin news endpoints.
   - The direct `/fd/bfb/api/v3/office/switch/feature` path returned `503` during direct probing.
 - `Pay-as-you-go telemetry`
   - Earlier GET-style probing was misleading.
   - The observed portal pattern is `POST /admin/api/km/setting/telemetry`, which returns `204`.
+  - `Get-M365AdminPayAsYouGoService -Name Telemetry` now exposes the observed method, path, and status metadata while keeping the surface read-only.
   - Follow-up: capture the exact request body and surrounding portal workflow if real telemetry semantics are needed.
 
 ### Tenant-Dependent Optional Payloads
@@ -207,6 +211,6 @@ These behaved as informational or static pages in the current tenant rather than
 1. Stabilize `Search & intelligence` `Configurations` endpoint access.
 2. Revisit `Account Linking` to determine whether a reproducible direct read exists.
 3. Capture the full `pay-as-you-go telemetry` request body and surrounding workflow.
-4. Improve cookie-import and non-passkey validation reliability for `Connect-M365Portal`.
+4. Continue validating cookie-import and non-passkey admin sessions across additional tenants.
 5. Continue validating tenant-dependent or informational pages across additional tenants before promoting them beyond informational wrappers.
 6. Continue polishing remaining older cmdlets so output shaping and custom formatting are consistent across the module.

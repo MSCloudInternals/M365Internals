@@ -17,6 +17,9 @@
         Returns the underlying leaf payload bundle for the selected page composition when it
         makes sense to do so.
 
+    .PARAMETER RawJson
+        Returns the raw payload for the selected Copilot section serialized as formatted JSON.
+
     .EXAMPLE
         Get-M365AdminCopilotSetting
 
@@ -42,7 +45,10 @@
         [switch]$Force,
 
         [Parameter()]
-        [switch]$Raw
+        [switch]$Raw,
+
+        [Parameter()]
+        [switch]$RawJson
     )
 
     process {
@@ -59,7 +65,7 @@
                 & $ScriptBlock
             }
             catch {
-                New-M365AdminUnavailableResult -Name $ResultName -Description 'The Copilot settings section did not return a usable payload.' -Reason 'TenantSpecific' -ErrorMessage $_.Exception.Message
+                New-M365AdminUnavailableResultFromError -Name $ResultName -Area 'Copilot settings section' -DefaultDescription 'The Copilot settings section did not return a usable payload.' -ErrorMessage $_.Exception.Message
             }
         }
 
@@ -142,8 +148,8 @@
 
         switch ($Name) {
             'All' {
-                if ($Raw) {
-                    return Get-AllRawPayload
+                if ($Raw -or $RawJson) {
+                    return Resolve-M365AdminOutput -RawValue (Get-AllRawPayload) -Raw:$Raw -RawJson:$RawJson
                 }
 
                 $result = [pscustomobject]@{
@@ -154,37 +160,37 @@
                 return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.CopilotSetting'
             }
             'Recommendations' {
-                return Get-M365AdminPortalData -Path '/admin/api/recommendations/m365/ccs' -CacheKey 'M365AdminCopilotSetting:Recommendations' -Force:$Force
+                return Resolve-M365AdminOutput -DefaultValue (Get-M365AdminPortalData -Path '/admin/api/recommendations/m365/ccs' -CacheKey 'M365AdminCopilotSetting:Recommendations' -Force:$Force) -Raw:$Raw -RawJson:$RawJson
             }
             'Dismissed' {
-                return Get-M365AdminPortalData -Path '/admin/api/copilotsettings/settings/dismissed' -CacheKey 'M365AdminCopilotSetting:Dismissed' -Force:$Force
+                return Resolve-M365AdminOutput -DefaultValue (Get-M365AdminPortalData -Path '/admin/api/copilotsettings/settings/dismissed' -CacheKey 'M365AdminCopilotSetting:Dismissed' -Force:$Force) -Raw:$Raw -RawJson:$RawJson
             }
             'SecurityCopilotAuth' {
-                return Get-M365AdminPortalData -Path '/admin/api/copilotsettings/securitycopilot/auth' -CacheKey 'M365AdminCopilotSetting:SecurityCopilotAuth' -Force:$Force
+                return Resolve-M365AdminOutput -DefaultValue (Get-CopilotResult -ResultName 'SecurityCopilotAuth' -ScriptBlock { Get-M365AdminPortalData -Path '/admin/api/copilotsettings/securitycopilot/auth' -CacheKey 'M365AdminCopilotSetting:SecurityCopilotAuth' -Force:$Force }) -Raw:$Raw -RawJson:$RawJson
             }
             'AzureSubscriptions' {
-                return Get-M365AdminPortalData -Path '/admin/api/syntexbilling/azureSubscriptions' -CacheKey 'M365AdminCopilotSetting:AzureSubscriptions' -Force:$Force
+                return Resolve-M365AdminOutput -DefaultValue (Get-M365AdminPortalData -Path '/admin/api/syntexbilling/azureSubscriptions' -CacheKey 'M365AdminCopilotSetting:AzureSubscriptions' -Force:$Force) -Raw:$Raw -RawJson:$RawJson
             }
             'CopilotChatBillingPolicy' {
-                return Get-M365AdminPortalData -Path '/_api/v2.1/billingPolicies?feature=M365CopilotChat' -CacheKey 'M365AdminCopilotSetting:CopilotChatBillingPolicy' -Force:$Force
+                return Resolve-M365AdminOutput -DefaultValue (Get-M365AdminPortalData -Path '/_api/v2.1/billingPolicies?feature=M365CopilotChat' -CacheKey 'M365AdminCopilotSetting:CopilotChatBillingPolicy' -Force:$Force) -Raw:$Raw -RawJson:$RawJson
             }
             'AuditEnabled' {
-                return Get-M365AdminPortalData -Path '/fd/purview/apiproxy/adtsch/AuditEnabled' -CacheKey 'M365AdminCopilotSetting:AuditEnabled' -Force:$Force
+                return Resolve-M365AdminOutput -DefaultValue (Get-M365AdminPortalData -Path '/fd/purview/apiproxy/adtsch/AuditEnabled' -CacheKey 'M365AdminCopilotSetting:AuditEnabled' -Force:$Force) -Raw:$Raw -RawJson:$RawJson
             }
             'AIBaselineSummary' {
-                return Get-CopilotResult -ResultName 'AIBaselineSummary' -ScriptBlock { Get-PurviewAIBaselineSummary -CacheKey 'M365AdminCopilotSetting:AIBaselineSummary' -BypassCache:$Force }
+                return Resolve-M365AdminOutput -DefaultValue (Get-CopilotResult -ResultName 'AIBaselineSummary' -ScriptBlock { Get-PurviewAIBaselineSummary -CacheKey 'M365AdminCopilotSetting:AIBaselineSummary' -BypassCache:$Force }) -Raw:$Raw -RawJson:$RawJson
             }
             'PurviewForAISetting' {
-                return Get-CopilotResult -ResultName 'PurviewForAISetting' -ScriptBlock { Get-M365AdminPortalData -Path "/fd/purview/apiproxy/di/find/PurviewForAISetting?tenantId=$tenantId" -CacheKey 'M365AdminCopilotSetting:PurviewForAISetting' -Force:$Force }
+                return Resolve-M365AdminOutput -DefaultValue (Get-CopilotResult -ResultName 'PurviewForAISetting' -ScriptBlock { Get-M365AdminPortalData -Path "/fd/purview/apiproxy/di/find/PurviewForAISetting?tenantId=$tenantId" -CacheKey 'M365AdminCopilotSetting:PurviewForAISetting' -Force:$Force }) -Raw:$Raw -RawJson:$RawJson
             }
             'DefaultDlpPolicy' {
-                return Get-CopilotResult -ResultName 'DefaultDlpPolicy' -ScriptBlock { Get-M365AdminPortalData -Path "/fd/purview/apiproxy/di/find/DlpCompliancePolicy?tenantId=$tenantId&filter=$policyFilter" -CacheKey 'M365AdminCopilotSetting:DefaultDlpPolicy' -Force:$Force }
+                return Resolve-M365AdminOutput -DefaultValue (Get-CopilotResult -ResultName 'DefaultDlpPolicy' -ScriptBlock { Get-M365AdminPortalData -Path "/fd/purview/apiproxy/di/find/DlpCompliancePolicy?tenantId=$tenantId&filter=$policyFilter" -CacheKey 'M365AdminCopilotSetting:DefaultDlpPolicy' -Force:$Force }) -Raw:$Raw -RawJson:$RawJson
             }
             'Optimize' {
-                return Get-OptimizeLeafPayload
+                return Resolve-M365AdminOutput -DefaultValue (Get-OptimizeLeafPayload) -Raw:$Raw -RawJson:$RawJson
             }
             'ViewAll' {
-                return Get-ViewAllLeafPayload
+                return Resolve-M365AdminOutput -DefaultValue (Get-ViewAllLeafPayload) -Raw:$Raw -RawJson:$RawJson
             }
         }
     }

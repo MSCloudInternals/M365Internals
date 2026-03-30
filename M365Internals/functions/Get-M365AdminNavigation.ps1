@@ -13,6 +13,12 @@
     .PARAMETER Force
         Bypasses the cache and forces a fresh retrieval.
 
+    .PARAMETER Raw
+        Returns the raw navigation payload.
+
+    .PARAMETER RawJson
+        Returns the raw navigation payload serialized as formatted JSON.
+
     .EXAMPLE
         Get-M365AdminNavigation
 
@@ -33,7 +39,13 @@
         [switch]$Async,
 
         [Parameter()]
-        [switch]$Force
+        [switch]$Force,
+
+        [Parameter()]
+        [switch]$Raw,
+
+        [Parameter()]
+        [switch]$RawJson
     )
 
     process {
@@ -45,6 +57,7 @@
             '/admin/api/navigation'
         }
 
-        Get-M365AdminPortalData -Path $path -CacheKey $cacheKey -Force:$Force
+        $result = Get-M365AdminPortalData -Path $path -CacheKey $cacheKey -Force:$Force
+        return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
     }
 }

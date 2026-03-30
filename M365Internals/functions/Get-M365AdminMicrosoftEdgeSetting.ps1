@@ -13,6 +13,12 @@
     .PARAMETER Force
         Bypasses the cache and forces a fresh retrieval.
 
+    .PARAMETER Raw
+        Returns the raw Microsoft Edge payload for the selected section.
+
+    .PARAMETER RawJson
+        Returns the raw Microsoft Edge payload serialized as formatted JSON.
+
     .EXAMPLE
         Get-M365AdminMicrosoftEdgeSetting
 
@@ -29,16 +35,33 @@
         [string]$Name = 'All',
 
         [Parameter()]
-        [switch]$Force
+        [switch]$Force,
+
+        [Parameter()]
+        [switch]$Raw,
+
+        [Parameter()]
+        [switch]$RawJson
     )
 
     process {
-        function Get-EdgeDeviceSummary {
-            $deviceResult = Invoke-M365AdminRestMethod -Path '/fd/msgraph/v1.0/devices?$count=true&$top=1' -Headers @{ ConsistencyLevel = 'eventual' }
-            [pscustomobject]@{
-                Count  = $deviceResult.'@odata.count'
-                Sample = @($deviceResult.value)
+        function Get-EdgeDeviceResult {
+            Invoke-M365AdminRestMethod -Path '/fd/msgraph/v1.0/devices?$count=true&$top=1' -Headers @{ ConsistencyLevel = 'eventual' }
+        }
+
+        function ConvertTo-EdgeDeviceSummary {
+            param (
+                [Parameter(Mandatory)]
+                $DeviceResult
+            )
+
+            $result = [pscustomobject]@{
+                Count       = $DeviceResult.'@odata.count'
+                Sample      = @($DeviceResult.value)
+                RawSettings = $DeviceResult
             }
+
+            return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.MicrosoftEdgeSetting.DeviceCount'
         }
 
         function Get-EdgeExtensionFeedback {
@@ -51,28 +74,46 @@
         }
 
         if ($Name -eq 'All') {
+            if ($Raw -or $RawJson) {
+                $rawResult = [pscustomobject]@{
+                    ConfigurationPolicies = Get-M365AdminPortalData -Path '/fd/OfficePolicyAdmin/v1.0/edge/policies' -CacheKey 'M365AdminMicrosoftEdgeSetting:ConfigurationPolicies' -Force:$Force
+                    DeviceCount           = Get-EdgeDeviceResult
+                    FeatureProfiles       = Get-M365AdminPortalData -Path '/fd/edgeenterpriseextensionsmanagement/api/featureManagement/profiles' -CacheKey 'M365AdminMicrosoftEdgeSetting:FeatureProfiles' -Force:$Force
+                    ExtensionPolicies     = Get-M365AdminPortalData -Path '/fd/edgeenterpriseextensionsmanagement/api/policies' -CacheKey 'M365AdminMicrosoftEdgeSetting:ExtensionPolicies' -Force:$Force
+                    ExtensionFeedback     = Get-EdgeExtensionFeedback
+                    SiteLists             = Get-M365AdminEdgeSiteList -Force:$Force -Raw
+                }
+
+                $rawResult = Add-M365TypeName -InputObject $rawResult -TypeName 'M365Admin.MicrosoftEdgeSetting.Raw'
+                return Resolve-M365AdminOutput -RawValue $rawResult -Raw:$Raw -RawJson:$RawJson
+            }
+
+            $deviceResult = Get-EdgeDeviceResult
             $result = [pscustomobject]@{
                 ConfigurationPolicies = Get-M365AdminPortalData -Path '/fd/OfficePolicyAdmin/v1.0/edge/policies' -CacheKey 'M365AdminMicrosoftEdgeSetting:ConfigurationPolicies' -Force:$Force
-                DeviceCount           = Get-EdgeDeviceSummary
+                DeviceCount           = ConvertTo-EdgeDeviceSummary -DeviceResult $deviceResult
                 FeatureProfiles       = Get-M365AdminPortalData -Path '/fd/edgeenterpriseextensionsmanagement/api/featureManagement/profiles' -CacheKey 'M365AdminMicrosoftEdgeSetting:FeatureProfiles' -Force:$Force
                 ExtensionPolicies     = Get-M365AdminPortalData -Path '/fd/edgeenterpriseextensionsmanagement/api/policies' -CacheKey 'M365AdminMicrosoftEdgeSetting:ExtensionPolicies' -Force:$Force
                 ExtensionFeedback     = Get-EdgeExtensionFeedback
                 SiteLists             = Get-M365AdminEdgeSiteList -Force:$Force
             }
 
-            return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.MicrosoftEdgeSetting'
+            $result = Add-M365TypeName -InputObject $result -TypeName 'M365Admin.MicrosoftEdgeSetting'
+            return $result
         }
 
         if ($Name -eq 'DeviceCount') {
-            return Get-EdgeDeviceSummary
+            $deviceResult = Get-EdgeDeviceResult
+            $result = ConvertTo-EdgeDeviceSummary -DeviceResult $deviceResult
+            return Resolve-M365AdminOutput -DefaultValue $result -RawValue $deviceResult -Raw:$Raw -RawJson:$RawJson
         }
 
         if ($Name -eq 'SiteLists') {
-            return Get-M365AdminEdgeSiteList -Force:$Force
+            return Get-M365AdminEdgeSiteList -Force:$Force -Raw:$Raw -RawJson:$RawJson
         }
 
         if ($Name -eq 'ExtensionFeedback') {
-            return Get-EdgeExtensionFeedback
+            return Resolve-M365AdminOutput -DefaultValue (Get-EdgeExtensionFeedback) -Raw:$Raw -RawJson:$RawJson
         }
 
         $path = switch ($Name) {
@@ -81,6 +122,7 @@
             'FeatureProfiles' { '/fd/edgeenterpriseextensionsmanagement/api/featureManagement/profiles' }
         }
 
-        Get-M365AdminPortalData -Path $path -CacheKey "M365AdminMicrosoftEdgeSetting:$Name" -Force:$Force
+        $result = Get-M365AdminPortalData -Path $path -CacheKey "M365AdminMicrosoftEdgeSetting:$Name" -Force:$Force
+        return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
     }
 }

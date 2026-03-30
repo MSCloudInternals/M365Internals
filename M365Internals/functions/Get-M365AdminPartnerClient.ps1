@@ -12,6 +12,12 @@
     .PARAMETER Force
         Bypasses the cache and forces a fresh retrieval.
 
+    .PARAMETER Raw
+        Returns the raw partner client payload.
+
+    .PARAMETER RawJson
+        Returns the raw partner client payload serialized as formatted JSON.
+
     .EXAMPLE
         Get-M365AdminPartnerClient -PartnerType GDAP
 
@@ -28,11 +34,18 @@
         [string]$PartnerType = 'DAP',
 
         [Parameter()]
-        [switch]$Force
+        [switch]$Force,
+
+        [Parameter()]
+        [switch]$Raw,
+
+        [Parameter()]
+        [switch]$RawJson
     )
 
     process {
         $path = '/admin/api/partners/AOBOClients?partnerType={0}' -f $PartnerType
-        Get-M365AdminPortalData -Path $path -CacheKey "M365AdminPartnerClient:$PartnerType" -Force:$Force
+        $result = Get-M365AdminPortalData -Path $path -CacheKey "M365AdminPartnerClient:$PartnerType" -Force:$Force
+        return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
     }
 }

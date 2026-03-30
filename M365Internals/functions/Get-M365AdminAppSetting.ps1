@@ -13,6 +13,12 @@
     .PARAMETER Force
         Bypasses the cache and forces a fresh retrieval.
 
+    .PARAMETER Raw
+        Returns the underlying admin-center payload without applying any additional shaping.
+
+    .PARAMETER RawJson
+        Returns the raw app settings payload serialized as formatted JSON.
+
     .EXAMPLE
         Get-M365AdminAppSetting -Name Bookings
 
@@ -29,7 +35,13 @@
         [string]$Name,
 
         [Parameter()]
-        [switch]$Force
+        [switch]$Force,
+
+        [Parameter()]
+        [switch]$Raw,
+
+        [Parameter()]
+        [switch]$RawJson
     )
 
     process {
@@ -53,7 +65,7 @@
                 $isUnavailableStatus = $_.Exception.Message -match '400 \(Bad Request\)|404 \(Not Found\)'
 
                 if ($isKnownUnavailableSurface -and $isUnavailableStatus) {
-                    return New-M365AdminUnavailableResult -Name $ResultName -Description 'This app setting endpoint currently does not return a usable payload in the current tenant.' -Reason 'TenantSpecific' -ErrorMessage $_.Exception.Message
+                    return New-M365AdminUnavailableResultFromError -Name $ResultName -Area 'app setting surface' -DefaultDescription 'This app setting endpoint currently does not return a usable payload in the current tenant.' -ErrorMessage $_.Exception.Message
                 }
 
                 throw
@@ -61,6 +73,7 @@
         }
 
         $path = Get-M365AdminAppSettingPath -Name $Name
-        Get-AppSettingResult -ResultName $Name -Path $path
+        $result = Get-AppSettingResult -ResultName $Name -Path $path
+        return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
     }
 }

@@ -12,6 +12,12 @@
     .PARAMETER Force
         Bypasses the cache and forces a fresh retrieval.
 
+    .PARAMETER Raw
+        Returns the raw tenant settings payload for the selected section.
+
+    .PARAMETER RawJson
+        Returns the raw tenant settings payload serialized as formatted JSON.
+
     .EXAMPLE
         Get-M365AdminTenantSetting -Name AccountSkus
 
@@ -28,7 +34,13 @@
         [string]$Name,
 
         [Parameter()]
-        [switch]$Force
+        [switch]$Force,
+
+        [Parameter()]
+        [switch]$Raw,
+
+        [Parameter()]
+        [switch]$RawJson
     )
 
     process {
@@ -42,6 +54,8 @@
             'ReportsPrivacyEnabled' { '/admin/api/tenant/isReportsPrivacyEnabled' }
         }
 
-        Get-M365AdminPortalData -Path $path -CacheKey "M365AdminTenantSetting:$Name" -Force:$Force
+        $result = Get-M365AdminPortalData -Path $path -CacheKey "M365AdminTenantSetting:$Name" -Force:$Force
+        $result = Add-M365TypeName -InputObject $result -TypeName ("M365Admin.TenantSetting.{0}" -f $Name)
+        return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
     }
 }

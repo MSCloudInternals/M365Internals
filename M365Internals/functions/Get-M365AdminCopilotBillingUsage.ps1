@@ -17,6 +17,9 @@
         Returns the underlying leaf payload bundle for the selected page composition when it
         makes sense to do so.
 
+    .PARAMETER RawJson
+        Returns the raw Billing & usage payload serialized as formatted JSON.
+
     .EXAMPLE
         Get-M365AdminCopilotBillingUsage
 
@@ -42,7 +45,10 @@
         [switch]$Force,
 
         [Parameter()]
-        [switch]$Raw
+        [switch]$Raw,
+
+        [Parameter()]
+        [switch]$RawJson
     )
 
     process {
@@ -61,8 +67,8 @@
 
         switch ($Name) {
             'All' {
-                if ($Raw) {
-                    return Get-BillingUsageRawPayload
+                if ($Raw -or $RawJson) {
+                    return Resolve-M365AdminOutput -RawValue (Get-BillingUsageRawPayload) -Raw:$Raw -RawJson:$RawJson
                 }
 
                 $result = [pscustomobject]@{
@@ -83,10 +89,12 @@
                     AzureSubscriptions = Get-M365AdminCopilotBillingUsage -Name AzureSubscriptions -Force:$Force
                 }
 
-                return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.CopilotBillingUsage.BillingPolicies'
+                $result = Add-M365TypeName -InputObject $result -TypeName 'M365Admin.CopilotBillingUsage.BillingPolicies'
+                return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
             }
             'BillingPolicyBudgets' {
-                return Get-M365AdminPortalData -Path '/_api/v2.1/billingPolicies?budgets=true' -CacheKey 'M365AdminCopilotBillingUsage:BillingPolicyBudgets' -Force:$Force
+                $result = Get-M365AdminPortalData -Path '/_api/v2.1/billingPolicies?budgets=true' -CacheKey 'M365AdminCopilotBillingUsage:BillingPolicyBudgets' -Force:$Force
+                return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
             }
             'BillingAccounts' {
                 $result = [pscustomobject]@{
@@ -94,10 +102,12 @@
                     ArmBillingAccounts = Get-M365AdminPortalData -Path '/fd/arm/providers/Microsoft.Billing/billingAccounts?api-version=2020-05-01' -CacheKey 'M365AdminCopilotBillingUsage:ArmBillingAccounts' -Force:$Force
                 }
 
-                return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.CopilotBillingUsage.BillingAccounts'
+                $result = Add-M365TypeName -InputObject $result -TypeName 'M365Admin.CopilotBillingUsage.BillingAccounts'
+                return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
             }
             'AzureSubscriptions' {
-                return Get-M365AdminPortalData -Path '/admin/api/tenant/azureSubscriptions' -CacheKey 'M365AdminCopilotBillingUsage:AzureSubscriptions' -Force:$Force
+                $result = Get-M365AdminPortalData -Path '/admin/api/tenant/azureSubscriptions' -CacheKey 'M365AdminCopilotBillingUsage:AzureSubscriptions' -Force:$Force
+                return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
             }
             'PayAsYouGoServices' {
                 $result = [pscustomobject]@{
@@ -105,7 +115,8 @@
                     CopilotChatPolicy = Get-M365AdminPortalData -Path '/_api/v2.1/billingPolicies?feature=M365CopilotChat' -CacheKey 'M365AdminCopilotBillingUsage:PayAsYouGoCopilotChatPolicy' -Force:$Force
                 }
 
-                return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.CopilotBillingUsage.PayAsYouGoServices'
+                $result = Add-M365TypeName -InputObject $result -TypeName 'M365Admin.CopilotBillingUsage.PayAsYouGoServices'
+                return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
             }
             'HighUsageUsers' {
                 $result = [pscustomobject]@{
@@ -114,7 +125,8 @@
                     Description = 'The High-usage users tab shows a prerequisite message until at least one Copilot billing policy is connected. No separate high-usage user feed was requested by the current tenant state.'
                 }
 
-                return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.CopilotBillingUsage.HighUsageUsers'
+                $result = Add-M365TypeName -InputObject $result -TypeName 'M365Admin.CopilotBillingUsage.HighUsageUsers'
+                return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
             }
         }
     }

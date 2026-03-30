@@ -16,6 +16,9 @@
         Returns the raw Bookings settings payload from the admin center without applying the
         friendly property mapping.
 
+    .PARAMETER RawJson
+        Returns the raw Bookings settings payload serialized as formatted JSON.
+
     .EXAMPLE
         Get-M365AdminBookingsSetting
 
@@ -36,15 +39,14 @@
         [switch]$Force,
 
         [Parameter()]
-        [switch]$Raw
+        [switch]$Raw,
+
+        [Parameter()]
+        [switch]$RawJson
     )
 
     process {
         $settings = Get-M365AdminPortalData -Path '/admin/api/settings/apps/bookings' -CacheKey 'M365AdminAppSetting:Bookings' -Force:$Force
-
-        if ($Raw) {
-            return $settings
-        }
 
         $result = [pscustomobject]@{
             BookingsEnabled                = $settings.Enabled
@@ -85,8 +87,8 @@
             PaymentsLearnMoreUrl           = $settings.PaymentsLearnMoreUrl
             RawSettings                    = $settings
         }
-        $result.PSObject.TypeNames.Insert(0, 'M365Admin.BookingsSetting')
+        $result = Add-M365TypeName -InputObject $result -TypeName 'M365Admin.BookingsSetting'
 
-        return $result
+        return Resolve-M365AdminOutput -DefaultValue $result -RawValue $settings -Raw:$Raw -RawJson:$RawJson
     }
 }

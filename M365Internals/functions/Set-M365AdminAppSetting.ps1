@@ -52,7 +52,7 @@
 
     process {
         $path = Get-M365AdminAppSettingPath -Name $Name
-        $currentSettings = Get-M365AdminAppSetting -Name $Name -Force:$Force
+        $currentSettings = Get-M365AdminAppSetting -Name $Name -Force:$Force -Raw
         $body = Merge-M365AdminSettingsPayload -CurrentSettings $currentSettings -Settings $Settings
 
         if ($PSCmdlet.ShouldProcess("App setting '$Name'", "POST $path")) {

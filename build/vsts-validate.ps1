@@ -1,4 +1,4 @@
-﻿# Run internal pester tests
+﻿# Run the standard maintainer validation workflow used by CI.
 $repositoryRoot = Join-Path $PSScriptRoot '..'
-$testScriptPath = Join-Path (Join-Path $repositoryRoot 'tests') 'pester.ps1'
-& $testScriptPath
+$validationScriptPath = Join-Path $PSScriptRoot 'run-maintainer-validation.ps1'
+& $validationScriptPath -PesterOutput None

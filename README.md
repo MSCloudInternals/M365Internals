@@ -71,7 +71,7 @@ When it makes sense, the module prefers a more user-friendly default output inst
 - Friendly output is easier to scan and script against for common admin tasks.
 - Raw output is better when you need to inspect the original admin-center response shape.
 
-Several cmdlets now support `-Raw` and return a friendlier summarized or page-oriented object by default:
+Several cmdlets now support both `-Raw` and `-RawJson` and return a friendlier summarized or page-oriented object by default:
 
 ```powershell
 # Friendly summarized output
@@ -79,6 +79,9 @@ Get-M365AdminBookingsSetting
 
 # Original admin-center payload
 Get-M365AdminBookingsSetting -Raw
+
+# Original admin-center payload as formatted JSON
+Get-M365AdminBookingsSetting -RawJson
 
 # Page-oriented default output
 Get-M365AdminCopilotSetting
@@ -91,9 +94,12 @@ Get-M365AdminSearchAndIntelligenceSetting
 
 # Underlying leaf payload bundle
 Get-M365AdminSearchAndIntelligenceSetting -Raw
+
+# Raw company settings payload as formatted JSON
+Get-M365AdminCompanySetting -Name Profile -RawJson
 ```
 
-This same `friendly by default, raw on demand` pattern is the intended direction for more cmdlets as the module is polished further.
+This same `friendly by default, raw on demand` pattern now applies broadly across the Settings-family getters, including app, company, security, people, search, report, tenant, user, Viva, Microsoft Edge, Microsoft 365 Backup, and related Org settings cmdlets.
 
 ### Validation Status
 
@@ -102,8 +108,22 @@ The current publish-readiness pass included authenticated live validation agains
 - The public cmdlet surface was exercised in five live validation batches.
 - Validation confirmed the current request shapes for mixed GET and POST cmdlets such as `Get-M365AdminUserSetting`.
 - Software passkey-backed validation is currently more reliable than saved-cookie reuse for broad live testing.
+- Maintainers can now run `./build/run-maintainer-validation.ps1` for the standard Pester pass and optionally append one or more live scripts with `-LiveScript`.
 
 Known tenant-specific or optional sections should still be expected to return structured informational results instead of hard failures when the live portal behaves the same way.
+
+### Confirmed Write Coverage
+
+The module now exposes write-capable cmdlets for the Settings-family routes that accepted live no-op payload replays from the authenticated admin-center session.
+
+- `Set-M365AdminAppSetting` continues to cover the app settings routes that already supported reversible write validation.
+- `Set-M365AdminUserOwnedAppSetting` continues to cover Office Store access, trials, and auto-claim licensing policy.
+- `Set-M365AdminCompanySetting` now covers Help Desk, Profile, Release Track, Send From Address, Theme, and Tile payloads.
+- `Set-M365AdminSecuritySetting` now covers Bing data collection, data access, guest policy, guest access, password policy, privacy policy, tenant lockbox, security defaults, and the People-backed name-pronunciation and pronouns security surfaces.
+- `Set-M365AdminPeopleSetting` now covers the direct People toggles for name pronunciation and pronouns.
+- `Set-M365AdminMicrosoft365GroupSetting` now covers the Microsoft 365 Groups guest access and guest user policy payloads.
+
+For higher-impact Settings routes, live validation used no-op roundtrips with the current payload to confirm the method and body contract without changing tenant state. Lower-risk toggles such as Bing data collection, name pronunciation, and pronouns were also exercised with reversible live mutations.
 
 ## Available Cmdlets
 
@@ -118,6 +138,7 @@ Known tenant-specific or optional sections should still be expected to return st
 | Connect-M365PortalBySSO                  | Connect to the Microsoft 365 admin center by using browser-based single sign-on |
 | Connect-M365PortalByTemporaryAccessPass  | Connect to the Microsoft 365 admin center by using a Temporary Access Pass |
 | Get-M365AdminAgent                       | Retrieve the Agents > All agents route-family payloads                     |
+| Get-M365AdminAgentFrontierAccess         | Retrieve the Agents Frontier access policy payload                         |
 | Get-M365AdminAgentOverview               | Retrieve Agents overview inventory, adoption, and risky-agent payloads     |
 | Get-M365AdminAgentSetting                | Retrieve Agents settings, sharing, templates, and user-access payloads     |
 | Get-M365AdminAgentTool                   | Retrieve Agents tools payloads such as the MCP server inventory            |
@@ -128,6 +149,7 @@ Known tenant-specific or optional sections should still be expected to return st
 | Get-M365AdminCopilotBillingUsage         | Retrieve Copilot Billing & usage tab payloads and billing policy data      |
 | Get-M365AdminCopilotConnector            | Retrieve Copilot Connectors gallery and connection inventory payloads      |
 | Get-M365AdminCopilotOverview             | Retrieve Copilot Overview, Security, Usage, and About payloads             |
+| Get-M365AdminCopilotPinPolicy            | Retrieve the Copilot pin policy payload                                    |
 | Get-M365AdminCopilotSetting              | Retrieve Copilot Settings optimize and view-all payloads                   |
 | Get-M365AdminContentUnderstandingSetting | Retrieve Content Understanding settings and related admin payloads          |
 | Get-M365AdminDirectorySyncError          | Retrieve directory sync error rows from the admin center settings surface   |
@@ -161,7 +183,13 @@ Known tenant-specific or optional sections should still be expected to return st
 | Get-M365AdminUserSetting                 | Retrieve current-user, role, product, dashboard-layout, and token-broker admin data |
 | Get-M365AdminVivaSetting                 | Retrieve Viva module, role, and Glint client lookup settings               |
 | Invoke-M365AdminRestMethod               | Invoke authenticated REST requests against `admin.cloud.microsoft`         |
+| Set-M365AdminAgentFrontierAccess         | Update the Agents Frontier access policy by merging provided values into the current payload |
 | Set-M365AdminAppSetting                  | Update an app settings payload by merging provided values into the current admin-center payload |
+| Set-M365AdminCompanySetting              | Update supported company settings payloads such as Help Desk, Profile, Release Track, Theme, and Tile |
+| Set-M365AdminCopilotPinPolicy            | Update the Copilot pin policy by merging provided values into the current payload |
+| Set-M365AdminMicrosoft365GroupSetting    | Update Microsoft 365 Groups guest access and guest user policy payloads |
+| Set-M365AdminPeopleSetting               | Update the People name-pronunciation and pronouns payloads |
+| Set-M365AdminSecuritySetting             | Update supported security settings payloads such as Bing data collection, guest access, privacy policy, and security defaults |
 | Set-M365AdminUserOwnedAppSetting         | Update Office Store access, trials, and auto-claim settings for user-owned apps and services |
 
 ## Installation
@@ -202,6 +230,9 @@ Connect-M365Portal
 # Connect by exchanging an ESTS authentication cookie
 Connect-M365Portal -EstsAuthCookieValue $estsCookie
 
+# Connect by reusing core portal cookies and let bootstrap recover AjaxSessionKey when needed
+Connect-M365Portal -RootAuthToken $root -SPAAuthCookie $spa -OIDCAuthCookie $oidc
+
 # Connect by using Entra credentials with automatic Authenticator OTP handling
 Connect-M365Portal -Credential (Get-Credential) -TotpSecret 'JBSWY3DPEHPK3PXP'
 
@@ -237,6 +268,12 @@ Get-M365AdminFeature -All
 # Retrieve the company profile settings payload
 Get-M365AdminCompanySetting -Name Profile
 
+# Update the company Help Desk payload
+Set-M365AdminCompanySetting -Name HelpDesk -Settings @{ CustomSupportEnabled = $true } -Confirm:$false
+
+# Update only one company profile field and return the refreshed payload
+Set-M365AdminCompanySetting -Name Profile -Settings @{ Name = 'Contoso' } -PassThru -Confirm:$false
+
 # Retrieve the Copilot overview payloads
 Get-M365AdminCopilotOverview
 
@@ -254,6 +291,18 @@ Get-M365AdminCopilotBillingUsage -Raw
 
 # Retrieve the Copilot settings payloads
 Get-M365AdminCopilotSetting
+
+# Retrieve the current Copilot pin policy
+Get-M365AdminCopilotPinPolicy
+
+# Retrieve the current Agents Frontier access policy
+Get-M365AdminAgentFrontierAccess
+
+# Update the Copilot pin policy
+Set-M365AdminCopilotPinPolicy -Settings @{ CopilotPinningPolicy = 1 } -Confirm:$false
+
+# Update the Agents Frontier access policy
+Set-M365AdminAgentFrontierAccess -Settings @{ FrontierPolicy = 1 } -Confirm:$false
 
 # Retrieve the raw Copilot settings payload bundle
 Get-M365AdminCopilotSetting -Raw
@@ -282,6 +331,21 @@ Get-M365AdminBookingsSetting -Raw
 # Retrieve People settings org data
 Get-M365AdminPeopleSetting
 
+# Update Bing data collection consent
+Set-M365AdminSecuritySetting -Name BingDataCollection -Settings @{ IsBingDataCollectionConsented = $false } -Confirm:$false
+
+# Update the People pronouns toggle
+Set-M365AdminPeopleSetting -Name Pronouns -Settings @{ isEnabledInOrganization = $true } -Confirm:$false
+
+# Retrieve the canonical service view; legacy aliases such as MicrosoftToDo still resolve here
+Get-M365AdminService -Name Todo
+
+# Inspect the modeled interactive-only Account Linking surface metadata
+Get-M365AdminSearchSetting -Name AccountLinking
+
+# Inspect the modeled telemetry request metadata
+Get-M365AdminPayAsYouGoService -Name Telemetry
+
 # Retrieve an admin-center brokered token for Azure Resource Manager
 Get-M365AdminUserSetting -Name TokenWithExpiry -TokenAudience 'https://management.azure.com/'
 
@@ -293,6 +357,9 @@ Get-M365AdminDomain -Dependencies -DomainName 'contoso.com' -DependencyKind 1
 
 # Retrieve Microsoft 365 Groups org settings
 Get-M365AdminMicrosoft365GroupSetting
+
+# Update the Microsoft 365 Groups guest user policy payload
+Set-M365AdminMicrosoft365GroupSetting -Name GuestUserPolicy -Settings @{ AllowGuestInvitations = $false } -Confirm:$false
 
 # Retrieve Microsoft 365 installation options
 Get-M365AdminMicrosoft365InstallationOption

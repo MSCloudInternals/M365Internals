@@ -13,6 +13,12 @@
     .PARAMETER Force
         Bypasses the cache and forces a fresh retrieval.
 
+    .PARAMETER Raw
+        Returns the raw People settings payload for the selected section.
+
+    .PARAMETER RawJson
+        Returns the raw People settings payload serialized as formatted JSON.
+
     .EXAMPLE
         Get-M365AdminPeopleSetting -Name PersonInfoOnProfileCards
 
@@ -29,7 +35,13 @@
         [string]$Name = 'PersonInfoOnProfileCards',
 
         [Parameter()]
-        [switch]$Force
+        [switch]$Force,
+
+        [Parameter()]
+        [switch]$Raw,
+
+        [Parameter()]
+        [switch]$RawJson
     )
 
     process {
@@ -63,7 +75,8 @@
                     ConnectorProperties   = $connectorProperties
                 }
 
-                return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.PeopleSetting.PersonInfoOnProfileCards'
+                $result = Add-M365TypeName -InputObject $result -TypeName 'M365Admin.PeopleSetting.PersonInfoOnProfileCards'
+                return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
             }
             'ProfileCardProperties' {
                 $path = "/fd/peopleadminservice/{0}/profilecard/properties" -f $tenantId
@@ -79,6 +92,7 @@
             }
         }
 
-        Get-PeopleSettingResult -ResultName $Name -Path $path
+        $result = Get-PeopleSettingResult -ResultName $Name -Path $path
+        return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
     }
 }

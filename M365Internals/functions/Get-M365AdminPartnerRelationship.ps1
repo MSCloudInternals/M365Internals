@@ -12,6 +12,12 @@
     .PARAMETER Force
         Bypasses the cache and forces a fresh retrieval.
 
+    .PARAMETER Raw
+        Returns the raw partner relationship payload for the selected view.
+
+    .PARAMETER RawJson
+        Returns the raw partner relationship payload serialized as formatted JSON.
+
     .EXAMPLE
         Get-M365AdminPartnerRelationship
 
@@ -28,7 +34,13 @@
         [string]$Name = 'All',
 
         [Parameter()]
-        [switch]$Force
+        [switch]$Force,
+
+        [Parameter()]
+        [switch]$Raw,
+
+        [Parameter()]
+        [switch]$RawJson
     )
 
     process {
@@ -38,9 +50,11 @@
                 GDAP = Get-M365AdminPartnerClient -PartnerType GDAP -Force:$Force
             }
 
-            return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.PartnerRelationship'
+            $result = Add-M365TypeName -InputObject $result -TypeName 'M365Admin.PartnerRelationship'
+            return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
         }
 
-        Get-M365AdminPartnerClient -PartnerType $Name -Force:$Force
+        $result = Get-M365AdminPartnerClient -PartnerType $Name -Force:$Force -Raw:$Raw -RawJson:$RawJson
+        return $result
     }
 }

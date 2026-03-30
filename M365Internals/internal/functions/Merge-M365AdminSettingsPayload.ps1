@@ -34,7 +34,13 @@
         }
 
         if ($CurrentSettings.PSObject.TypeNames -contains 'M365Admin.UnavailableResult') {
-            throw "Cannot update unavailable settings payload '$($CurrentSettings.Name)'. $($CurrentSettings.Description)"
+            $message = "Cannot update unavailable settings payload '$($CurrentSettings.Name)'. $($CurrentSettings.Description)"
+
+            if (($CurrentSettings.PSObject.Properties.Name -contains 'SuggestedAction') -and -not [string]::IsNullOrWhiteSpace([string]$CurrentSettings.SuggestedAction)) {
+                $message = "{0} {1}" -f $message, $CurrentSettings.SuggestedAction
+            }
+
+            throw $message
         }
 
         if ($Settings.Count -eq 0) {

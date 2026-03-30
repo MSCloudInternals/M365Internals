@@ -22,7 +22,7 @@
         } -Confirm:$false | Out-Null
 
         Assert-MockCalled Get-M365AdminAppSetting -ModuleName M365Internals -Exactly 1 -ParameterFilter {
-            $Name -eq 'OfficeScripts' -and -not $Force.IsPresent
+            $Name -eq 'OfficeScripts' -and $Raw.IsPresent -and -not $Force.IsPresent
         }
 
         Assert-MockCalled Invoke-M365AdminRestMethod -ModuleName M365Internals -Exactly 1 -ParameterFilter {
@@ -54,6 +54,8 @@
 
         $result.Enabled | Should -Be $true
         Assert-MockCalled Get-M365AdminAppSetting -ModuleName M365Internals -Exactly 2
+        Assert-MockCalled Get-M365AdminAppSetting -ModuleName M365Internals -Exactly 1 -ParameterFilter { $Raw.IsPresent }
+        Assert-MockCalled Get-M365AdminAppSetting -ModuleName M365Internals -Exactly 1 -ParameterFilter { -not $Raw.IsPresent }
     }
 
     It 'wraps primitive Boolean payloads in a writable body' {

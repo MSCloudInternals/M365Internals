@@ -65,6 +65,22 @@
         }
     }
 
+    function Update-PortalHeaderState {
+        if ([string]::IsNullOrWhiteSpace($cookieValues['s.AjaxSessionKey'])) {
+            $null = $script:m365PortalHeaders.Remove('AjaxSessionKey')
+        }
+        else {
+            $script:m365PortalHeaders['AjaxSessionKey'] = $cookieValues['s.AjaxSessionKey']
+        }
+
+        if ([string]::IsNullOrWhiteSpace($cookieValues['x-portal-routekey'])) {
+            $null = $script:m365PortalHeaders.Remove('x-portal-routekey')
+        }
+        else {
+            $script:m365PortalHeaders['x-portal-routekey'] = $cookieValues['x-portal-routekey']
+        }
+    }
+
     function Resolve-TenantIdFromContent {
         param (
             [string]$Content
@@ -120,11 +136,98 @@
         return ($Value -match '^[0-9a-fA-F-]{36}$')
     }
 
+    function Test-IsUnexpectedHtmlBootstrapShell {
+        param (
+            [string]$Content
+        )
+
+        if ([string]::IsNullOrWhiteSpace($Content)) {
+            return $false
+        }
+
+        $trimmedContent = $Content.TrimStart()
+        if (-not $trimmedContent.StartsWith('<')) {
+            return $false
+        }
+
+        if ($Content -match 'O365\.TID=' -or
+            $Content -match '\$Config\s*=\s*\{' -or
+            $Content -match '"TID"\s*:\s*"?[0-9a-fA-F-]{36}') {
+            return $false
+        }
+
+        return $true
+    }
+
+    function Get-BootstrapFailureDetails {
+        $bootstrapState = $script:m365PortalLastBootstrapState
+        if (-not $bootstrapState) {
+            return ''
+        }
+
+        if ($bootstrapState.PSObject.Properties['LogClientAttempted'] -and $bootstrapState.LogClientAttempted -and
+            $bootstrapState.PSObject.Properties['LogClientSucceeded'] -and -not $bootstrapState.LogClientSucceeded -and
+            -not [string]::IsNullOrWhiteSpace([string]$bootstrapState.LogClientError)) {
+            return " The preceding logclient bootstrap request also failed: $($bootstrapState.LogClientError)"
+        }
+
+        if ($bootstrapState.PSObject.Properties['AjaxSessionKeyPresent'] -and -not $bootstrapState.AjaxSessionKeyPresent) {
+            return ' The bootstrap retry did not have an s.AjaxSessionKey cookie to replay the expected follow-up requests.'
+        }
+
+        return ''
+    }
+
+    function Invoke-ValidatedBootstrapProbe {
+        param (
+            [Parameter(Mandatory)]
+            [string]$ProbeName,
+
+            [Parameter(Mandatory)]
+            [string]$Path,
+
+            [hashtable]$Headers,
+
+            [switch]$RetryOnHtmlShell
+        )
+
+        $attempt = 0
+
+        while ($true) {
+            $attempt++
+            $response = Invoke-M365PortalRequest -Path $Path -Headers $Headers -RawResponse
+
+            if (-not (Test-IsUnexpectedHtmlBootstrapShell -Content $response.Content)) {
+                return $response
+            }
+
+            if ($RetryOnHtmlShell -and $attempt -lt 2) {
+                Write-Verbose "The $ProbeName validation probe returned the admin portal HTML shell. Replaying the post-landing bootstrap and retrying once."
+
+                try {
+                    $null = Invoke-M365PortalPostLandingBootstrap -WebSession $WebSession -UserAgent $UserAgent
+                }
+                catch {
+                    Write-Verbose "The retry bootstrap attempt after the $ProbeName HTML shell did not complete successfully: $($_.Exception.Message)"
+                }
+
+                Sync-PortalCookieValues
+                if (-not [string]::IsNullOrWhiteSpace($cookieValues['x-portal-routekey'])) {
+                    $script:m365PortalHeaders['x-portal-routekey'] = $cookieValues['x-portal-routekey']
+                }
+
+                continue
+            }
+
+            throw ("Connected to admin.cloud.microsoft, but the {0} validation probe returned the admin portal HTML error shell instead of bootstrap data.{1}" -f $ProbeName, (Get-BootstrapFailureDetails))
+        }
+    }
+
     if ($UserAgent) {
         $WebSession.UserAgent = $UserAgent
     }
 
-    $requiredCookieNames = 'RootAuthToken', 'SPAAuthCookie', 'OIDCAuthCookie', 's.AjaxSessionKey'
+    $requiredCookieNames = 'RootAuthToken', 'SPAAuthCookie', 'OIDCAuthCookie'
     $cookieValues = @{}
     Sync-PortalCookieValues
 
@@ -136,17 +239,17 @@
     $previousSession = $script:m365PortalSession
     $previousHeaders = $script:m365PortalHeaders
     $previousConnection = $script:m365PortalConnection
+    $previousBootstrapState = $script:m365PortalLastBootstrapState
+    $script:m365PortalLastBootstrapState = $null
 
     $script:m365PortalSession = $WebSession
     $script:m365PortalHeaders = @{
-        AjaxSessionKey = $cookieValues['s.AjaxSessionKey']
         Accept         = 'application/json, text/plain, */*'
     }
-    if (-not [string]::IsNullOrWhiteSpace($cookieValues['x-portal-routekey'])) {
-        $script:m365PortalHeaders['x-portal-routekey'] = $cookieValues['x-portal-routekey']
-    }
+    Update-PortalHeaderState
 
-    if ($cookieValues['UserLoginRef'] -ne '%2Fhomepage' -or
+    if ([string]::IsNullOrWhiteSpace($cookieValues['s.AjaxSessionKey']) -or
+        $cookieValues['UserLoginRef'] -ne '%2Fhomepage' -or
         [string]::IsNullOrWhiteSpace($cookieValues['s.UserTenantId']) -or
         [string]::IsNullOrWhiteSpace($cookieValues['x-portal-routekey'])) {
         try {
@@ -157,9 +260,11 @@
         }
 
         Sync-PortalCookieValues
+        Update-PortalHeaderState
     }
 
-    if ([string]::IsNullOrWhiteSpace($cookieValues['s.UserTenantId'])) {
+    if ([string]::IsNullOrWhiteSpace($cookieValues['s.AjaxSessionKey']) -or
+        [string]::IsNullOrWhiteSpace($cookieValues['s.UserTenantId'])) {
         try {
             $null = Invoke-M365PortalPostLandingBootstrap -WebSession $WebSession -UserAgent $UserAgent
         }
@@ -168,6 +273,7 @@
         }
 
         Sync-PortalCookieValues
+        Update-PortalHeaderState
 
         try {
             if ([string]::IsNullOrWhiteSpace($cookieValues['s.UserTenantId'])) {
@@ -188,10 +294,7 @@
         }
 
         Sync-PortalCookieValues
-
-        if (-not [string]::IsNullOrWhiteSpace($cookieValues['x-portal-routekey'])) {
-            $script:m365PortalHeaders['x-portal-routekey'] = $cookieValues['x-portal-routekey']
-        }
+        Update-PortalHeaderState
     }
 
     $validationResults = New-Object System.Collections.Generic.List[object]
@@ -206,7 +309,7 @@
     }
     try {
         if (-not $SkipValidation) {
-            $classicModernResponse = Invoke-M365PortalRequest -Path '/adminportal/home/ClassicModernAdminDataStream?ref=/homepage' -Headers (Get-M365PortalContextHeaders -Context Homepage) -RawResponse
+            $classicModernResponse = Invoke-ValidatedBootstrapProbe -ProbeName 'ClassicModernAdminDataStream' -Path '/adminportal/home/ClassicModernAdminDataStream?ref=/homepage' -Headers (Get-M365PortalContextHeaders -Context Homepage) -RetryOnHtmlShell
             if ([string]::IsNullOrWhiteSpace($resolvedTenantId)) {
                 $resolvedTenantId = Resolve-TenantIdFromContent -Content $classicModernResponse.Content
             }
@@ -216,9 +319,7 @@
                 $resolvedTenantId = $cookieValues['s.UserTenantId']
             }
 
-            if (-not [string]::IsNullOrWhiteSpace($cookieValues['x-portal-routekey'])) {
-                $script:m365PortalHeaders['x-portal-routekey'] = $cookieValues['x-portal-routekey']
-            }
+            Update-PortalHeaderState
 
             $validationResults.Add([pscustomobject]@{
                 Name       = 'ClassicModernAdminDataStream'
@@ -227,7 +328,7 @@
             })
 
             try {
-                $shellInfoResponse = Invoke-M365PortalRequest -Path '/admin/api/coordinatedbootstrap/shellinfo' -Headers (Get-M365PortalContextHeaders -Context Homepage) -RawResponse
+                $shellInfoResponse = Invoke-ValidatedBootstrapProbe -ProbeName 'ShellInfo' -Path '/admin/api/coordinatedbootstrap/shellinfo' -Headers (Get-M365PortalContextHeaders -Context Homepage) -RetryOnHtmlShell
                 if ([string]::IsNullOrWhiteSpace($resolvedTenantId)) {
                     $resolvedTenantId = Resolve-TenantIdFromContent -Content $shellInfoResponse.Content
                 }
@@ -279,6 +380,7 @@
         }
 
         Sync-PortalCookieValues
+        Update-PortalHeaderState
         if ([string]::IsNullOrWhiteSpace($resolvedTenantId)) {
             if (Test-IsGuidValue -Value $cookieValues['s.UserTenantId']) {
                 $resolvedTenantId = $cookieValues['s.UserTenantId']
@@ -323,6 +425,7 @@
         $script:m365PortalSession = $previousSession
         $script:m365PortalHeaders = $previousHeaders
         $script:m365PortalConnection = $previousConnection
+        $script:m365PortalLastBootstrapState = $previousBootstrapState
         throw
     }
 }

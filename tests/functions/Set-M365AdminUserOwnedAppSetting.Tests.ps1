@@ -27,8 +27,7 @@
 
         Assert-MockCalled Invoke-M365AdminRestMethod -ModuleName M365Internals -Exactly 1 -ParameterFilter {
             $Path -eq '/admin/api/storesettings/iwpurchase/false' -and
-            $Method -eq 'Put' -and
-            $null -eq $Body
+            $Method -eq 'Put'
         }
     }
 

@@ -22,6 +22,12 @@
     .PARAMETER Force
         Bypasses the cache and forces a fresh retrieval.
 
+    .PARAMETER Raw
+        Returns the raw user payload for the selected section.
+
+    .PARAMETER RawJson
+        Returns the raw user payload serialized as formatted JSON.
+
     .EXAMPLE
         Get-M365AdminUserSetting -Name CurrentUser
 
@@ -57,7 +63,13 @@
         [string]$TokenAudience = 'https://management.azure.com/',
 
         [Parameter()]
-        [switch]$Force
+        [switch]$Force,
+
+        [Parameter()]
+        [switch]$Raw,
+
+        [Parameter()]
+        [switch]$RawJson
     )
 
     process {
@@ -75,7 +87,8 @@
 
         switch ($Name) {
             'ContextualAlerts' {
-                return Get-M365AdminPortalData -Path '/admin/api/users/contextualalerts' -CacheKey $cacheKey -Method Post -Body @{} -Force:$Force
+                $result = Get-M365AdminPortalData -Path '/admin/api/users/contextualalerts' -CacheKey $cacheKey -Method Post -Body @{} -Force:$Force
+                return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
             }
             'ListUsers' {
                 $body = @{
@@ -89,7 +102,8 @@
                     ServerContext    = $null
                 }
 
-                return Get-M365AdminPortalData -Path '/admin/api/Users/ListUsers' -CacheKey $cacheKey -Method Post -Body $body -Force:$Force
+                $result = Get-M365AdminPortalData -Path '/admin/api/Users/ListUsers' -CacheKey $cacheKey -Method Post -Body $body -Force:$Force
+                return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
             }
             'Roles' {
                 $currentUser = Get-M365AdminUserSetting -Name CurrentUser -Force:$Force
@@ -113,10 +127,12 @@
                     }
                 }
 
-                return Get-M365AdminPortalData -Path '/admin/api/users/getuserroles' -CacheKey $cacheKey -Method Post -Body $body -Force:$Force
+                $result = Get-M365AdminPortalData -Path '/admin/api/users/getuserroles' -CacheKey $cacheKey -Method Post -Body $body -Force:$Force
+                return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
             }
             'TokenWithExpiry' {
-                return Get-M365AdminPortalData -Path '/admin/api/users/tokenWithExpiry' -CacheKey $cacheKey -Method Post -ContentType 'application/x-www-form-urlencoded; charset=UTF-8' -Body ('={0}' -f $TokenAudience) -Force:$Force
+                $result = Get-M365AdminPortalData -Path '/admin/api/users/tokenWithExpiry' -CacheKey $cacheKey -Method Post -ContentType 'application/x-www-form-urlencoded; charset=UTF-8' -Body ('={0}' -f $TokenAudience) -Force:$Force
+                return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
             }
         }
 
@@ -131,6 +147,7 @@
             'TeamsSettingsInfo' { '/admin/api/users/teamssettingsinfo' }
         }
 
-        Get-M365AdminPortalData -Path $path -CacheKey $cacheKey -Force:$Force
+        $result = Get-M365AdminPortalData -Path $path -CacheKey $cacheKey -Force:$Force
+        return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
     }
 }

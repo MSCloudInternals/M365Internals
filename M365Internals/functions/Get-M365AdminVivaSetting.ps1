@@ -13,6 +13,12 @@
     .PARAMETER Force
         Bypasses the cache and forces a fresh retrieval.
 
+    .PARAMETER Raw
+        Returns the raw Viva payload for the selected section.
+
+    .PARAMETER RawJson
+        Returns the raw Viva payload serialized as formatted JSON.
+
     .EXAMPLE
         Get-M365AdminVivaSetting -Name Modules
 
@@ -29,7 +35,13 @@
         [string]$Name = 'All',
 
         [Parameter()]
-        [switch]$Force
+        [switch]$Force,
+
+        [Parameter()]
+        [switch]$Raw,
+
+        [Parameter()]
+        [switch]$RawJson
     )
 
     process {
@@ -61,7 +73,8 @@
                 AccountSkus = Get-M365AdminTenantSetting -Name AccountSkus -Force:$Force
             }
 
-            return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.VivaSetting'
+                $result = Add-M365TypeName -InputObject $result -TypeName 'M365Admin.VivaSetting'
+                return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
         }
 
         $path = switch ($Name) {
@@ -72,6 +85,7 @@
         }
 
         $headers = if ($Name -eq 'AccountSkus') { $null } else { Get-M365PortalContextHeaders -Context Viva }
-        Get-VivaSettingResult -ResultName $Name -Path $path -ResultHeaders $headers
+        $result = Get-VivaSettingResult -ResultName $Name -Path $path -ResultHeaders $headers
+        return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
     }
 }

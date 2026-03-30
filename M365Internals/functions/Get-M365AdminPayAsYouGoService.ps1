@@ -13,6 +13,12 @@
     .PARAMETER Force
         Bypasses the cache and forces a fresh retrieval.
 
+    .PARAMETER Raw
+        Returns the raw pay-as-you-go payload for the selected view.
+
+    .PARAMETER RawJson
+        Returns the raw pay-as-you-go payload serialized as formatted JSON.
+
     .EXAMPLE
         Get-M365AdminPayAsYouGoService
 
@@ -29,10 +35,26 @@
         [string]$Name = 'All',
 
         [Parameter()]
-        [switch]$Force
+        [switch]$Force,
+
+        [Parameter()]
+        [switch]$Raw,
+
+        [Parameter()]
+        [switch]$RawJson
     )
 
     process {
+        function Get-TelemetryUnavailableResult {
+            $result = New-M365AdminUnavailableResult -Name 'Telemetry' -Description 'The telemetry surface is known to use POST /admin/api/km/setting/telemetry in the live portal, but the request body and surrounding workflow have not been captured well enough to issue a safe direct read from the module yet.' -Reason 'UndiscoveredEndpoint' -SuggestedAction 'Inspect the live portal telemetry interaction with browser DevTools to capture the exact POST body and any required headers before adding direct module support.'
+            Add-Member -InputObject $result -NotePropertyName RequestMethod -NotePropertyValue 'Post' -Force
+            Add-Member -InputObject $result -NotePropertyName RequestPath -NotePropertyValue '/admin/api/km/setting/telemetry' -Force
+            Add-Member -InputObject $result -NotePropertyName ObservedStatusCode -NotePropertyValue 204 -Force
+            Add-Member -InputObject $result -NotePropertyName RequestBodyCaptured -NotePropertyValue $false -Force
+            Add-Member -InputObject $result -NotePropertyName PortalSurface -NotePropertyValue 'Org settings / Pay-as-you-go services' -Force
+            return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.PayAsYouGoService.Telemetry'
+        }
+
         switch ($Name) {
             'All' {
                 $result = [pscustomobject]@{
@@ -47,10 +69,11 @@
                     ESignature                    = Get-M365AdminPortalData -Path '/admin/api/contentunderstanding/esignaturesettings' -CacheKey 'M365AdminPayAsYouGoService:ESignature' -Force:$Force
                     TaxonomyTagging               = Get-M365AdminPortalData -Path '/admin/api/contentunderstanding/taxonomytaggingsetting' -CacheKey 'M365AdminPayAsYouGoService:TaxonomyTagging' -Force:$Force
                     PlaybackTranscriptTranslation = Get-M365AdminPortalData -Path '/admin/api/contentunderstanding/playbacktranscripttranslationsettings' -CacheKey 'M365AdminPayAsYouGoService:PlaybackTranscriptTranslation' -Force:$Force
-                    Telemetry                     = New-M365AdminUnavailableResult -Name 'Telemetry' -Description 'The telemetry endpoint currently requires an undiscovered API version and does not respond successfully to the direct read pattern used elsewhere in the module.' -Reason 'UndiscoveredEndpoint'
+                    Telemetry                     = Get-TelemetryUnavailableResult
                 }
 
-                return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.PayAsYouGoService'
+                $result = Add-M365TypeName -InputObject $result -TypeName 'M365Admin.PayAsYouGoService'
+                return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
             }
             'BillingFeature' {
                 $path = "/_api/v2.1/billingFeatures('M365Backup')"
@@ -86,10 +109,13 @@
                 $path = '/admin/api/contentunderstanding/playbacktranscripttranslationsettings'
             }
             'Telemetry' {
-                return New-M365AdminUnavailableResult -Name 'Telemetry' -Description 'The telemetry endpoint currently requires an undiscovered API version and does not respond successfully to the direct read pattern used elsewhere in the module.' -Reason 'UndiscoveredEndpoint'
+                $result = Get-TelemetryUnavailableResult
+                return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
             }
         }
 
-        Get-M365AdminPortalData -Path $path -CacheKey "M365AdminPayAsYouGoService:$Name" -Force:$Force
+        $result = Get-M365AdminPortalData -Path $path -CacheKey "M365AdminPayAsYouGoService:$Name" -Force:$Force
+        $result = Add-M365TypeName -InputObject $result -TypeName ("M365Admin.PayAsYouGoService.{0}" -f $Name)
+        return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
     }
 }

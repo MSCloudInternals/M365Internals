@@ -15,6 +15,14 @@ Describe 'Connect-M365Portal auth surface' {
         $portalCookieParameterSet.Parameters.Name | Should -Contain 'Username'
     }
 
+    It 'treats AjaxSessionKey as optional for portal-cookie reuse' {
+        $command = Get-Command Connect-M365Portal
+        $portalCookieParameterSet = $command.ParameterSets | Where-Object Name -EQ 'PortalCookies'
+        $ajaxParameter = $portalCookieParameterSet.Parameters | Where-Object Name -EQ 'AjaxSessionKey'
+
+        $ajaxParameter.IsMandatory | Should -BeFalse
+    }
+
     It 'accepts TenantId with the ESTS cookie parameter sets' {
         $command = Get-Command Connect-M365Portal
         $plainTextParameterSet = $command.ParameterSets | Where-Object Name -EQ 'EstsPlainText'
@@ -244,6 +252,26 @@ $Config = {"pgid":"ConvergedSignIn","arrSessions":[{"id":"session-123"}],"urlLog
             Assert-MockCalled Invoke-M365CredentialAuthentication -Times 1 -ParameterFilter {
                 -not $PSBoundParameters.ContainsKey('MfaMethod')
             }
+        }
+    }
+
+    Describe 'portal cookie reuse' {
+        BeforeEach {
+            $script:lastPortalCookieSession = $null
+
+            Mock Set-M365PortalConnectionSettings {
+                $script:lastPortalCookieSession = $WebSession
+                [pscustomobject]@{
+                    Connected = $true
+                }
+            }
+        }
+
+        It 'can reuse portal cookies without an AjaxSessionKey value' {
+            $result = Connect-M365Portal -RootAuthToken 'root-token' -SPAAuthCookie 'spa-cookie' -OIDCAuthCookie 'oidc-cookie' -SkipValidation
+
+            $result.Connected | Should -BeTrue
+            ($script:lastPortalCookieSession.Cookies.GetCookies('https://admin.cloud.microsoft/') | Where-Object Name -eq 's.AjaxSessionKey') | Should -BeNullOrEmpty
         }
     }
 

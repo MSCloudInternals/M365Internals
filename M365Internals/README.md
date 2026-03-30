@@ -33,28 +33,28 @@ The module follows the same high-level structure as XDRInternals, adapted for Mi
 
 The module includes shared in-memory caching for portal metadata and repeated read operations:
 
-- Cache entries are tenant-aware and scoped to the active portal connection when possible
-- Read-heavy cmdlets commonly support `-Force` to bypass cache
-- Common bootstrap and settings data can be reused across repeated calls in the same session
+- Cached responses are stored in memory with tenant-aware cache keys.
+- Many read cmdlets support `-Force` when you need to bypass cache and fetch a fresh payload.
+- Successful responses are typically cached for 5 to 15 minutes, depending on the cmdlet.
 
 Example:
 ```powershell
 # Retrieve and cache shell information
 Get-M365AdminShellInfo
 
-# Bypass the cache for a fresh response
+# Force a fresh retrieval
 Get-M365AdminShellInfo -Force
 ```
 
-### Result Shapes And Availability
+### Friendly Output And Raw Output
 
 The module favors interactive, page-oriented outputs where that better matches the admin center.
 
 - Many `-Name All` experiences return grouped objects that mirror major portal sections.
-- Some cmdlets offer `-Raw` to return the underlying leaf payload bundle instead.
+- Many Settings-family cmdlets support `-Raw` to return the underlying payload and `-RawJson` to emit that payload as formatted JSON.
 - Tenant-specific, optional, or informational sub-results increasingly use the `M365Admin.UnavailableResult` type instead of throwing or returning ad hoc placeholder objects.
 
-This keeps broad exploratory commands useful even when one part of a page is unavailable in the current tenant.
+This keeps broad exploratory commands useful even when one part of a page is unavailable in the current tenant while still preserving easy access to the original admin-center response shape.
 
 ### Validation Notes
 
@@ -83,6 +83,7 @@ Current validation work has confirmed the public cmdlet surface live by using so
 | Connect-M365PortalBySSO                  | Connect to the Microsoft 365 admin center by using browser-based single sign-on |
 | Connect-M365PortalByTemporaryAccessPass  | Connect to the Microsoft 365 admin center by using a Temporary Access Pass |
 | Get-M365AdminAgent                       | Retrieve the Agents > All agents route-family payloads                     |
+| Get-M365AdminAgentFrontierAccess         | Retrieve the Agents Frontier access policy payload                         |
 | Get-M365AdminAgentOverview               | Retrieve Agents overview inventory, adoption, and risky-agent payloads     |
 | Get-M365AdminAgentSetting                | Retrieve Agents settings, sharing, templates, and user-access payloads     |
 | Get-M365AdminAgentTool                   | Retrieve Agents tools payloads such as the MCP server inventory            |
@@ -93,6 +94,7 @@ Current validation work has confirmed the public cmdlet surface live by using so
 | Get-M365AdminCopilotBillingUsage         | Retrieve Copilot Billing & usage tab payloads and billing policy data      |
 | Get-M365AdminCopilotConnector            | Retrieve Copilot Connectors gallery and connection inventory payloads      |
 | Get-M365AdminCopilotOverview             | Retrieve Copilot Overview, Security, Usage, and About payloads             |
+| Get-M365AdminCopilotPinPolicy            | Retrieve the Copilot pin policy payload                                    |
 | Get-M365AdminCopilotSetting              | Retrieve Copilot Settings optimize and view-all payloads                   |
 | Get-M365AdminContentUnderstandingSetting | Retrieve Content Understanding settings and related admin payloads          |
 | Get-M365AdminDirectorySyncError          | Retrieve directory sync error rows from the admin center settings surface   |
@@ -126,7 +128,13 @@ Current validation work has confirmed the public cmdlet surface live by using so
 | Get-M365AdminUserSetting                 | Retrieve current-user, role, product, dashboard-layout, and token-broker admin data |
 | Get-M365AdminVivaSetting                 | Retrieve Viva module, role, and Glint client lookup settings               |
 | Invoke-M365AdminRestMethod               | Invoke authenticated REST requests against `admin.cloud.microsoft`         |
+| Set-M365AdminAgentFrontierAccess         | Update the Agents Frontier access policy by merging provided values into the current payload |
 | Set-M365AdminAppSetting                  | Update an app settings payload by merging provided values into the current admin-center payload |
+| Set-M365AdminCompanySetting              | Update supported company settings payloads such as Help Desk, Profile, Release Track, Theme, and Tile |
+| Set-M365AdminCopilotPinPolicy            | Update the Copilot pin policy by merging provided values into the current payload |
+| Set-M365AdminMicrosoft365GroupSetting    | Update Microsoft 365 Groups guest access and guest user policy payloads |
+| Set-M365AdminPeopleSetting               | Update the People name-pronunciation and pronouns payloads |
+| Set-M365AdminSecuritySetting             | Update supported security settings payloads such as Bing data collection, guest access, privacy policy, and security defaults |
 | Set-M365AdminUserOwnedAppSetting         | Update Office Store access, trials, and auto-claim settings for user-owned apps and services |
 
 ## Installation
@@ -166,6 +174,9 @@ Connect-M365Portal
 
 # Connect by exchanging an ESTS authentication cookie
 Connect-M365Portal -EstsAuthCookieValue $estsCookie
+
+# Connect by reusing core portal cookies and let bootstrap recover AjaxSessionKey when needed
+Connect-M365Portal -RootAuthToken $root -SPAAuthCookie $spa -OIDCAuthCookie $oidc
 
 # Connect by using Entra credentials with automatic Authenticator OTP handling
 Connect-M365Portal -Credential (Get-Credential) -TotpSecret 'JBSWY3DPEHPK3PXP'
@@ -211,11 +222,17 @@ Get-M365AdminAgentOverview
 # Retrieve the All agents payloads
 Get-M365AdminAgent
 
+# Retrieve the Agents Frontier access policy payload
+Get-M365AdminAgentFrontierAccess
+
 # Retrieve the Agents tools payloads
 Get-M365AdminAgentTool
 
 # Retrieve the Agents settings payloads
 Get-M365AdminAgentSetting
+
+# Retrieve the Copilot pin policy payload
+Get-M365AdminCopilotPinPolicy
 
 # Retrieve the raw Agents settings payload bundle
 Get-M365AdminAgentSetting -Raw
@@ -246,6 +263,33 @@ Get-M365AdminAppSetting -Name Project
 
 # Update Project settings and return the refreshed payload
 Set-M365AdminAppSetting -Name Project -Settings @{ IsRoadmapEnabled = $false } -PassThru -Confirm:$false
+
+# Update the Agents Frontier access policy and return the refreshed payload
+Set-M365AdminAgentFrontierAccess -Settings @{ FrontierPolicy = 0 } -PassThru -Confirm:$false
+
+# Update the Copilot pin policy and return the refreshed payload
+Set-M365AdminCopilotPinPolicy -Settings @{ CopilotPinningPolicy = 0 } -PassThru -Confirm:$false
+
+# Update a company profile setting and return the refreshed payload
+Set-M365AdminCompanySetting -Name Profile -Settings @{ Name = 'Contoso' } -PassThru -Confirm:$false
+
+# Update a People setting and return the refreshed payload
+Set-M365AdminPeopleSetting -Name Pronouns -Settings @{ isEnabledInOrganization = $true } -PassThru -Confirm:$false
+
+# Retrieve the canonical service view; legacy aliases such as MicrosoftToDo still resolve here
+Get-M365AdminService -Name Todo
+
+# Inspect the modeled interactive-only Account Linking surface metadata
+Get-M365AdminSearchSetting -Name AccountLinking
+
+# Inspect the modeled telemetry request metadata
+Get-M365AdminPayAsYouGoService -Name Telemetry
+
+# Update a security setting and return the refreshed payload
+Set-M365AdminSecuritySetting -Name BingDataCollection -Settings @{ IsBingDataCollectionConsented = $false } -PassThru -Confirm:$false
+
+# Update a Microsoft 365 Groups setting and return the refreshed payload
+Set-M365AdminMicrosoft365GroupSetting -Name GuestAccess -Settings @{ AllowGuestAccess = $false } -PassThru -Confirm:$false
 
 # Retrieve grouped user-owned apps and services settings
 Get-M365AdminUserOwnedAppSetting
