@@ -13,6 +13,12 @@
     .PARAMETER Force
         Bypasses the cache and forces a fresh retrieval.
 
+    .PARAMETER Raw
+        Returns the underlying leaf payload bundle for the selected overview view.
+
+    .PARAMETER RawJson
+        Returns the raw overview payload bundle serialized as formatted JSON.
+
     .EXAMPLE
         Get-M365AdminAgentOverview
 
@@ -29,10 +35,50 @@
         [string]$Name = 'All',
 
         [Parameter()]
-        [switch]$Force
+        [switch]$Force,
+
+        [Parameter()]
+        [switch]$Raw,
+
+        [Parameter()]
+        [switch]$RawJson
     )
 
     process {
+        function Get-AgentOverviewRawPayload {
+            param (
+                [Parameter(Mandatory)]
+                [ValidateSet('All', 'Summary')]
+                [string]$ViewName
+            )
+
+            switch ($ViewName) {
+                'Summary' {
+                    $result = [pscustomobject]@{
+                        AgentInsights = Get-M365AdminAgentOverview -Name AgentInsights -Force:$Force
+                        RiskyAgents = Get-M365AdminAgentOverview -Name RiskyAgents -Force:$Force
+                    }
+                }
+                'All' {
+                    $result = [pscustomobject]@{
+                        Products = Get-M365AdminAgentOverview -Name Products -Force:$Force
+                        OfferRecommendations = Get-M365AdminAgentOverview -Name OfferRecommendations -Force:$Force
+                        UsageMetrics = Get-M365AdminAgentOverview -Name UsageMetrics -Force:$Force
+                        UsageWoWMetrics = Get-M365AdminAgentOverview -Name UsageWoWMetrics -Force:$Force
+                        UsageDailyMetrics = Get-M365AdminAgentOverview -Name UsageDailyMetrics -Force:$Force
+                        TopAgentsByDailyActiveUsers = Get-M365AdminAgentOverview -Name TopAgentsByDailyActiveUsers -Force:$Force
+                        Agents = Get-M365AdminAgentOverview -Name Agents -Force:$Force
+                        ActionableApps = Get-M365AdminAgentOverview -Name ActionableApps -Force:$Force
+                        AgentInsights = Get-M365AdminAgentOverview -Name AgentInsights -Force:$Force
+                        FrontierAccess = Get-M365AdminAgentOverview -Name FrontierAccess -Force:$Force
+                        RiskyAgents = Get-M365AdminAgentOverview -Name RiskyAgents -Force:$Force
+                    }
+                }
+            }
+
+            return Add-M365TypeName -InputObject $result -TypeName "M365Admin.AgentOverview.$ViewName.Raw"
+        }
+
         function Get-AgentSummary {
             $insights = Get-M365AdminAgentOverview -Name AgentInsights -Force:$Force
             $riskyAgents = Get-M365AdminAgentOverview -Name RiskyAgents -Force:$Force
@@ -55,6 +101,10 @@
 
         switch ($Name) {
             'All' {
+                if ($Raw -or $RawJson) {
+                    return Resolve-M365AdminOutput -RawValue (Get-AgentOverviewRawPayload -ViewName All) -Raw:$Raw -RawJson:$RawJson
+                }
+
                 $result = [pscustomobject]@{
                     Summary = Get-M365AdminAgentOverview -Name Summary -Force:$Force
                     Products = Get-M365AdminAgentOverview -Name Products -Force:$Force
@@ -73,10 +123,12 @@
                 return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.AgentOverview'
             }
             'Products' {
-                return Get-M365AdminPortalData -Path '/admin/api/users/products' -CacheKey 'M365AdminAgentOverview:Products' -Force:$Force
+                $result = Get-M365AdminPortalData -Path '/admin/api/users/products' -CacheKey 'M365AdminAgentOverview:Products' -Force:$Force
+                return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
             }
             'Summary' {
-                return Get-AgentSummary
+                $result = Get-AgentSummary
+                return Resolve-M365AdminOutput -DefaultValue $result -RawValue (Get-AgentOverviewRawPayload -ViewName Summary) -Raw:$Raw -RawJson:$RawJson
             }
             'OfferRecommendations' {
                 $result = [pscustomobject]@{
@@ -84,34 +136,44 @@
                     Offer49 = Get-M365AdminPortalData -Path '/admin/api/offerrec/offer/49' -CacheKey 'M365AdminAgentOverview:Offer49' -Force:$Force
                 }
 
-                return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.AgentOverview.OfferRecommendations'
+                $result = Add-M365TypeName -InputObject $result -TypeName 'M365Admin.AgentOverview.OfferRecommendations'
+                return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
             }
             'UsageMetrics' {
-                return Get-M365AdminPortalData -Path '/admin/api/reports/GetReportData?entityname=getCopilotAgentActiveUserRL30Metrics&pagesize=100' -CacheKey 'M365AdminAgentOverview:UsageMetrics' -Force:$Force
+                $result = Get-M365AdminPortalData -Path '/admin/api/reports/GetReportData?entityname=getCopilotAgentActiveUserRL30Metrics&pagesize=100' -CacheKey 'M365AdminAgentOverview:UsageMetrics' -Force:$Force
+                return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
             }
             'UsageWoWMetrics' {
-                return Get-M365AdminPortalData -Path '/admin/api/reports/GetReportData?entityname=getCopilotAgentActiveUserRL30WoWMetrics&pagesize=100' -CacheKey 'M365AdminAgentOverview:UsageWoWMetrics' -Force:$Force
+                $result = Get-M365AdminPortalData -Path '/admin/api/reports/GetReportData?entityname=getCopilotAgentActiveUserRL30WoWMetrics&pagesize=100' -CacheKey 'M365AdminAgentOverview:UsageWoWMetrics' -Force:$Force
+                return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
             }
             'UsageDailyMetrics' {
-                return Get-M365AdminPortalData -Path '/admin/api/reports/GetReportData?entityname=getCopilotAgentActiveUserRL30DailyMetrics&pagesize=100' -CacheKey 'M365AdminAgentOverview:UsageDailyMetrics' -Force:$Force
+                $result = Get-M365AdminPortalData -Path '/admin/api/reports/GetReportData?entityname=getCopilotAgentActiveUserRL30DailyMetrics&pagesize=100' -CacheKey 'M365AdminAgentOverview:UsageDailyMetrics' -Force:$Force
+                return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
             }
             'TopAgentsByDailyActiveUsers' {
-                return Get-M365AdminPortalData -Path '/admin/api/reports/GetReportData?entityname=getCopilotTenantTopAgentsByDAU&pagesize=100' -CacheKey 'M365AdminAgentOverview:TopAgentsByDailyActiveUsers' -Force:$Force
+                $result = Get-M365AdminPortalData -Path '/admin/api/reports/GetReportData?entityname=getCopilotTenantTopAgentsByDAU&pagesize=100' -CacheKey 'M365AdminAgentOverview:TopAgentsByDailyActiveUsers' -Force:$Force
+                return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
             }
             'Agents' {
-                return Get-M365AdminPortalData -Path '/fd/addins/api/agents?workloads=SharedAgent&scopes=Shared&limit=200&creatorId=none' -CacheKey 'M365AdminAgentOverview:Agents' -Force:$Force
+                $result = Get-M365AdminPortalData -Path '/fd/addins/api/agents?workloads=SharedAgent&scopes=Shared&limit=200&creatorId=none' -CacheKey 'M365AdminAgentOverview:Agents' -Force:$Force
+                return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
             }
             'ActionableApps' {
-                return Get-M365AdminPortalData -Path '/fd/addins/api/actionableApps?workloads=MetaOS%2CSharedAgent&limit=200' -CacheKey 'M365AdminAgentOverview:ActionableApps' -Force:$Force
+                $result = Get-M365AdminPortalData -Path '/fd/addins/api/actionableApps?workloads=MetaOS%2CSharedAgent&limit=200' -CacheKey 'M365AdminAgentOverview:ActionableApps' -Force:$Force
+                return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
             }
             'AgentInsights' {
-                return Get-M365AdminPortalData -Path '/fd/addins/api/apps/insight?workload=SharedAgent&entraScopes=EntraAgentBlueprintSP,EntraAgentPVA,EntraAgentIdentity' -CacheKey 'M365AdminAgentOverview:AgentInsights' -Force:$Force
+                $result = Get-M365AdminPortalData -Path '/fd/addins/api/apps/insight?workload=SharedAgent&entraScopes=EntraAgentBlueprintSP,EntraAgentPVA,EntraAgentIdentity' -CacheKey 'M365AdminAgentOverview:AgentInsights' -Force:$Force
+                return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
             }
             'FrontierAccess' {
-                return Get-M365AdminPortalData -Path '/admin/api/settings/company/frontier/access' -CacheKey 'M365AdminAgentOverview:FrontierAccess' -Force:$Force
+                $result = Get-M365AdminPortalData -Path '/admin/api/settings/company/frontier/access' -CacheKey 'M365AdminAgentOverview:FrontierAccess' -Force:$Force
+                return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
             }
             'RiskyAgents' {
-                return Get-M365AdminPortalData -Path '/admin/api/agentusers/metrics/agents/risky?maxCount=3' -CacheKey 'M365AdminAgentOverview:RiskyAgents' -Force:$Force
+                $result = Get-M365AdminPortalData -Path '/admin/api/agentusers/metrics/agents/risky?maxCount=3' -CacheKey 'M365AdminAgentOverview:RiskyAgents' -Force:$Force
+                return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
             }
         }
     }

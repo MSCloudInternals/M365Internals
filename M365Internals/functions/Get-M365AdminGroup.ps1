@@ -12,6 +12,12 @@
     .PARAMETER Force
         Bypasses the cache and forces a fresh retrieval.
 
+    .PARAMETER Raw
+        Returns the raw group payload for the selected view.
+
+    .PARAMETER RawJson
+        Returns the raw group payload serialized as formatted JSON.
+
     .EXAMPLE
         Get-M365AdminGroup -Name Labels
 
@@ -28,7 +34,13 @@
         [string]$Name = 'Groups',
 
         [Parameter()]
-        [switch]$Force
+        [switch]$Force,
+
+        [Parameter()]
+        [switch]$Raw,
+
+        [Parameter()]
+        [switch]$RawJson
     )
 
     begin {
@@ -41,7 +53,7 @@
             $currentCacheValue = Get-M365Cache -CacheKey $cacheKey -ErrorAction SilentlyContinue
             if (-not $Force -and $currentCacheValue -and $currentCacheValue.NotValidAfter -gt (Get-Date)) {
                 Write-Verbose "Using cached $cacheKey data"
-                return $currentCacheValue.Value
+                return Resolve-M365AdminOutput -DefaultValue $currentCacheValue.Value -Raw:$Raw -RawJson:$RawJson
             }
             elseif ($Force) {
                 Write-Verbose 'Force parameter specified, bypassing cache'
@@ -64,7 +76,7 @@
             }
 
             Set-M365Cache -CacheKey $cacheKey -Value $parsedResult -TTLMinutes 15 | Out-Null
-            return $parsedResult
+            return Resolve-M365AdminOutput -DefaultValue $parsedResult -Raw:$Raw -RawJson:$RawJson
         }
 
         $path = switch ($Name) {
@@ -72,6 +84,7 @@
             'Permissions' { '/admin/api/groups/permissions' }
         }
 
-        Get-M365AdminPortalData -Path $path -CacheKey "M365AdminGroup:$Name" -Force:$Force
+        $result = Get-M365AdminPortalData -Path $path -CacheKey "M365AdminGroup:$Name" -Force:$Force
+        return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
     }
 }

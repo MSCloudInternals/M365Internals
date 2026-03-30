@@ -12,6 +12,12 @@
     .PARAMETER Force
         Bypasses the cache and forces a fresh retrieval.
 
+    .PARAMETER Raw
+        Returns the raw security settings payload for the selected section.
+
+    .PARAMETER RawJson
+        Returns the raw security settings payload serialized as formatted JSON.
+
     .EXAMPLE
         Get-M365AdminSecuritySetting -Name MultiFactorAuth
 
@@ -28,10 +34,32 @@
         [string]$Name,
 
         [Parameter()]
-        [switch]$Force
+        [switch]$Force,
+
+        [Parameter()]
+        [switch]$Raw,
+
+        [Parameter()]
+        [switch]$RawJson
     )
 
     process {
+        function Add-SecuritySettingTypeName {
+            param(
+                [Parameter(Mandatory)]
+                $InputObject,
+
+                [Parameter(Mandatory)]
+                [string]$SectionName
+            )
+
+            if ($InputObject -and ($InputObject.PSObject.TypeNames -notcontains 'M365Admin.UnavailableResult')) {
+                $InputObject = Add-M365TypeName -InputObject $InputObject -TypeName ("M365Admin.SecuritySetting.{0}" -f $SectionName)
+            }
+
+            return $InputObject
+        }
+
         if ($Name -in @('NamePronunciation', 'Pronouns')) {
             $tenantId = Get-M365PortalTenantId
             $path = if ($Name -eq 'NamePronunciation') {
@@ -41,7 +69,9 @@
                 "/fd/peopleadminservice/{0}/settings/pronouns" -f $tenantId
             }
 
-            return Get-M365AdminPortalData -Path $path -CacheKey "M365AdminSecuritySetting:$Name" -Force:$Force
+            $result = Get-M365AdminPortalData -Path $path -CacheKey "M365AdminSecuritySetting:$Name" -Force:$Force
+            $result = Add-SecuritySettingTypeName -InputObject $result -SectionName $Name
+            return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
         }
 
         $path = switch ($Name) {
@@ -70,6 +100,8 @@
             'TenantLockbox' { '/admin/api/Settings/security/tenantLockbox' }
         }
 
-        Get-M365AdminPortalData -Path $path -CacheKey "M365AdminSecuritySetting:$Name" -Force:$Force
+        $result = Get-M365AdminPortalData -Path $path -CacheKey "M365AdminSecuritySetting:$Name" -Force:$Force
+        $result = Add-SecuritySettingTypeName -InputObject $result -SectionName $Name
+        return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
     }
 }

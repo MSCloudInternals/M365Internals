@@ -13,6 +13,12 @@
     .PARAMETER Force
         Bypasses the cache and forces a fresh retrieval.
 
+    .PARAMETER Raw
+        Returns the raw tenant relationship payload for the selected view.
+
+    .PARAMETER RawJson
+        Returns the raw tenant relationship payload serialized as formatted JSON.
+
     .EXAMPLE
         Get-M365AdminTenantRelationship -Name Tenants
 
@@ -35,7 +41,13 @@
         [string]$Name = 'MultiTenantOrganization',
 
         [Parameter()]
-        [switch]$Force
+        [switch]$Force,
+
+        [Parameter()]
+        [switch]$Raw,
+
+        [Parameter()]
+        [switch]$RawJson
     )
 
     process {
@@ -71,7 +83,8 @@
                 UserSyncAppOutboundDetails = $userSyncAppOutboundDetails
             }
 
-            return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.TenantRelationship.MultiTenantCollaboration'
+            $result = Add-M365TypeName -InputObject $result -TypeName 'M365Admin.TenantRelationship.MultiTenantCollaboration'
+            return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
         }
 
         $path = switch ($Name) {
@@ -82,6 +95,7 @@
             'UserSyncAppOutboundDetails' { '/admin/api/tenantRelationships/userSyncApps/outboundDetails' }
         }
 
-        Get-TenantRelationshipResult -ResultName $Name -Path $path
+        $result = Get-TenantRelationshipResult -ResultName $Name -Path $path
+        return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
     }
 }

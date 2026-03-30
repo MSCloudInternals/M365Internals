@@ -13,6 +13,12 @@
     .PARAMETER Force
         Bypasses the cache and forces a fresh retrieval.
 
+    .PARAMETER Raw
+        Returns the raw Brand center payload bundle for the selected view.
+
+    .PARAMETER RawJson
+        Returns the raw Brand center payload serialized as formatted JSON.
+
     .EXAMPLE
         Get-M365AdminBrandCenterSetting
 
@@ -29,7 +35,13 @@
         [string]$Name = 'All',
 
         [Parameter()]
-        [switch]$Force
+        [switch]$Force,
+
+        [Parameter()]
+        [switch]$Raw,
+
+        [Parameter()]
+        [switch]$RawJson
     )
 
     process {
@@ -43,7 +55,8 @@
                     SiteUrl        = $siteUrl
                 }
 
-                return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.BrandCenterSetting'
+                $result = Add-M365TypeName -InputObject $result -TypeName 'M365Admin.BrandCenterSetting'
+                return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
             }
             'Configuration' {
                 $path = '/_api/spo.tenant/GetBrandCenterConfiguration'
@@ -53,6 +66,7 @@
             }
         }
 
-        Get-M365AdminPortalData -Path $path -CacheKey "M365AdminBrandCenterSetting:$Name" -Force:$Force
+        $result = Get-M365AdminPortalData -Path $path -CacheKey "M365AdminBrandCenterSetting:$Name" -Force:$Force
+        return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
     }
 }

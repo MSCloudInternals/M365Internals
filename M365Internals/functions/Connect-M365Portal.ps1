@@ -34,7 +34,8 @@
         The OIDCAuthCookie cookie value from admin.cloud.microsoft.
 
     .PARAMETER AjaxSessionKey
-        The s.AjaxSessionKey cookie value from admin.cloud.microsoft.
+        The optional s.AjaxSessionKey cookie value from admin.cloud.microsoft. When omitted,
+        the connection bootstrap flow will try to recover it from the existing portal session.
 
     .PARAMETER SessionId
         The optional s.SessID cookie value from admin.cloud.microsoft.
@@ -127,6 +128,7 @@
         Connect-M365Portal -RootAuthToken $root -SPAAuthCookie $spa -OIDCAuthCookie $oidc -AjaxSessionKey $ajax
 
         Connects by loading browser-derived admin.cloud.microsoft cookies into a web session.
+        `AjaxSessionKey` is optional when the remaining portal cookies are already valid.
 
     .EXAMPLE
         Connect-M365Portal -WebSession $session
@@ -180,7 +182,7 @@
         [Parameter(Mandatory, ParameterSetName = 'PortalCookies')]
         [string]$OIDCAuthCookie,
 
-        [Parameter(Mandatory, ParameterSetName = 'PortalCookies')]
+        [Parameter(ParameterSetName = 'PortalCookies')]
         [string]$AjaxSessionKey,
 
         [Parameter(ParameterSetName = 'PortalCookies')]
@@ -351,7 +353,9 @@
             Add-CookieToSession -Session $session -Name 'RootAuthToken' -Value $RootAuthToken -Domain 'admin.cloud.microsoft'
             Add-CookieToSession -Session $session -Name 'SPAAuthCookie' -Value $SPAAuthCookie -Domain 'admin.cloud.microsoft'
             Add-CookieToSession -Session $session -Name 'OIDCAuthCookie' -Value $OIDCAuthCookie -Domain 'admin.cloud.microsoft'
-            Add-CookieToSession -Session $session -Name 's.AjaxSessionKey' -Value $AjaxSessionKey -Domain 'admin.cloud.microsoft'
+            if (-not [string]::IsNullOrWhiteSpace($AjaxSessionKey)) {
+                Add-CookieToSession -Session $session -Name 's.AjaxSessionKey' -Value $AjaxSessionKey -Domain 'admin.cloud.microsoft'
+            }
 
             if ($SessionId) {
                 Add-CookieToSession -Session $session -Name 's.SessID' -Value $SessionId -Domain 'admin.cloud.microsoft'

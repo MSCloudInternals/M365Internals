@@ -12,6 +12,12 @@
     .PARAMETER Force
         Bypasses the cache and forces a fresh retrieval.
 
+    .PARAMETER Raw
+        Returns the raw company settings payload for the selected section.
+
+    .PARAMETER RawJson
+        Returns the raw company settings payload serialized as formatted JSON.
+
     .EXAMPLE
         Get-M365AdminCompanySetting -Name Profile
 
@@ -28,7 +34,13 @@
         [string]$Name,
 
         [Parameter()]
-        [switch]$Force
+        [switch]$Force,
+
+        [Parameter()]
+        [switch]$Raw,
+
+        [Parameter()]
+        [switch]$RawJson
     )
 
     process {
@@ -58,13 +70,14 @@
                 LocalDataLocation          = $localDataLocation
             }
 
-            return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.CompanySetting.DataLocation'
+            $result = Add-M365TypeName -InputObject $result -TypeName 'M365Admin.CompanySetting.DataLocation'
+            return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
         }
 
         if ($Name -eq 'KeyboardShortcuts') {
             $result = New-M365AdminUnavailableResult -Name 'Keyboard shortcuts' -Description 'The Org settings Keyboard shortcuts item appears to be a static help surface rather than a dedicated settings API.' -Reason 'Informational'
             Add-Member -InputObject $result -NotePropertyName Shortcut -NotePropertyValue 'Shift+?' -Force
-            return $result
+            return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
         }
 
         $path = switch ($Name) {
@@ -83,6 +96,7 @@
             'Tile' { '/admin/api/Settings/company/tile' }
         }
 
-        Get-CompanySettingResult -ResultName $Name -Path $path
+        $result = Get-CompanySettingResult -ResultName $Name -Path $path
+        return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
     }
 }

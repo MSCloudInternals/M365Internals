@@ -80,8 +80,17 @@
     }
 
     $ajaxSessionKey = Get-PortalCookieValue -Name 's.AjaxSessionKey'
+    $script:m365PortalLastBootstrapState = [pscustomobject]@{
+        AttemptedAt          = Get-Date
+        AjaxSessionKeyPresent = (-not [string]::IsNullOrWhiteSpace($ajaxSessionKey))
+        LogClientAttempted   = $false
+        LogClientSucceeded   = $false
+        LogClientError       = $null
+    }
+
     if (-not [string]::IsNullOrWhiteSpace($ajaxSessionKey)) {
         try {
+            $script:m365PortalLastBootstrapState.LogClientAttempted = $true
             $null = Invoke-WebRequest -MaximumRedirection 20 -ErrorAction Stop -WebSession $WebSession -Method Post -Uri 'https://admin.cloud.microsoft/api/instrument/logclient' -Headers @{
                 Accept                 = '*/*'
                 'Cache-Control'        = 'no-cache'
@@ -91,9 +100,11 @@
                 'x-edge-shopping-flag' = '1'
                 'x-ms-mac-hostingapp'  = 'M365AdminPortal'
             } -ContentType 'application/json' -Body '[{"TagId":"516290","LogLevel":"Info","Message":"Loading the initial bundle","Adhoc2":"{\"appName\":\"M365AdminPortal\",\"featureName\":\"\"}"}]' -UserAgent $UserAgent
+            $script:m365PortalLastBootstrapState.LogClientSucceeded = $true
         }
         catch {
-            Write-Verbose "The optional logclient bootstrap request did not complete successfully: $($_.Exception.Message)"
+            $script:m365PortalLastBootstrapState.LogClientError = $_.Exception.Message
+            Write-Warning "The optional logclient bootstrap request did not complete successfully. Subsequent validation may return the admin portal HTML shell instead of bootstrap data. $($_.Exception.Message)"
         }
 
         try {

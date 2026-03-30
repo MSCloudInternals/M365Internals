@@ -12,6 +12,12 @@
     .PARAMETER Force
         Bypasses the cache and forces a fresh retrieval.
 
+    .PARAMETER Raw
+        Returns the raw Agents tools payload for the selected view.
+
+    .PARAMETER RawJson
+        Returns the raw Agents tools payload serialized as formatted JSON.
+
     .EXAMPLE
         Get-M365AdminAgentTool
 
@@ -28,20 +34,36 @@
         [string]$Name = 'All',
 
         [Parameter()]
-        [switch]$Force
+        [switch]$Force,
+
+        [Parameter()]
+        [switch]$Raw,
+
+        [Parameter()]
+        [switch]$RawJson
     )
 
     process {
         switch ($Name) {
             'All' {
-                $result = [pscustomobject]@{
+                $rawResult = [pscustomobject]@{
                     McpServers = Get-M365AdminAgentTool -Name McpServers -Force:$Force
+                }
+
+                if ($Raw -or $RawJson) {
+                    $rawResult = Add-M365TypeName -InputObject $rawResult -TypeName 'M365Admin.AgentTool.Raw'
+                    return Resolve-M365AdminOutput -RawValue $rawResult -Raw:$Raw -RawJson:$RawJson
+                }
+
+                $result = [pscustomobject]@{
+                    McpServers = $rawResult.McpServers
                 }
 
                 return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.AgentTool'
             }
             'McpServers' {
-                return Get-M365AdminPortalData -Path '/admin/api/agentssettings/mcpservers' -CacheKey 'M365AdminAgentTool:McpServers' -Force:$Force
+                $result = Get-M365AdminPortalData -Path '/admin/api/agentssettings/mcpservers' -CacheKey 'M365AdminAgentTool:McpServers' -Force:$Force
+                return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
             }
         }
     }

@@ -13,6 +13,12 @@
     .PARAMETER Force
         Bypasses the cache and forces a fresh retrieval.
 
+    .PARAMETER Raw
+        Returns the raw Microsoft 365 Groups payload for the selected view.
+
+    .PARAMETER RawJson
+        Returns the raw Microsoft 365 Groups payload serialized as formatted JSON.
+
     .EXAMPLE
         Get-M365AdminMicrosoft365GroupSetting
 
@@ -29,7 +35,13 @@
         [string]$Name = 'All',
 
         [Parameter()]
-        [switch]$Force
+        [switch]$Force,
+
+        [Parameter()]
+        [switch]$Raw,
+
+        [Parameter()]
+        [switch]$RawJson
     )
 
     process {
@@ -63,7 +75,8 @@
                     OwnerlessGroupPolicy = $ownerlessGroupPolicy
                 }
 
-                return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.Microsoft365GroupSetting'
+                $result = Add-M365TypeName -InputObject $result -TypeName 'M365Admin.Microsoft365GroupSetting'
+                return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
             }
             'GuestAccess' {
                 $path = '/admin/api/settings/security/o365guestuser'
@@ -72,10 +85,11 @@
                 $path = '/admin/api/Settings/security/guestUserPolicy'
             }
             'OwnerlessGroupPolicy' {
-                return Get-OwnerlessGroupPolicyResult
+                return Resolve-M365AdminOutput -DefaultValue (Get-OwnerlessGroupPolicyResult) -Raw:$Raw -RawJson:$RawJson
             }
         }
 
-        Get-M365AdminPortalData -Path $path -CacheKey "M365AdminMicrosoft365GroupSetting:$Name" -Force:$Force
+        $result = Get-M365AdminPortalData -Path $path -CacheKey "M365AdminMicrosoft365GroupSetting:$Name" -Force:$Force
+        return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
     }
 }

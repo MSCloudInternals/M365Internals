@@ -12,6 +12,12 @@
     .PARAMETER Force
         Bypasses the cache and forces a fresh retrieval.
 
+    .PARAMETER Raw
+        Returns the raw recommendation payload.
+
+    .PARAMETER RawJson
+        Returns the raw recommendation payload serialized as formatted JSON.
+
     .EXAMPLE
         Get-M365AdminRecommendation -Name M365Alerts
 
@@ -28,7 +34,13 @@
         [string]$Name = 'M365',
 
         [Parameter()]
-        [switch]$Force
+        [switch]$Force,
+
+        [Parameter()]
+        [switch]$Raw,
+
+        [Parameter()]
+        [switch]$RawJson
     )
 
     process {
@@ -45,6 +57,8 @@
             Get-M365PortalContextHeaders -Context Homepage
         }
 
-        Get-M365AdminPortalData -Path $path -CacheKey "M365AdminRecommendation:$Name" -Headers $headers -Force:$Force
+        $result = Get-M365AdminPortalData -Path $path -CacheKey "M365AdminRecommendation:$Name" -Headers $headers -Force:$Force
+        $result = Add-M365TypeName -InputObject $result -TypeName ("M365Admin.Recommendation.{0}" -f $Name)
+        return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
     }
 }

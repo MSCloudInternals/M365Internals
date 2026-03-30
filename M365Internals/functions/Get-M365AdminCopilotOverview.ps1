@@ -13,6 +13,12 @@
     .PARAMETER Force
         Bypasses the cache and forces a fresh retrieval.
 
+    .PARAMETER Raw
+        Returns the raw Copilot overview payload for the selected section.
+
+    .PARAMETER RawJson
+        Returns the raw Copilot overview payload serialized as formatted JSON.
+
     .EXAMPLE
         Get-M365AdminCopilotOverview
 
@@ -29,7 +35,13 @@
         [string]$Name = 'All',
 
         [Parameter()]
-        [switch]$Force
+        [switch]$Force,
+
+        [Parameter()]
+        [switch]$Raw,
+
+        [Parameter()]
+        [switch]$RawJson
     )
 
     process {
@@ -93,7 +105,8 @@
                     About = Get-M365AdminCopilotOverview -Name About -Force:$Force
                 }
 
-                return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.CopilotOverview'
+                $result = Add-M365TypeName -InputObject $result -TypeName 'M365Admin.CopilotOverview'
+                return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
             }
             'Overview' {
                 $result = [pscustomobject]@{
@@ -113,7 +126,8 @@
                     SubscribedSkus = Get-M365AdminPortalData -Path '/fd/MSGraph/v1.0/subscribedSkus' -CacheKey 'M365AdminCopilotOverview:SubscribedSkus' -Force:$Force
                 }
 
-                return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.CopilotOverview.Overview'
+                $result = Add-M365TypeName -InputObject $result -TypeName 'M365Admin.CopilotOverview.Overview'
+                return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
             }
             'Security' {
                 $result = [pscustomobject]@{
@@ -128,7 +142,8 @@
                     DataLeakRecommendation = Get-CopilotResult -ResultName 'DataLeakRecommendation' -ScriptBlock { Get-M365AdminPortalData -Path "/fd/purview/apiproxy/di/find/PurviewForAI?tenantId=$tenantId&filter=$purviewFilter15&startTime=$startTime&endTime=$endTime" -CacheKey 'M365AdminCopilotOverview:DataLeakRecommendation' -Force:$Force }
                 }
 
-                return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.CopilotOverview.Security'
+                $result = Add-M365TypeName -InputObject $result -TypeName 'M365Admin.CopilotOverview.Security'
+                return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
             }
             'Usage' {
                 $result = [pscustomobject]@{
@@ -145,7 +160,8 @@
                     LicenseAssignmentDate = Get-M365AdminPortalData -Path '/admin/api/Copilot/getcopilotlicenseassignmentdate' -CacheKey 'M365AdminCopilotOverview:UsageLicenseAssignmentDate' -Force:$Force
                 }
 
-                return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.CopilotOverview.Usage'
+                $result = Add-M365TypeName -InputObject $result -TypeName 'M365Admin.CopilotOverview.Usage'
+                return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
             }
             'About' {
                 $result = [pscustomobject]@{
@@ -157,7 +173,8 @@
                     LicenseAssignmentDate = Get-M365AdminPortalData -Path '/admin/api/Copilot/getcopilotlicenseassignmentdate' -CacheKey 'M365AdminCopilotOverview:AboutLicenseAssignmentDate' -Force:$Force
                 }
 
-                return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.CopilotOverview.About'
+                $result = Add-M365TypeName -InputObject $result -TypeName 'M365Admin.CopilotOverview.About'
+                return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
             }
         }
     }

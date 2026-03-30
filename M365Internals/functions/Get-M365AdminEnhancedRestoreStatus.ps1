@@ -12,6 +12,12 @@
     .PARAMETER Force
         Bypasses the cache and forces a fresh retrieval.
 
+    .PARAMETER Raw
+        Returns the raw Graph batch response instead of the summarized offboarding counts.
+
+    .PARAMETER RawJson
+        Returns the raw Graph batch response serialized as formatted JSON.
+
     .EXAMPLE
         Get-M365AdminEnhancedRestoreStatus
 
@@ -24,7 +30,13 @@
     [CmdletBinding()]
     param (
         [Parameter()]
-        [switch]$Force
+        [switch]$Force,
+
+        [Parameter()]
+        [switch]$Raw,
+
+        [Parameter()]
+        [switch]$RawJson
     )
 
     begin {
@@ -32,15 +44,18 @@
     }
 
     process {
-        $cacheKey = 'M365AdminEnhancedRestoreStatus'
+        $summaryCacheKey = 'M365AdminEnhancedRestoreStatus'
+        $rawCacheKey = 'M365AdminEnhancedRestoreStatus:Raw'
+        $cacheKey = if ($Raw -or $RawJson) { $rawCacheKey } else { $summaryCacheKey }
         $currentCacheValue = Get-M365Cache -CacheKey $cacheKey -ErrorAction SilentlyContinue
         if (-not $Force -and $currentCacheValue -and $currentCacheValue.NotValidAfter -gt (Get-Date)) {
             Write-Verbose "Using cached $cacheKey data"
-            return $currentCacheValue.Value
+            return Resolve-M365AdminOutput -DefaultValue $currentCacheValue.Value -Raw:$Raw -RawJson:$RawJson
         }
         elseif ($Force) {
             Write-Verbose 'Force parameter specified, bypassing cache'
-            Clear-M365Cache -CacheKey $cacheKey
+            Clear-M365Cache -CacheKey $summaryCacheKey
+            Clear-M365Cache -CacheKey $rawCacheKey
         }
 
         $batchBody = @{
@@ -81,12 +96,13 @@
             MailboxOffboardingCount = if ($responsesById['GetOffboardingMailboxProtectionUnits'] -and $responsesById['GetOffboardingMailboxProtectionUnits'].status -eq 200) { [int]$responsesById['GetOffboardingMailboxProtectionUnits'].body } else { $null }
             RawResponses = @($result.responses)
         }
-        $summary.PSObject.TypeNames.Insert(0, 'M365Admin.EnhancedRestoreStatus')
+        $summary = Add-M365TypeName -InputObject $summary -TypeName 'M365Admin.EnhancedRestoreStatus'
 
         if ((@($result.responses | Where-Object { $_.status -ge 400 })).Count -eq 0) {
-            Set-M365Cache -CacheKey $cacheKey -Value $summary -TTLMinutes 15 | Out-Null
+            Set-M365Cache -CacheKey $summaryCacheKey -Value $summary -TTLMinutes 15 | Out-Null
+            Set-M365Cache -CacheKey $rawCacheKey -Value $result -TTLMinutes 15 | Out-Null
         }
 
-        return $summary
+        return Resolve-M365AdminOutput -DefaultValue $summary -RawValue $result -Raw:$Raw -RawJson:$RawJson
     }
 }

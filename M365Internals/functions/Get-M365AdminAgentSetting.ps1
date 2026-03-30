@@ -17,6 +17,9 @@
         Returns the underlying shared or leaf payload bundle for the selected page composition
         when it makes sense to do so.
 
+    .PARAMETER RawJson
+        Returns the raw payload for the selected page composition serialized as formatted JSON.
+
     .EXAMPLE
         Get-M365AdminAgentSetting
 
@@ -42,7 +45,10 @@
         [switch]$Force,
 
         [Parameter()]
-        [switch]$Raw
+        [switch]$Raw,
+
+        [Parameter()]
+        [switch]$RawJson
     )
 
     process {
@@ -68,7 +74,7 @@
                 New-M365AdminUnavailableResult -Name $ResultName -Description 'The Agents settings endpoint returned no data for this section in the current tenant.' -Reason 'TenantSpecific'
             }
             catch {
-                New-M365AdminUnavailableResult -Name $ResultName -Description 'The Agents settings endpoint failed during direct retrieval. The portal may be returning a transient error for this section.' -Reason 'Transient' -ErrorMessage $_.Exception.Message
+                New-M365AdminUnavailableResultFromError -Name $ResultName -Area 'Agents settings section' -DefaultDescription 'The Agents settings endpoint failed during direct retrieval. The portal may be returning a transient error for this section.' -DefaultReason 'Transient' -ErrorMessage $_.Exception.Message
             }
         }
 
@@ -96,8 +102,8 @@
 
         switch ($Name) {
             'All' {
-                if ($Raw) {
-                    return Get-AllRawPayload
+                if ($Raw -or $RawJson) {
+                    return Resolve-M365AdminOutput -RawValue (Get-AllRawPayload) -Raw:$Raw -RawJson:$RawJson
                 }
 
                 $result = [pscustomobject]@{
@@ -111,10 +117,6 @@
             }
             'AllowedAgentTypes' {
                 $settings = Get-AgentSettingsData
-                if ($Raw) {
-                    return $settings
-                }
-
                 $result = [pscustomobject]@{
                     AllowMicrosoftBuiltAgents = $settings.settings.areFirstPartyAppsAllowed
                     AllowExternalPublisherAgents = $settings.settings.areThirdPartyAppsAllowed
@@ -124,14 +126,11 @@
                     RawSettings = $settings
                 }
 
-                return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.AgentSetting.AllowedAgentTypes'
+                $result = Add-M365TypeName -InputObject $result -TypeName 'M365Admin.AgentSetting.AllowedAgentTypes'
+                return Resolve-M365AdminOutput -DefaultValue $result -RawValue $settings -Raw:$Raw -RawJson:$RawJson
             }
             'Sharing' {
                 $settings = Get-AgentSettingsData
-                if ($Raw) {
-                    return $settings
-                }
-
                 $result = [pscustomobject]@{
                     IsSettingApplicable = $settings.settings.allowOrgWideSharing.isSettingApplicable
                     AssignmentCategory = $settings.settings.allowOrgWideSharing.userAssignmentCategory
@@ -139,17 +138,14 @@
                     RawSettings = $settings
                 }
 
-                return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.AgentSetting.Sharing'
+                $result = Add-M365TypeName -InputObject $result -TypeName 'M365Admin.AgentSetting.Sharing'
+                return Resolve-M365AdminOutput -DefaultValue $result -RawValue $settings -Raw:$Raw -RawJson:$RawJson
             }
             'Templates' {
-                return Get-TemplatesPayload
+                return Resolve-M365AdminOutput -DefaultValue (Get-TemplatesPayload) -Raw:$Raw -RawJson:$RawJson
             }
             'UserAccess' {
                 $settings = Get-AgentSettingsData
-                if ($Raw) {
-                    return $settings
-                }
-
                 $result = [pscustomobject]@{
                     IsApplicable = $settings.settings.metaOSCopilotExtensibilitySettings.isCopilotExtensibilityApplicable
                     AssignmentCategory = $settings.settings.metaOSCopilotExtensibilitySettings.userAssignmentCategory
@@ -157,7 +153,8 @@
                     RawSettings = $settings
                 }
 
-                return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.AgentSetting.UserAccess'
+                $result = Add-M365TypeName -InputObject $result -TypeName 'M365Admin.AgentSetting.UserAccess'
+                return Resolve-M365AdminOutput -DefaultValue $result -RawValue $settings -Raw:$Raw -RawJson:$RawJson
             }
         }
     }

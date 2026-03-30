@@ -22,6 +22,12 @@
     .PARAMETER Force
         Bypasses the cache and forces a fresh retrieval.
 
+    .PARAMETER Raw
+        Returns the raw feature payload for the selected parameter set.
+
+    .PARAMETER RawJson
+        Returns the raw feature payload serialized as formatted JSON.
+
     .EXAMPLE
         Get-M365AdminFeature -All
 
@@ -53,7 +59,13 @@
         [switch]$AdminContentCdnImagePath,
 
         [Parameter()]
-        [switch]$Force
+        [switch]$Force,
+
+        [Parameter()]
+        [switch]$Raw,
+
+        [Parameter()]
+        [switch]$RawJson
     )
 
     process {
@@ -65,6 +77,7 @@
             default { '/admin/api/features/all' }
         }
 
-        Get-M365AdminPortalData -Path $path -CacheKey $cacheKey -Force:$Force
+        $result = Get-M365AdminPortalData -Path $path -CacheKey $cacheKey -Force:$Force
+        return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
     }
 }

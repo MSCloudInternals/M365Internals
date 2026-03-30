@@ -12,6 +12,12 @@
     .PARAMETER Force
         Bypasses the cache and forces a fresh retrieval.
 
+    .PARAMETER Raw
+        Returns the raw report settings payload for the selected section.
+
+    .PARAMETER RawJson
+        Returns the raw report settings payload serialized as formatted JSON.
+
     .EXAMPLE
         Get-M365AdminReportSetting -Name TenantConfiguration
 
@@ -28,7 +34,13 @@
         [string]$Name = 'TenantConfiguration',
 
         [Parameter()]
-        [switch]$Force
+        [switch]$Force,
+
+        [Parameter()]
+        [switch]$Raw,
+
+        [Parameter()]
+        [switch]$RawJson
     )
 
     process {
@@ -36,11 +48,13 @@
             $productivityScoreConfig = Get-M365AdminPortalData -Path '/admin/api/reports/productivityScoreConfig/GetProductivityScoreConfig' -CacheKey 'M365AdminReportSetting:ProductivityScoreConfig' -Force:$Force
             $productivityScoreCustomerOption = Get-M365AdminPortalData -Path '/admin/api/reports/productivityScoreCustomerOption' -CacheKey 'M365AdminReportSetting:ProductivityScoreCustomerOption' -Force:$Force
 
-            [pscustomobject]@{
+            $result = [pscustomobject]@{
                 ProductivityScoreConfig         = $productivityScoreConfig
                 ProductivityScoreCustomerOption = $productivityScoreCustomerOption
             }
-            return
+
+            $result = Add-M365TypeName -InputObject $result -TypeName 'M365Admin.ReportSetting.AdoptionScore'
+            return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
         }
 
         $path = switch ($Name) {
@@ -50,6 +64,7 @@
             'Reports' { '/admin/api/reports/config/GetTenantConfiguration' }
         }
 
-        Get-M365AdminPortalData -Path $path -CacheKey "M365AdminReportSetting:$Name" -Force:$Force
+        $result = Get-M365AdminPortalData -Path $path -CacheKey "M365AdminReportSetting:$Name" -Force:$Force
+        return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
     }
 }

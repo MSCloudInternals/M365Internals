@@ -13,6 +13,12 @@
     .PARAMETER Force
         Bypasses the cache and forces a fresh retrieval.
 
+    .PARAMETER Raw
+        Returns the raw Content Understanding payload for the selected section.
+
+    .PARAMETER RawJson
+        Returns the raw Content Understanding payload serialized as formatted JSON.
+
     .EXAMPLE
         Get-M365AdminContentUnderstandingSetting -Name Setting
 
@@ -29,7 +35,13 @@
         [string]$Name,
 
         [Parameter()]
-        [switch]$Force
+        [switch]$Force,
+
+        [Parameter()]
+        [switch]$Raw,
+
+        [Parameter()]
+        [switch]$RawJson
     )
 
     process {
@@ -45,6 +57,7 @@
             'TaxonomyTagging' { '/admin/api/contentunderstanding/taxonomytaggingsetting' }
         }
 
-        Get-M365AdminPortalData -Path $path -CacheKey "M365AdminContentUnderstandingSetting:$Name" -Force:$Force
+        $result = Get-M365AdminPortalData -Path $path -CacheKey "M365AdminContentUnderstandingSetting:$Name" -Force:$Force
+        return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
     }
 }

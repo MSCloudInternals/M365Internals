@@ -17,6 +17,10 @@
         Returns the underlying leaf payload bundle for the selected page composition when it
         makes sense to do so.
 
+    .PARAMETER RawJson
+        Returns the raw payload for the selected Search & intelligence section serialized as
+        formatted JSON.
+
     .EXAMPLE
         Get-M365AdminSearchAndIntelligenceSetting
 
@@ -42,7 +46,10 @@
         [switch]$Force,
 
         [Parameter()]
-        [switch]$Raw
+        [switch]$Raw,
+
+        [Parameter()]
+        [switch]$RawJson
     )
 
     process {
@@ -84,8 +91,8 @@
 
         switch ($Name) {
             'All' {
-                if ($Raw) {
-                    return Get-RawAllPayload
+                if ($Raw -or $RawJson) {
+                    return Resolve-M365AdminOutput -RawValue (Get-RawAllPayload) -Raw:$Raw -RawJson:$RawJson
                 }
 
                 $result = [pscustomobject]@{
@@ -105,7 +112,8 @@
                     UsageAnalytics              = Get-M365AdminService -Name SearchAndIntelligenceUsageAnalytics -Force:$Force
                 }
 
-                return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.SearchAndIntelligenceSetting.Overview'
+                $result = Add-M365TypeName -InputObject $result -TypeName 'M365Admin.SearchAndIntelligenceSetting.Overview'
+                return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
             }
             'Insights' {
                 $result = [pscustomobject]@{
@@ -114,7 +122,8 @@
                     AdoptionScore  = Get-M365AdminReportSetting -Name AdoptionScore -Force:$Force
                 }
 
-                return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.SearchAndIntelligenceSetting.Insights'
+                $result = Add-M365TypeName -InputObject $result -TypeName 'M365Admin.SearchAndIntelligenceSetting.Insights'
+                return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
             }
             'Answers' {
                 $result = [pscustomobject]@{
@@ -124,14 +133,16 @@
                     Qnas              = Get-M365AdminSearchSetting -Name Qnas -Force:$Force
                 }
 
-                return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.SearchAndIntelligenceSetting.Answers'
+                $result = Add-M365TypeName -InputObject $result -TypeName 'M365Admin.SearchAndIntelligenceSetting.Answers'
+                return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
             }
             'DataSources' {
                 $result = [pscustomobject]@{
                     UdtConnectorsSummary = Get-M365AdminSearchSetting -Name UdtConnectorsSummary -Force:$Force
                 }
 
-                return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.SearchAndIntelligenceSetting.DataSources'
+                $result = Add-M365TypeName -InputObject $result -TypeName 'M365Admin.SearchAndIntelligenceSetting.DataSources'
+                return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
             }
             'Customizations' {
                 $result = [pscustomobject]@{
@@ -139,12 +150,15 @@
                     FirstRunExperience    = Get-M365AdminSearchSetting -Name FirstRunExperience -Force:$Force
                 }
 
-                return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.SearchAndIntelligenceSetting.Customizations'
+                $result = Add-M365TypeName -InputObject $result -TypeName 'M365Admin.SearchAndIntelligenceSetting.Customizations'
+                return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
             }
             'Configurations' {
-                return Get-SearchSectionResult -SectionName 'Configurations' -ScriptBlock {
+                $result = Get-SearchSectionResult -SectionName 'Configurations' -ScriptBlock {
                     Get-M365AdminSearchSetting -Name Configurations -Force:$Force
                 }
+
+                return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
             }
         }
     }

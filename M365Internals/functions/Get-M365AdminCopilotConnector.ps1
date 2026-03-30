@@ -17,6 +17,9 @@
         Returns the underlying leaf payload bundle for the selected page composition when it
         makes sense to do so.
 
+    .PARAMETER RawJson
+        Returns the raw connectors payload serialized as formatted JSON.
+
     .EXAMPLE
         Get-M365AdminCopilotConnector
 
@@ -42,7 +45,10 @@
         [switch]$Force,
 
         [Parameter()]
-        [switch]$Raw
+        [switch]$Raw,
+
+        [Parameter()]
+        [switch]$RawJson
     )
 
     process {
@@ -60,8 +66,8 @@
 
         switch ($Name) {
             'All' {
-                if ($Raw) {
-                    return Get-ConnectorRawPayload
+                if ($Raw -or $RawJson) {
+                    return Resolve-M365AdminOutput -RawValue (Get-ConnectorRawPayload) -Raw:$Raw -RawJson:$RawJson
                 }
 
                 $result = [pscustomobject]@{
@@ -72,19 +78,24 @@
                 return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.CopilotConnector'
             }
             'Summary' {
-                return Get-M365AdminPortalData -Path '/admin/api/searchadminapi/UDTConnectorsSummary' -CacheKey 'M365AdminCopilotConnector:Summary' -Force:$Force
+                $result = Get-M365AdminPortalData -Path '/admin/api/searchadminapi/UDTConnectorsSummary' -CacheKey 'M365AdminCopilotConnector:Summary' -Force:$Force
+                return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
             }
             'Statistics' {
-                return Get-M365AdminPortalData -Path '/fd/mssearchconnectors/v1.0/admin/connections/getStatistics' -CacheKey 'M365AdminCopilotConnector:Statistics' -Force:$Force
+                $result = Get-M365AdminPortalData -Path '/fd/mssearchconnectors/v1.0/admin/connections/getStatistics' -CacheKey 'M365AdminCopilotConnector:Statistics' -Force:$Force
+                return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
             }
             'Connections' {
-                return Get-M365AdminPortalData -Path '/fd/mssearchconnectors/v1.0/admin/connections/v2?filterActive=false&useCachedRead=true&includeFederatedConnections=true' -CacheKey 'M365AdminCopilotConnector:Connections' -Force:$Force
+                $result = Get-M365AdminPortalData -Path '/fd/mssearchconnectors/v1.0/admin/connections/v2?filterActive=false&useCachedRead=true&includeFederatedConnections=true' -CacheKey 'M365AdminCopilotConnector:Connections' -Force:$Force
+                return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
             }
             'AdminUxOptions' {
-                return Get-M365AdminPortalData -Path '/fd/mssearchconnectors/v1.0/admin/AdminUxOptionsV2/Connectors?query=Connectors' -CacheKey 'M365AdminCopilotConnector:AdminUxOptions' -Force:$Force
+                $result = Get-M365AdminPortalData -Path '/fd/mssearchconnectors/v1.0/admin/AdminUxOptionsV2/Connectors?query=Connectors' -CacheKey 'M365AdminCopilotConnector:AdminUxOptions' -Force:$Force
+                return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
             }
             'GallerySettings' {
-                return Get-M365AdminPortalData -Path "/fd/ssms/api/v1.0/'MSS'/Collection('VT')/Settings(Path='',LogicalId='all')" -CacheKey 'M365AdminCopilotConnector:GallerySettings' -Force:$Force
+                $result = Get-M365AdminPortalData -Path "/fd/ssms/api/v1.0/'MSS'/Collection('VT')/Settings(Path='',LogicalId='all')" -CacheKey 'M365AdminCopilotConnector:GallerySettings' -Force:$Force
+                return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
             }
             'YourConnections' {
                 $result = [pscustomobject]@{
@@ -93,7 +104,8 @@
                     Connections = Get-M365AdminCopilotConnector -Name Connections -Force:$Force
                 }
 
-                return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.CopilotConnector.YourConnections'
+                $result = Add-M365TypeName -InputObject $result -TypeName 'M365Admin.CopilotConnector.YourConnections'
+                return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
             }
             'Gallery' {
                 $result = [pscustomobject]@{
@@ -103,7 +115,8 @@
                     GallerySettings = Get-M365AdminCopilotConnector -Name GallerySettings -Force:$Force
                 }
 
-                return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.CopilotConnector.Gallery'
+                $result = Add-M365TypeName -InputObject $result -TypeName 'M365Admin.CopilotConnector.Gallery'
+                return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
             }
         }
     }

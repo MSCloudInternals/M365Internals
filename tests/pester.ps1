@@ -9,7 +9,9 @@
 	
 	$Include = "*",
 	
-	$Exclude = ""
+	$Exclude = "",
+
+	[switch]$PassThru
 )
 
 Write-Host "Starting Tests"
@@ -36,6 +38,7 @@ $null = New-Item -Path $testResultsPath -ItemType Directory -Force
 
 $totalFailed = 0
 $totalRun = 0
+$suiteResults = New-Object System.Collections.Generic.List[object]
 
 $testresults = @()
 $config = [PesterConfiguration]::Default
@@ -60,6 +63,15 @@ if ($TestGeneral)
 		{
 			$totalRun += $result.TotalCount
 			$totalFailed += $result.FailedCount
+			$suiteResults.Add([pscustomobject]@{
+				Category = 'General'
+				FileName = $file.Name
+				Path = $file.FullName
+				TotalCount = $result.TotalCount
+				PassedCount = $result.PassedCount
+				FailedCount = $result.FailedCount
+				SkippedCount = $result.SkippedCount
+			})
 			$result.Tests | Where-Object Result -ne 'Passed' | ForEach-Object {
 				$testresults += [pscustomobject]@{
 					Block    = $_.Block
@@ -94,6 +106,15 @@ if ($TestFunctions)
 		{
 			$totalRun += $result.TotalCount
 			$totalFailed += $result.FailedCount
+			$suiteResults.Add([pscustomobject]@{
+				Category = 'Function'
+				FileName = $file.Name
+				Path = $file.FullName
+				TotalCount = $result.TotalCount
+				PassedCount = $result.PassedCount
+				FailedCount = $result.FailedCount
+				SkippedCount = $result.SkippedCount
+			})
 			$result.Tests | Where-Object Result -ne 'Passed' | ForEach-Object {
 				$testresults += [pscustomobject]@{
 					Block    = $_.Block
@@ -109,10 +130,25 @@ if ($TestFunctions)
 
 $testresults | Sort-Object Describe, Context, Name, Result, Message | Format-List
 
+$summary = [pscustomobject]@{
+	RepositoryRoot = $repositoryRoot
+	TestResultsPath = $testResultsPath
+	TotalCount = $totalRun
+	FailedCount = $totalFailed
+	PassedCount = ($totalRun - $totalFailed)
+	Suites = [object[]]$suiteResults.ToArray()
+	ScriptAnalyzer = $global:__pester_data.ScriptAnalyzer
+}
+
 if ($totalFailed -eq 0) { Write-Host  "All $totalRun tests executed without a single failure!" }
 else { Write-Host "$totalFailed tests out of $totalRun tests failed!" }
 
 if ($totalFailed -gt 0)
 {
 	throw "$totalFailed / $totalRun tests failed!"
+}
+
+if ($PassThru)
+{
+	return $summary
 }

@@ -12,6 +12,12 @@
     .PARAMETER Force
         Bypasses the cache and forces a fresh retrieval.
 
+    .PARAMETER Raw
+        Returns the raw integrated apps payload bundle for the selected view.
+
+    .PARAMETER RawJson
+        Returns the raw integrated apps payload serialized as formatted JSON.
+
     .EXAMPLE
         Get-M365AdminIntegratedAppSetting
 
@@ -28,7 +34,13 @@
         [string]$Name = 'All',
 
         [Parameter()]
-        [switch]$Force
+        [switch]$Force,
+
+        [Parameter()]
+        [switch]$Raw,
+
+        [Parameter()]
+        [switch]$RawJson
     )
 
     process {
@@ -42,7 +54,8 @@
                     PopularAppRecommendations = Get-M365AdminPortalData -Path '/fd/addins/api/recommendations/appRecommendations?appRecommendationType=PopularApps' -CacheKey 'M365AdminIntegratedAppSetting:PopularAppRecommendations' -Force:$Force
                 }
 
-                return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.IntegratedAppSetting'
+                $result = Add-M365TypeName -InputObject $result -TypeName 'M365Admin.IntegratedAppSetting'
+                return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
             }
             'Settings' {
                 $path = '/fd/addins/api/v2/settings?keys=IsTenantEligibleForEntireOrgEmail,AreFirstPartyAppsAllowed,AreThirdPartyAppsAllowed,AreLOBAppsAllowed,AreMicrosoftCertified3PAppsAllowed,MetaOSCopilotExtensibilitySettings'
@@ -61,6 +74,7 @@
             }
         }
 
-        Get-M365AdminPortalData -Path $path -CacheKey "M365AdminIntegratedAppSetting:$Name" -Force:$Force
+        $result = Get-M365AdminPortalData -Path $path -CacheKey "M365AdminIntegratedAppSetting:$Name" -Force:$Force
+        return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
     }
 }

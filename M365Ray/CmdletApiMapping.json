@@ -85,6 +85,20 @@
 	},
 	{
 		"Cmdlet": "Get-M365AdminAppSetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/settings/apps/dcg",
+		"Parameters": {
+			"Name": "fixed:Dynamics365ConnectionGraph"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminAppSetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/settings/apps/dci",
+		"Parameters": {
+			"Name": "fixed:Dynamics365SalesInsights"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminAppSetting",
 		"ApiUri": "https://admin.cloud.microsoft/admin/api/settings/apps/EndUserCommunications",
 		"Parameters": {
 			"Name": "fixed:EndUserCommunications"
@@ -141,6 +155,20 @@
 	},
 	{
 		"Cmdlet": "Get-M365AdminAppSetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/settings/apps/officescripts",
+		"Parameters": {
+			"Name": "fixed:OfficeScripts"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminAppSetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/settings/apps/projectonline",
+		"Parameters": {
+			"Name": "fixed:Project"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminAppSetting",
 		"ApiUri": "https://admin.cloud.microsoft/admin/api/settings/apps/sitessharing",
 		"Parameters": {
 			"Name": "fixed:SitesSharing"
@@ -179,6 +207,27 @@
 		"ApiUri": "https://admin.cloud.microsoft/admin/api/settings/apps/whiteboard",
 		"Parameters": {
 			"Name": "fixed:Whiteboard"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminUserOwnedAppSetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/settings/apps/store",
+		"Parameters": {
+			"Name": "fixed:StoreAccess"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminUserOwnedAppSetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/storesettings/iwpurchaseallowed",
+		"Parameters": {
+			"Name": "fixed:InAppPurchasesAllowed"
+		}
+	},
+	{
+		"Cmdlet": "Get-M365AdminUserOwnedAppSetting",
+		"ApiUri": "https://admin.cloud.microsoft/fd/m365licensing/v1/policies/autoclaim",
+		"Parameters": {
+			"Name": "fixed:AutoClaimPolicy"
 		}
 	},
 	{

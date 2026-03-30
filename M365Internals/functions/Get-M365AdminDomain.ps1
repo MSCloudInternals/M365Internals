@@ -67,6 +67,12 @@
     .PARAMETER Force
         Bypasses the cache and forces a fresh retrieval.
 
+    .PARAMETER Raw
+        Returns the raw domain payload for the selected parameter set.
+
+    .PARAMETER RawJson
+        Returns the raw domain payload serialized as formatted JSON.
+
     .EXAMPLE
         Get-M365AdminDomain
 
@@ -155,7 +161,13 @@
         [int]$Mode = 0,
 
         [Parameter()]
-        [switch]$Force
+        [switch]$Force,
+
+        [Parameter()]
+        [switch]$Raw,
+
+        [Parameter()]
+        [switch]$RawJson
     )
 
     process {
@@ -185,20 +197,23 @@
 
         if ($PSCmdlet.ParameterSetName -eq 'Dependencies') {
             try {
-                return Get-M365AdminPortalData -Path $path -CacheKey $cacheKey -Force:$Force
+                $result = Get-M365AdminPortalData -Path $path -CacheKey $cacheKey -Force:$Force
             }
             catch {
                 if ($_.Exception.Message -match '400' -or $_.Exception.Message -match 'Bad Request') {
                     $result = New-M365AdminUnavailableResult -Name 'Dependencies' -Description 'The domain dependency endpoint did not return data for this domain in the current tenant.' -Reason 'TenantSpecific' -ErrorMessage $_.Exception.Message
                     $result | Add-Member -NotePropertyName DomainName -NotePropertyValue $DomainName
                     $result | Add-Member -NotePropertyName DependencyKind -NotePropertyValue $DependencyKind
-                    return $result
+                    return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
                 }
 
                 throw
             }
+
+            return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
         }
 
-        Get-M365AdminPortalData -Path $path -CacheKey $cacheKey -Force:$Force
+        $result = Get-M365AdminPortalData -Path $path -CacheKey $cacheKey -Force:$Force
+        return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
     }
 }

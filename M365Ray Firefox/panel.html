@@ -1,7 +1,10 @@
 ﻿<!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>M365Ray</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -141,6 +144,25 @@
             border: 1px solid #3e3e42;
             color: #cccccc;
         }
+
+        #danger-zone-wrapper {
+            margin-left: auto;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        #danger-zone-toggle {
+            border: 1px solid #ce9178;
+            color: #ce9178;
+        }
+
+        #danger-zone-content {
+            display: none;
+            gap: 5px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
     </style>
 </head>
 
@@ -149,10 +171,10 @@
         <h1>M365Ray</h1>
         <button id="clear-btn" class="secondary">Clear</button>
         <button id="save-btn">Save Script (.ps1)</button>
-        <div id="danger-zone-wrapper" style="margin-left: auto; display: flex; gap: 10px; align-items: center;">
-            <button id="danger-zone-toggle" class="secondary" style="border: 1px solid #ce9178; color: #ce9178;">⚠
+        <div id="danger-zone-wrapper">
+            <button id="danger-zone-toggle" class="secondary">⚠
                 Danger Zone</button>
-            <div id="danger-zone-content" style="display: none; gap: 5px; align-items: center; flex-wrap: wrap;">
+            <div id="danger-zone-content">
                 <button id="copy-rootauth-btn" class="warning" title="Warning: Sensitive Data">Copy RootAuthToken</button>
                 <button id="copy-spaauth-btn" class="warning" title="Warning: Sensitive Data">Copy SPAAuthCookie</button>
                 <button id="copy-oidcauth-btn" class="warning" title="Warning: Sensitive Data">Copy OIDCAuthCookie</button>
