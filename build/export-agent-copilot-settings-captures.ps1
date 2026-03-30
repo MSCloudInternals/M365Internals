@@ -64,5 +64,5 @@ $results = [ordered]@{
     }
 }
 
-$results | ConvertTo-Json -Depth 40 | Set-Content -Path $OutputPath
+$results | ConvertTo-Json -Depth 40 | Set-Content -Path $OutputPath -Encoding utf8
 $results | ConvertTo-Json -Depth 12

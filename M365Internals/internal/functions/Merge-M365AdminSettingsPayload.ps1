@@ -48,6 +48,10 @@
         }
 
         $body = $CurrentSettings | ConvertTo-Json -Depth 30 | ConvertFrom-Json -Depth 30
+        if ($body -isnot [pscustomobject]) {
+            $body = [pscustomobject]@{}
+        }
+
         foreach ($settingEntry in @($Settings.GetEnumerator())) {
             if ($body.PSObject.Properties.Name -contains $settingEntry.Key) {
                 $body.($settingEntry.Key) = $settingEntry.Value

@@ -111,8 +111,8 @@ $metadata = [pscustomobject]@{
     CookieCount = $cookies.Count
 }
 
-$storageState | ConvertTo-Json -Depth 10 | Set-Content -Path $OutputPath
-$metadata | ConvertTo-Json -Depth 5 | Set-Content -Path $MetadataPath
+$storageState | ConvertTo-Json -Depth 10 | Set-Content -Path $OutputPath -Encoding utf8
+$metadata | ConvertTo-Json -Depth 5 | Set-Content -Path $MetadataPath -Encoding utf8
 
 [pscustomobject]@{
     OutputPath = $OutputPath

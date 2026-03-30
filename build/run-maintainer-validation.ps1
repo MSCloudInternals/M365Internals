@@ -14,7 +14,7 @@ $ErrorActionPreference = 'Stop'
 
 $startedAt = Get-Date
 $repositoryRoot = Join-Path $PSScriptRoot '..'
-$testScriptPath = Join-Path $repositoryRoot 'tests\pester.ps1'
+$testScriptPath = Join-Path (Join-Path $repositoryRoot 'tests') 'pester.ps1'
 $testResultsPath = Join-Path $repositoryRoot 'TestResults'
 $artifactPath = Join-Path $testResultsPath 'Artifacts'
 $summaryJsonPath = Join-Path $artifactPath 'maintainer-validation-summary.json'
