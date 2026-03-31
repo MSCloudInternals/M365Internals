@@ -332,7 +332,18 @@ $Config = {"pgid":"ConvergedSignIn","arrSessions":[{"id":"session-123"}],"urlLog
                 return
             }
 
+            $script:lastStartProcessParameters = $null
+
             Mock Start-Process {
+                param(
+                    $FilePath,
+                    $ArgumentList,
+                    [switch]$PassThru,
+                    $RedirectStandardOutput,
+                    $RedirectStandardError
+                )
+
+                $script:lastStartProcessParameters = $PSBoundParameters
                 [pscustomobject]@{
                     Id        = 1234
                     HasExited = $false
@@ -341,13 +352,12 @@ $Config = {"pgid":"ConvergedSignIn","arrSessions":[{"id":"session-123"}],"urlLog
 
             $result = Start-M365BrowserProcess -BrowserPath '/usr/bin/microsoft-edge-stable' -ArgumentList @('https://admin.cloud.microsoft/') -SuppressBrowserOutput
 
-            Should -Invoke Start-Process -Times 1 -Exactly -ParameterFilter {
-                $FilePath -eq '/usr/bin/microsoft-edge-stable' -and
-                -not [string]::IsNullOrWhiteSpace($RedirectStandardOutput) -and
-                -not [string]::IsNullOrWhiteSpace($RedirectStandardError) -and
-                $RedirectStandardOutput -ne $RedirectStandardError
-            }
-
+            $script:lastStartProcessParameters.FilePath | Should -Be '/usr/bin/microsoft-edge-stable'
+            $script:lastStartProcessParameters.RedirectStandardOutput | Should -Not -BeNullOrEmpty
+            $script:lastStartProcessParameters.RedirectStandardError | Should -Not -BeNullOrEmpty
+            $script:lastStartProcessParameters.RedirectStandardOutput | Should -Not -Be $script:lastStartProcessParameters.RedirectStandardError
+            $result.StandardOutputPath | Should -Be $script:lastStartProcessParameters.RedirectStandardOutput
+            $result.StandardErrorPath | Should -Be $script:lastStartProcessParameters.RedirectStandardError
             $result.StandardOutputPath | Should -Not -BeNullOrEmpty
             $result.StandardErrorPath | Should -Not -BeNullOrEmpty
             $result.StandardOutputPath | Should -Not -Be $result.StandardErrorPath
