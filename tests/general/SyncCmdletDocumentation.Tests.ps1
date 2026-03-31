@@ -2,7 +2,8 @@
 	BeforeAll {
 		$repoRoot = (Resolve-Path (Join-Path $global:testroot '..')).Path
 		$syncScriptPath = Join-Path (Join-Path $repoRoot 'build') 'Sync-CmdletDocumentation.ps1'
-		$tempRoot = Join-Path $env:TEMP ("M365Internals-SyncCmdletDocumentation-" + [Guid]::NewGuid().Guid)
+		$tempBasePath = [System.IO.Path]::GetTempPath()
+		$tempRoot = Join-Path $tempBasePath ("M365Internals-SyncCmdletDocumentation-" + [Guid]::NewGuid().Guid)
 		$copyItems = @(
 			'M365Internals',
 			'M365Ray',
