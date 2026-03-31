@@ -332,8 +332,6 @@ $Config = {"pgid":"ConvergedSignIn","arrSessions":[{"id":"session-123"}],"urlLog
                 return
             }
 
-            $script:lastStartProcessParameters = $null
-
             Mock Start-Process {
                 param(
                     $FilePath,
@@ -343,21 +341,23 @@ $Config = {"pgid":"ConvergedSignIn","arrSessions":[{"id":"session-123"}],"urlLog
                     $RedirectStandardError
                 )
 
-                $script:lastStartProcessParameters = $PSBoundParameters
                 [pscustomobject]@{
-                    Id        = 1234
-                    HasExited = $false
+                    Id                     = 1234
+                    HasExited              = $false
+                    FilePath               = $FilePath
+                    RedirectStandardOutput = $RedirectStandardOutput
+                    RedirectStandardError  = $RedirectStandardError
                 }
             }
 
             $result = Start-M365BrowserProcess -BrowserPath '/usr/bin/microsoft-edge-stable' -ArgumentList @('https://admin.cloud.microsoft/') -SuppressBrowserOutput
 
-            $script:lastStartProcessParameters.FilePath | Should -Be '/usr/bin/microsoft-edge-stable'
-            $script:lastStartProcessParameters.RedirectStandardOutput | Should -Not -BeNullOrEmpty
-            $script:lastStartProcessParameters.RedirectStandardError | Should -Not -BeNullOrEmpty
-            $script:lastStartProcessParameters.RedirectStandardOutput | Should -Not -Be $script:lastStartProcessParameters.RedirectStandardError
-            $result.StandardOutputPath | Should -Be $script:lastStartProcessParameters.RedirectStandardOutput
-            $result.StandardErrorPath | Should -Be $script:lastStartProcessParameters.RedirectStandardError
+            $result.FilePath | Should -Be '/usr/bin/microsoft-edge-stable'
+            $result.RedirectStandardOutput | Should -Not -BeNullOrEmpty
+            $result.RedirectStandardError | Should -Not -BeNullOrEmpty
+            $result.RedirectStandardOutput | Should -Not -Be $result.RedirectStandardError
+            $result.StandardOutputPath | Should -Be $result.RedirectStandardOutput
+            $result.StandardErrorPath | Should -Be $result.RedirectStandardError
             $result.StandardOutputPath | Should -Not -BeNullOrEmpty
             $result.StandardErrorPath | Should -Not -BeNullOrEmpty
             $result.StandardOutputPath | Should -Not -Be $result.StandardErrorPath
