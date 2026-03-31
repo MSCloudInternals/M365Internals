@@ -39,15 +39,14 @@ function Initialize-M365SsoProfile {
     }
 
     $preferencesPath = Join-Path $defaultProfilePath 'Preferences'
-    if (Test-Path -LiteralPath $preferencesPath) {
-        return
-    }
-
-    @{
-        sync    = @{ requested = $false }
-        signin  = @{ allowed = $true }
-        browser = @{ has_seen_welcome_page = $true }
-    } | ConvertTo-Json -Depth 5 | Set-Content -Path $preferencesPath -Encoding UTF8
+    $preferences = Read-M365BrowserJsonConfigurationFile -Path $preferencesPath
+    Set-M365BrowserJsonConfigurationValue -Configuration $preferences -Path @('sync', 'requested') -Value $false
+    Set-M365BrowserJsonConfigurationValue -Configuration $preferences -Path @('signin', 'allowed') -Value $true
+    Set-M365BrowserJsonConfigurationValue -Configuration $preferences -Path @('browser', 'has_seen_welcome_page') -Value $true
+    Set-M365BrowserJsonConfigurationValue -Configuration $preferences -Path @('profile', 'exit_type') -Value 'Normal'
+    Set-M365BrowserJsonConfigurationValue -Configuration $preferences -Path @('session', 'restore_on_startup') -Value 5
+    Set-M365BrowserJsonConfigurationValue -Configuration $preferences -Path @('session', 'startup_urls') -Value @()
+    Write-M365BrowserJsonConfigurationFile -Path $preferencesPath -Configuration $preferences
 }
 
 function Get-M365SsoLaunchArgumentList {
@@ -94,7 +93,30 @@ function Get-M365SsoLaunchArgumentList {
         $arguments = @("--user-agent=$UserAgent") + $arguments
     }
 
-    return [string[]](Format-M365BrowserProcessArgumentList -Arguments ($arguments + @($StartUrl)))
+    return [string[]]($arguments + @($StartUrl))
+}
+
+function Start-M365SsoBrowserProcess {
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '', Justification = 'Private helper that launches the dedicated SSO browser process.')]
+    [OutputType([System.Diagnostics.Process])]
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [string]$BrowserPath,
+
+        [Parameter(Mandatory)]
+        [string[]]$ArgumentList,
+
+        [switch]$Visible
+    )
+
+    $formattedArgumentList = Format-M365BrowserProcessArgumentList -Arguments $ArgumentList
+
+    if ($Visible -or -not $IsWindows) {
+        return Start-Process -FilePath $BrowserPath -ArgumentList $formattedArgumentList -PassThru
+    }
+
+    return Start-Process -FilePath $BrowserPath -ArgumentList $formattedArgumentList -PassThru -WindowStyle Hidden -RedirectStandardError 'NUL'
 }
 
 function Invoke-M365SsoAuthentication {
@@ -178,6 +200,7 @@ function Invoke-M365SsoAuthentication {
     }
     $arguments = Get-M365SsoLaunchArgumentList -ProfilePath $resolvedProfilePath -DebugPort $debugPort -StartUrl $startUrl -Visible:$Visible -UserAgent $UserAgent
     $browserProcess = $null
+    $browserWebSocketUrl = $null
 
     try {
         Write-Host "Launching $($browser.Name) for SSO sign-in..."
@@ -187,17 +210,15 @@ function Invoke-M365SsoAuthentication {
             Write-Host 'Attempting silent browser SSO in headless mode...'
         }
 
-        if ($Visible) {
-            $browserProcess = Start-Process -FilePath $browser.Path -ArgumentList $arguments -PassThru
-        } else {
-            $browserProcess = Start-Process -FilePath $browser.Path -ArgumentList $arguments -PassThru -WindowStyle Hidden -RedirectStandardError 'NUL'
-        }
+        $browserProcess = Start-M365SsoBrowserProcess -BrowserPath $browser.Path -ArgumentList $arguments -Visible:$Visible
 
         $versionInfo = Get-M365BrowserCdpVersion -Port $debugPort -TimeoutSeconds 20
+        $browserWebSocketUrl = $versionInfo.webSocketDebuggerUrl
         $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
         $estsAuthCookieValue = $null
         $portalWebSession = $null
-        $portalCookieGraceDeadline = $null
+        $firstEstsCookieObservedAt = $null
+        $lastObservedTargetDescription = $null
 
         do {
             Start-Sleep -Seconds 2
@@ -210,16 +231,33 @@ function Invoke-M365SsoAuthentication {
                     }
 
                     if ($Visible) {
-                        throw 'The browser window closed before SSO authentication completed.'
+                        $message = 'The browser window closed before SSO authentication completed.'
+                        if ($lastObservedTargetDescription) {
+                            $message += " Last observed browser page: $lastObservedTargetDescription"
+                        }
+
+                        throw $message
                     }
 
-                    throw 'The browser exited before SSO authentication completed. Retry with -Visible to observe the flow on this device.'
+                    $message = 'The browser exited before SSO authentication completed. Retry with -Visible to observe the flow on this device.'
+                    if ($lastObservedTargetDescription) {
+                        $message += " Last observed browser page: $lastObservedTargetDescription"
+                    }
+
+                    throw $message
                 }
             }
 
             try {
-                $cookieWebSocketUrl = Get-M365BrowserPreferredWebSocketUrl -Port $debugPort -FallbackWebSocketUrl $versionInfo.webSocketDebuggerUrl
-                $cookies = @(Get-M365BrowserCookieJar -WebSocketUrl $cookieWebSocketUrl)
+                $targetContext = Get-M365BrowserPreferredTargetContext -Port $debugPort -FallbackWebSocketUrl $browserWebSocketUrl
+                $browserWebSocketUrl = $targetContext.WebSocketUrl
+                $currentTargetDescription = Format-M365BrowserTargetDescription -Url $targetContext.Url -Title $targetContext.Title
+                if ($currentTargetDescription -and $currentTargetDescription -ne $lastObservedTargetDescription) {
+                    $lastObservedTargetDescription = $currentTargetDescription
+                    Write-Verbose "Observed browser page: $currentTargetDescription"
+                }
+
+                $cookies = @(Get-M365BrowserCookieJar -WebSocketUrl $browserWebSocketUrl)
             } catch {
                 Write-Verbose "Cookie polling failed: $($_.Exception.Message)"
                 continue
@@ -228,25 +266,26 @@ function Invoke-M365SsoAuthentication {
             $currentEstsCookie = Get-M365BestBrowserEstsCookie -Cookies $cookies
             if ($currentEstsCookie) {
                 $estsAuthCookieValue = $currentEstsCookie.value
-                if (-not $portalCookieGraceDeadline) {
-                    $portalCookieGraceDeadline = (Get-Date).AddSeconds(10)
+                if (-not $firstEstsCookieObservedAt) {
+                    $firstEstsCookieObservedAt = Get-Date
                     Write-Verbose 'Captured ESTS authentication cookie. Waiting briefly for the admin portal cookie set to appear before falling back to ESTS bootstrap.'
                 }
             }
 
             $portalWebSession = New-M365BrowserPortalWebSession -Cookies $cookies -UserAgent $UserAgent
 
-            if ($portalWebSession) {
-                break
-            }
-
-            if ($estsAuthCookieValue -and $portalCookieGraceDeadline -and (Get-Date) -ge $portalCookieGraceDeadline) {
+            if (Test-M365BrowserAuthenticationCompletion -PortalWebSession $portalWebSession -EstsCookie $currentEstsCookie -FirstEstsCookieObservedAt $firstEstsCookieObservedAt -Deadline $deadline) {
                 break
             }
         } while ((Get-Date) -lt $deadline)
 
         if (-not $portalWebSession -and -not $estsAuthCookieValue) {
-            throw 'SSO authentication did not produce admin portal or ESTS cookies before the timeout expired.'
+            $message = 'SSO authentication did not produce admin portal or ESTS cookies before the timeout expired.'
+            if ($lastObservedTargetDescription) {
+                $message += " Last observed browser page: $lastObservedTargetDescription"
+            }
+
+            throw $message
         }
 
         return [pscustomobject]@{
@@ -257,10 +296,8 @@ function Invoke-M365SsoAuthentication {
         }
     } finally {
         if ($browserProcess) {
-            $browserProcess.Refresh()
-            if (-not $browserProcess.HasExited) {
-                Stop-Process -Id $browserProcess.Id -Force -ErrorAction SilentlyContinue
-            }
+            Stop-M365BrowserProcess -Process $browserProcess -BrowserWebSocketUrl $browserWebSocketUrl
+            Remove-M365BrowserProcessRedirectFiles -Process $browserProcess
         }
     }
 }

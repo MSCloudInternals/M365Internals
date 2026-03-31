@@ -54,9 +54,20 @@ Describe 'Connect-M365Portal auth surface' {
         (Get-Command Connect-M365PortalByEstsCookie).Parameters.Keys | Should -Contain 'SecureEstsAuthCookieValue'
         (Get-Command Connect-M365PortalByPhoneSignIn).Parameters.Keys | Should -Contain 'TimeoutSeconds'
         (Get-Command Connect-M365PortalBySoftwarePasskey).Parameters.Keys | Should -Contain 'KeyFilePath'
+        (Get-Command Connect-M365PortalBySoftwarePasskey).Parameters.Keys | Should -Contain 'KeyVaultTenantId'
+        (Get-Command Connect-M365PortalBySoftwarePasskey).Parameters.Keys | Should -Contain 'KeyVaultClientId'
         (Get-Command Connect-M365PortalBySSO).Parameters.Keys | Should -Contain 'Visible'
         (Get-Command Connect-M365PortalByTemporaryAccessPass).Parameters.Keys | Should -Contain 'TemporaryAccessPass'
         (Get-Command Connect-M365PortalByTemporaryAccessPass).Parameters['TemporaryAccessPass'].Aliases | Should -Contain 'TAP'
+    }
+
+    It 'exposes Key Vault passkey parameters on the SoftwarePasskey parameter set' {
+        $command = Get-Command Connect-M365Portal
+        $softwarePasskeyParameterSet = $command.ParameterSets | Where-Object Name -EQ 'SoftwarePasskey'
+
+        $softwarePasskeyParameterSet.Parameters.Name | Should -Contain 'KeyVaultTenantId'
+        $softwarePasskeyParameterSet.Parameters.Name | Should -Contain 'KeyVaultClientId'
+        $softwarePasskeyParameterSet.Parameters.Name | Should -Contain 'KeyVaultApiVersion'
     }
 }
 
@@ -197,28 +208,204 @@ $Config = {"pgid":"ConvergedSignIn","arrSessions":[{"id":"session-123"}],"urlLog
             $url | Should -Be 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=test-client&prompt=login'
         }
 
-        It 'quotes browser arguments that contain spaces' {
+        It 'quotes process arguments whose values contain spaces' {
+            $arguments = Format-M365BrowserProcessArgumentList -Arguments @(
+                '--remote-debugging-port=9222'
+                '--user-data-dir=C:\Users\Test User\AppData\Local\M365Internals\Browser Profile'
+                '--user-agent=Mozilla/5.0 Test Agent'
+                'https://admin.cloud.microsoft/'
+            )
+
+            $arguments | Should -Contain '--remote-debugging-port=9222'
+            $arguments | Should -Contain '--user-data-dir="C:\Users\Test User\AppData\Local\M365Internals\Browser Profile"'
+            $arguments | Should -Contain '--user-agent="Mozilla/5.0 Test Agent"'
+            $arguments | Should -Contain 'https://admin.cloud.microsoft/'
+        }
+
+        It 'uses the M365Internals Chromium profile directory when launching browser auth' {
             $arguments = Get-M365BrowserLaunchArgumentList `
                 -Browser ([pscustomobject]@{ Name = 'Microsoft Edge'; Path = 'C:\Edge\msedge.exe' }) `
                 -UsePrivateSession:$false `
                 -DebugPort 9222 `
                 -ProfileDirectory 'C:\Users\Test User\AppData\Local\M365Internals\Browser Profile' `
-                -StartUrl 'https://admin.cloud.microsoft/' `
-                -UserAgent 'Mozilla/5.0 Test Agent'
+                -StartUrl 'https://admin.cloud.microsoft/'
 
-            $arguments | Should -Contain '"--user-agent=Mozilla/5.0 Test Agent"'
-            $arguments | Should -Contain '"--user-data-dir=C:\Users\Test User\AppData\Local\M365Internals\Browser Profile"'
+            $arguments | Should -Contain '--profile-directory=M365Internals'
         }
 
-        It 'quotes SSO browser arguments that contain spaces' {
+        It 'returns SSO launch arguments that can be formatted for spaced profile paths' {
             $arguments = Get-M365SsoLaunchArgumentList `
                 -ProfilePath 'C:\Users\Test User\AppData\Local\M365Internals\SSO Profile' `
                 -DebugPort 9333 `
                 -StartUrl 'https://admin.cloud.microsoft/' `
                 -UserAgent 'Mozilla/5.0 Test Agent'
 
-            $arguments | Should -Contain '"--user-agent=Mozilla/5.0 Test Agent"'
-            $arguments | Should -Contain '"--user-data-dir=C:\Users\Test User\AppData\Local\M365Internals\SSO Profile"'
+            $formattedArguments = Format-M365BrowserProcessArgumentList -Arguments $arguments
+
+            $formattedArguments | Should -Contain '--user-agent="Mozilla/5.0 Test Agent"'
+            $formattedArguments | Should -Contain '--user-data-dir="C:\Users\Test User\AppData\Local\M365Internals\SSO Profile"'
+        }
+    }
+
+    Describe 'browser profile preparation' {
+        It 'initializes the dedicated Chromium profile as M365Internals without restoring previous tabs' {
+            $profileRoot = Join-Path ([System.IO.Path]::GetTempPath()) ('m365internals-browser-profile-' + [guid]::NewGuid().ToString('N'))
+
+            try {
+                Initialize-M365BrowserProfile -ProfilePath $profileRoot
+
+                $namedProfilePath = Join-Path $profileRoot 'M365Internals'
+                $preferencesPath = Join-Path $namedProfilePath 'Preferences'
+                $localStatePath = Join-Path $profileRoot 'Local State'
+                $preferences = Get-Content -LiteralPath $preferencesPath -Raw | ConvertFrom-Json
+                $localState = Get-Content -LiteralPath $localStatePath -Raw | ConvertFrom-Json
+
+                Test-Path -LiteralPath $namedProfilePath -PathType Container | Should -BeTrue
+                $preferences.profile.name | Should -Be 'M365Internals'
+                $preferences.profile.exit_type | Should -Be 'Normal'
+                $preferences.session.restore_on_startup | Should -Be 5
+                @($preferences.session.startup_urls).Count | Should -Be 0
+                $preferences.sync.requested | Should -BeFalse
+                $preferences.signin.allowed | Should -BeTrue
+                $preferences.browser.has_seen_welcome_page | Should -BeTrue
+                $localState.profile.last_used | Should -Be 'M365Internals'
+            }
+            finally {
+                Remove-Item -Path $profileRoot -Recurse -Force -ErrorAction SilentlyContinue
+            }
+        }
+
+        It 'migrates the legacy Default browser profile to M365Internals' {
+            $profileRoot = Join-Path ([System.IO.Path]::GetTempPath()) ('m365internals-browser-migration-' + [guid]::NewGuid().ToString('N'))
+            $legacyProfilePath = Join-Path $profileRoot 'Default'
+            $sentinelPath = Join-Path $legacyProfilePath 'Sentinel.txt'
+
+            try {
+                $null = New-Item -ItemType Directory -Path $legacyProfilePath -Force
+                Set-Content -LiteralPath $sentinelPath -Value 'legacy profile data'
+
+                Initialize-M365BrowserProfile -ProfilePath $profileRoot
+
+                Test-Path -LiteralPath (Join-Path $profileRoot 'Default') -PathType Container | Should -BeFalse
+                Test-Path -LiteralPath (Join-Path $profileRoot 'M365Internals/Sentinel.txt') -PathType Leaf | Should -BeTrue
+            }
+            finally {
+                Remove-Item -Path $profileRoot -Recurse -Force -ErrorAction SilentlyContinue
+            }
+        }
+    }
+
+    Describe 'browser candidate resolution' {
+        It 'includes user application installs in the macOS browser candidate set' {
+            $candidates = @(Get-M365MacOSBrowserCandidateSet)
+            $userApplicationRoot = Join-Path $HOME 'Applications'
+
+            $candidates.FilePath | Should -Contain (Join-Path $userApplicationRoot 'Microsoft Edge.app/Contents/MacOS/Microsoft Edge')
+            $candidates.FilePath | Should -Contain (Join-Path $userApplicationRoot 'Google Chrome.app/Contents/MacOS/Google Chrome')
+            $candidates.FilePath | Should -Contain (Join-Path $userApplicationRoot 'Brave Browser.app/Contents/MacOS/Brave Browser')
+            $candidates.FilePath | Should -Contain (Join-Path $userApplicationRoot 'Chromium.app/Contents/MacOS/Chromium')
+        }
+
+        It 'resolves a macOS app bundle path to its executable path' {
+            $bundleRoot = Join-Path ([System.IO.Path]::GetTempPath()) ('m365internals-browser-bundle-' + [guid]::NewGuid().ToString('N'))
+            $bundlePath = Join-Path $bundleRoot 'Contoso Browser.app'
+            $macOsPath = Join-Path $bundlePath 'Contents/MacOS'
+            $executablePath = Join-Path $macOsPath 'ContosoBrowserExecutable'
+
+            try {
+                $null = New-Item -ItemType Directory -Path $macOsPath -Force
+                $null = New-Item -ItemType File -Path $executablePath -Force
+
+                $result = Resolve-M365MacOSAppBundleExecutablePath -BundlePath $bundlePath
+
+                $result.Name | Should -Be 'ContosoBrowserExecutable'
+                $result.Path | Should -Be $executablePath
+            }
+            finally {
+                Remove-Item -Path $bundleRoot -Recurse -Force -ErrorAction SilentlyContinue
+            }
+        }
+
+        It 'suppresses interactive browser stdout and stderr on non-Windows platforms by default' {
+            if ($IsWindows) {
+                Set-ItResult -Skipped -Because 'Non-Windows launch behavior is not applicable on Windows.'
+                return
+            }
+
+            Mock Start-Process {
+                param(
+                    $FilePath,
+                    $ArgumentList,
+                    [switch]$PassThru,
+                    $RedirectStandardOutput,
+                    $RedirectStandardError
+                )
+
+                [pscustomobject]@{
+                    Id                     = 1234
+                    HasExited              = $false
+                    FilePath               = $FilePath
+                    RedirectStandardOutput = $RedirectStandardOutput
+                    RedirectStandardError  = $RedirectStandardError
+                }
+            }
+
+            $result = Start-M365BrowserProcess -BrowserPath '/usr/bin/microsoft-edge-stable' -ArgumentList @('https://admin.cloud.microsoft/') -SuppressBrowserOutput
+
+            $result.FilePath | Should -Be '/usr/bin/microsoft-edge-stable'
+            $result.RedirectStandardOutput | Should -Not -BeNullOrEmpty
+            $result.RedirectStandardError | Should -Not -BeNullOrEmpty
+            $result.RedirectStandardOutput | Should -Not -Be $result.RedirectStandardError
+            $result.StandardOutputPath | Should -Be $result.RedirectStandardOutput
+            $result.StandardErrorPath | Should -Be $result.RedirectStandardError
+            $result.StandardOutputPath | Should -Not -BeNullOrEmpty
+            $result.StandardErrorPath | Should -Not -BeNullOrEmpty
+            $result.StandardOutputPath | Should -Not -Be $result.StandardErrorPath
+        }
+    }
+
+    Describe 'software passkey forwarding' {
+        BeforeEach {
+            Mock Invoke-M365PasskeyAuthentication {
+                [Microsoft.PowerShell.Commands.WebRequestSession]::new()
+            }
+
+            Mock Connect-M365AuthArtifactSet {
+                [pscustomobject]@{
+                    Connected = $true
+                }
+            }
+        }
+
+        It 'forwards Key Vault passkey parameters from the public wrapper' {
+            Mock Connect-M365Portal {
+                [pscustomobject]@{
+                    Connected = $true
+                }
+            }
+
+            $result = Connect-M365PortalBySoftwarePasskey -KeyFilePath '.\admin-kv.passkey' -TenantId '8612f621-73ca-4c12-973c-0da732bc44c2' -KeyVaultTenantId '72f988bf-86f1-41af-91ab-2d7cd011db47' -KeyVaultClientId '11111111-2222-3333-4444-555555555555' -KeyVaultApiVersion '7.5'
+
+            $result.Connected | Should -BeTrue
+            Should -Invoke Connect-M365Portal -Times 1 -Exactly -ParameterFilter {
+                $KeyFilePath -eq '.\admin-kv.passkey' -and
+                $TenantId -eq '8612f621-73ca-4c12-973c-0da732bc44c2' -and
+                $KeyVaultTenantId -eq '72f988bf-86f1-41af-91ab-2d7cd011db47' -and
+                $KeyVaultClientId -eq '11111111-2222-3333-4444-555555555555' -and
+                $KeyVaultApiVersion -eq '7.5'
+            }
+        }
+
+        It 'forwards Key Vault passkey parameters from Connect-M365Portal to the internal helper' {
+            $result = Connect-M365Portal -KeyFilePath '.\admin-kv.passkey' -KeyVaultTenantId '72f988bf-86f1-41af-91ab-2d7cd011db47' -KeyVaultClientId '11111111-2222-3333-4444-555555555555' -KeyVaultApiVersion '7.5' -SkipValidation
+
+            $result.Connected | Should -BeTrue
+            Should -Invoke Invoke-M365PasskeyAuthentication -Times 1 -Exactly -ParameterFilter {
+                $KeyFilePath -eq '.\admin-kv.passkey' -and
+                $KeyVaultTenantId -eq '72f988bf-86f1-41af-91ab-2d7cd011db47' -and
+                $KeyVaultClientId -eq '11111111-2222-3333-4444-555555555555' -and
+                $KeyVaultApiVersion -eq '7.5'
+            }
         }
     }
 
@@ -304,14 +491,22 @@ $Config = {"pgid":"ConvergedSignIn","arrSessions":[{"id":"session-123"}],"urlLog
 
             Mock Get-M365BrowserInteractiveStartUrl { 'https://admin.cloud.microsoft/' }
             Mock Get-M365BrowserLaunchArgumentList { @('--headless=new') }
-            Mock Start-Process { $script:browserProcess }
-            Mock Stop-Process { }
+            Mock Start-M365BrowserProcess { $script:browserProcess }
+            Mock Stop-M365BrowserProcess { }
+            Mock Remove-M365BrowserProcessRedirectFiles { }
             Mock Get-M365BrowserCdpVersion {
                 [pscustomobject]@{
                     webSocketDebuggerUrl = 'ws://127.0.0.1:9222/devtools/browser/test'
                 }
             }
-            Mock Get-M365BrowserPreferredWebSocketUrl { 'ws://127.0.0.1:9222/devtools/browser/test' }
+            Mock Get-M365BrowserPreferredTargetContext {
+                [pscustomobject]@{
+                    Url          = 'https://admin.cloud.microsoft/'
+                    Title        = 'Microsoft 365 admin center'
+                    Type         = 'page'
+                    WebSocketUrl = 'ws://127.0.0.1:9222/devtools/browser/test'
+                }
+            }
             Mock Start-Sleep { }
 
             Mock Get-M365BrowserCookieJar {

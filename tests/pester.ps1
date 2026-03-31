@@ -72,7 +72,7 @@ if ($TestGeneral)
 				FailedCount = $result.FailedCount
 				SkippedCount = $result.SkippedCount
 			})
-			$result.Tests | Where-Object Result -ne 'Passed' | ForEach-Object {
+			$result.Tests | Where-Object Result -eq 'Failed' | ForEach-Object {
 				$testresults += [pscustomobject]@{
 					Block    = $_.Block
 					Name	 = "It $($_.Name)"
@@ -115,7 +115,7 @@ if ($TestFunctions)
 				FailedCount = $result.FailedCount
 				SkippedCount = $result.SkippedCount
 			})
-			$result.Tests | Where-Object Result -ne 'Passed' | ForEach-Object {
+			$result.Tests | Where-Object Result -eq 'Failed' | ForEach-Object {
 				$testresults += [pscustomobject]@{
 					Block    = $_.Block
 					Name	 = "It $($_.Name)"
@@ -128,7 +128,18 @@ if ($TestFunctions)
 }
 #endregion Test Commands
 
-$testresults | Sort-Object Describe, Context, Name, Result, Message | Format-List
+if ($testresults.Count -gt 0)
+{
+	$failedSuites = $suiteResults | Where-Object FailedCount -gt 0
+	if ($failedSuites.Count -gt 0)
+	{
+		Write-Host 'Failed suites:'
+		($failedSuites | Sort-Object Category, FileName | Format-Table Category, FileName, FailedCount, TotalCount -AutoSize | Out-String).TrimEnd() | Write-Host
+	}
+
+	Write-Host 'Failed tests:'
+	($testresults | Sort-Object Block, Name, Result, Message | Format-List | Out-String).TrimEnd() | Write-Host
+}
 
 $summary = [pscustomobject]@{
 	RepositoryRoot = $repositoryRoot
