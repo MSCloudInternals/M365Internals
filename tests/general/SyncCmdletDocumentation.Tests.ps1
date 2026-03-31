@@ -2,7 +2,8 @@
 	BeforeAll {
 		$repoRoot = (Resolve-Path (Join-Path $global:testroot '..')).Path
 		$syncScriptPath = Join-Path (Join-Path $repoRoot 'build') 'Sync-CmdletDocumentation.ps1'
-		$tempRoot = Join-Path $env:TEMP ("M365Internals-SyncCmdletDocumentation-" + [Guid]::NewGuid().Guid)
+		$tempBasePath = [System.IO.Path]::GetTempPath()
+		$tempRoot = Join-Path $tempBasePath ("M365Internals-SyncCmdletDocumentation-" + [Guid]::NewGuid().Guid)
 		$copyItems = @(
 			'M365Internals',
 			'M365Ray',
@@ -50,10 +51,21 @@
 	}
 
 	It "Runs successfully against a synchronized repo snapshot" {
+		if ($syncError) {
+			$details = @(
+				$syncError.Exception.Message
+				$syncError.ScriptStackTrace
+			) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+
+			throw ($details -join [Environment]::NewLine)
+		}
+
 		$syncError | Should -BeNullOrEmpty
 	}
 
-	It "Leaves <Target> byte-for-byte unchanged when no sync is needed" -ForEach $fileStates {
-		$AfterHash | Should -Be $BeforeHash
+	It "Leaves synchronized files byte-for-byte unchanged when no sync is needed" {
+		foreach ($state in $fileStates) {
+			$state.AfterHash | Should -Be $state.BeforeHash -Because "$($state.Target) changed during sync"
+		}
 	}
 }

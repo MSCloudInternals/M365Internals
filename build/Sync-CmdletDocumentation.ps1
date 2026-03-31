@@ -14,13 +14,15 @@ if ([string]::IsNullOrWhiteSpace($RepositoryRoot)) {
 $repoRoot = (Resolve-Path -Path $RepositoryRoot).Path
 $moduleRoot = Join-Path $repoRoot 'M365Internals'
 $functionsPath = Join-Path $moduleRoot 'functions'
+$internalFunctionsPath = Join-Path (Join-Path $moduleRoot 'internal') 'functions'
+$internalScriptsPath = Join-Path (Join-Path $moduleRoot 'internal') 'scripts'
 $rootReadmePath = Join-Path $repoRoot 'README.md'
 $moduleReadmePath = Join-Path $moduleRoot 'README.md'
 $manifestPath = Join-Path $moduleRoot 'M365Internals.psd1'
-$mappingSeedPath = Join-Path $repoRoot 'M365Ray\CmdletApiMapping.json'
+$mappingSeedPath = Join-Path (Join-Path $repoRoot 'M365Ray') 'CmdletApiMapping.json'
 $mappingPaths = @(
     $mappingSeedPath,
-    (Join-Path $repoRoot 'M365Ray Firefox\CmdletApiMapping.json')
+    (Join-Path (Join-Path $repoRoot 'M365Ray Firefox') 'CmdletApiMapping.json')
 )
 
 $script:SyncTenantId = '11111111-1111-1111-1111-111111111111'
@@ -32,7 +34,7 @@ $script:InternalPlaceholderMap = [ordered]@{
     $script:SyncSubscriptionId = 'SubscriptionId'
 }
 
-foreach ($file in Get-ChildItem -Path (Join-Path $moduleRoot 'internal\functions') -Filter '*.ps1' -Recurse) {
+foreach ($file in Get-ChildItem -Path $internalFunctionsPath -Filter '*.ps1' -Recurse) {
     . $file.FullName
 }
 
@@ -40,7 +42,7 @@ foreach ($file in Get-ChildItem -Path (Join-Path $moduleRoot 'functions') -Filte
     . $file.FullName
 }
 
-foreach ($file in Get-ChildItem -Path (Join-Path $moduleRoot 'internal\scripts') -Filter '*.ps1' -Recurse) {
+foreach ($file in Get-ChildItem -Path $internalScriptsPath -Filter '*.ps1' -Recurse) {
     . $file.FullName
 }
 
