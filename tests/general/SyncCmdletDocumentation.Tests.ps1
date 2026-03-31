@@ -63,7 +63,9 @@
 		$syncError | Should -BeNullOrEmpty
 	}
 
-	It "Leaves <Target> byte-for-byte unchanged when no sync is needed" -ForEach $fileStates {
-		$AfterHash | Should -Be $BeforeHash
+	It "Leaves synchronized files byte-for-byte unchanged when no sync is needed" {
+		foreach ($state in $fileStates) {
+			$state.AfterHash | Should -Be $state.BeforeHash -Because "$($state.Target) changed during sync"
+		}
 	}
 }
