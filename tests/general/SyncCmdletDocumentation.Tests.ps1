@@ -50,6 +50,15 @@
 	}
 
 	It "Runs successfully against a synchronized repo snapshot" {
+		if ($syncError) {
+			$details = @(
+				$syncError.Exception.Message
+				$syncError.ScriptStackTrace
+			) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+
+			throw ($details -join [Environment]::NewLine)
+		}
+
 		$syncError | Should -BeNullOrEmpty
 	}
 
