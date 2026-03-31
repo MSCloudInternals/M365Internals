@@ -117,7 +117,7 @@ function Resolve-M365MacOSAppBundleExecutablePath {
 
     return [pscustomobject]@{
         Path = $preferredExecutable.FullName
-        Name = $bundleName
+        Name = $preferredExecutable.Name
     }
 }
 

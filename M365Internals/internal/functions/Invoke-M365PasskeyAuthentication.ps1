@@ -118,6 +118,11 @@
 
             $cleanKey = $PrivateKey.Trim() -replace "`r|`n|\s", ''
             $cleanKey = $cleanKey -replace '-', '+' -replace '_', '/'
+            $paddingLength = (4 - ($cleanKey.Length % 4)) % 4
+            if ($paddingLength -gt 0) {
+                $cleanKey += ('=' * $paddingLength)
+            }
+
             $wrappedKey = ''
             for ($index = 0; $index -lt $cleanKey.Length; $index += 64) {
                 if (($index + 64) -lt $cleanKey.Length) {
@@ -398,18 +403,24 @@
 
             $vaultName = if ($KeyVault.PSObject.Properties['vaultName']) { [string]$KeyVault.vaultName } else { $null }
             $keyName = if ($KeyVault.PSObject.Properties['keyName']) { [string]$KeyVault.keyName } else { $null }
+            $keyVersion = if ($KeyVault.PSObject.Properties['keyVersion']) { [string]$KeyVault.keyVersion } else { $null }
             $keyId = if ($KeyVault.PSObject.Properties['keyId']) { [string]$KeyVault.keyId } else { $null }
+            $keyUri = $null
 
             if ($keyId) {
                 try {
                     $keyIdUri = [uri]$keyId
+                    $keyUri = $keyIdUri.GetLeftPart([System.UriPartial]::Path).TrimEnd('/')
                     if (-not $vaultName) {
                         $vaultName = ($keyIdUri.Host -split '\.')[0]
                     }
-                    if (-not $keyName) {
-                        $pathSegments = $keyIdUri.AbsolutePath.Trim('/') -split '/'
-                        if ($pathSegments.Length -ge 2 -and $pathSegments[0] -eq 'keys') {
+                    $pathSegments = $keyIdUri.AbsolutePath.Trim('/') -split '/'
+                    if ($pathSegments.Length -ge 2 -and $pathSegments[0] -eq 'keys') {
+                        if (-not $keyName) {
                             $keyName = $pathSegments[1]
+                        }
+                        if (-not $keyVersion -and $pathSegments.Length -ge 3) {
+                            $keyVersion = $pathSegments[2]
                         }
                     }
                 }
@@ -422,10 +433,19 @@
                 throw "The passkey file must include keyVault.vaultName and keyVault.keyName, or a parseable keyVault.keyId value."
             }
 
+            if (-not $keyUri) {
+                $keyUri = "https://$vaultName.vault.azure.net/keys/$keyName"
+                if ($keyVersion) {
+                    $keyUri += "/$keyVersion"
+                }
+            }
+
             [pscustomobject]@{
-                vaultName = $vaultName
-                keyName   = $keyName
-                keyId     = $keyId
+                vaultName  = $vaultName
+                keyName    = $keyName
+                keyVersion = $keyVersion
+                keyId      = $keyId
+                keyUri     = $keyUri
             }
         }
 
@@ -535,7 +555,7 @@ Could not obtain an Azure Key Vault access token. Ensure one of the following:
 
             $signedHash = Get-Sha256Hash -Bytes $signedBytes
             if ($KeyVaultInfo -and $KeyVaultToken) {
-                $signUri = "https://$($KeyVaultInfo.vaultName).vault.azure.net/keys/$($KeyVaultInfo.keyName)/sign?api-version=$KeyVaultApiVersion"
+                $signUri = "$($KeyVaultInfo.keyUri)/sign?api-version=$KeyVaultApiVersion"
                 $requestHeaders = @{ Authorization = "Bearer $KeyVaultToken"; 'Content-Type' = 'application/json' }
                 $requestBody = @{ alg = 'ES256'; value = (ConvertTo-Base64UrlString -Bytes $signedHash) } | ConvertTo-Json -Compress
 
@@ -569,7 +589,7 @@ Could not obtain an Azure Key Vault access token. Ensure one of the following:
                         $signature = $ecdsa.SignHash($signedHash, [System.Security.Cryptography.DSASignatureFormat]::Rfc3279DerSequence)
                     }
                     catch {
-                        $signature = $ecdsa.SignHash($signedHash)
+                        $signature = ConvertFrom-IeeeToDerSignature -IeeeSignature ($ecdsa.SignHash($signedHash))
                     }
                 }
                 finally {

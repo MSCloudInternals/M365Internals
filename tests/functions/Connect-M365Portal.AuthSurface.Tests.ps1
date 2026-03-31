@@ -310,7 +310,7 @@ $Config = {"pgid":"ConvergedSignIn","arrSessions":[{"id":"session-123"}],"urlLog
             $bundleRoot = Join-Path ([System.IO.Path]::GetTempPath()) ('m365internals-browser-bundle-' + [guid]::NewGuid().ToString('N'))
             $bundlePath = Join-Path $bundleRoot 'Contoso Browser.app'
             $macOsPath = Join-Path $bundlePath 'Contents/MacOS'
-            $executablePath = Join-Path $macOsPath 'Contoso Browser'
+            $executablePath = Join-Path $macOsPath 'ContosoBrowserExecutable'
 
             try {
                 $null = New-Item -ItemType Directory -Path $macOsPath -Force
@@ -318,7 +318,7 @@ $Config = {"pgid":"ConvergedSignIn","arrSessions":[{"id":"session-123"}],"urlLog
 
                 $result = Resolve-M365MacOSAppBundleExecutablePath -BundlePath $bundlePath
 
-                $result.Name | Should -Be 'Contoso Browser'
+                $result.Name | Should -Be 'ContosoBrowserExecutable'
                 $result.Path | Should -Be $executablePath
             }
             finally {
