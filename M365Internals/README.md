@@ -66,9 +66,14 @@ Current validation work has confirmed the public cmdlet surface live by using so
 
 ### Authentication Notes
 
-- `Connect-M365Portal` defaults to the interactive browser sign-in flow for interactive use.
-- `Connect-M365PortalBySSO` currently supports Windows only for now.
-- `Connect-M365PortalBySoftwarePasskey` requires PowerShell 7.0 or later.
+- `Connect-M365Portal` defaults to the interactive browser sign-in flow for interactive use and remains the main umbrella entrypoint for the built-in auth methods.
+- `Connect-M365Portal -Credential` and `Connect-M365PortalByCredential` support username/password sign-in and optional Authenticator TOTP completion through `-TotpSecret`.
+- `Connect-M365PortalByPhoneSignIn` starts the Microsoft Authenticator phone sign-in flow for passwordless approval scenarios.
+- `Connect-M365PortalByTemporaryAccessPass` uses a Temporary Access Pass for bootstrap, recovery, or other short-lived sign-in scenarios.
+- `Connect-M365PortalBySoftwarePasskey` requires PowerShell 7.0 or later and supports local or Azure Key Vault-backed passkeys.
+- `Connect-M365PortalByBrowser` and `Connect-M365PortalBySSO` use a dedicated Chromium profile directory to reduce session-restore friction during repeated sign-ins.
+- `Connect-M365PortalBySSO` currently supports Windows only.
+- Cookie reuse and `Connect-M365PortalByEstsCookie` remain best-effort because the admin portal can still reject stale bootstrap state.
 
 ## Available Cmdlets
 
@@ -81,7 +86,7 @@ Current validation work has confirmed the public cmdlet surface live by using so
 | Connect-M365PortalByCredential | Connect to the Microsoft 365 admin center by using username/password and optional MFA |
 | Connect-M365PortalByEstsCookie | Connect to the Microsoft 365 admin center by exchanging an ESTS authentication cookie |
 | Connect-M365PortalByPhoneSignIn | Connect to the Microsoft 365 admin center by using Microsoft Authenticator phone sign-in |
-| Connect-M365PortalBySoftwarePasskey | Connect to the Microsoft 365 admin center by using a local software passkey |
+| Connect-M365PortalBySoftwarePasskey | Connect to the Microsoft 365 admin center by using a local or Azure Key Vault-backed software passkey |
 | Connect-M365PortalBySSO | Connect to the Microsoft 365 admin center by using browser-based single sign-on |
 | Connect-M365PortalByTemporaryAccessPass | Connect to the Microsoft 365 admin center by using a Temporary Access Pass |
 
@@ -213,6 +218,9 @@ Connect-M365PortalBySSO -Visible
 
 # Connect by using a local software passkey file
 Connect-M365PortalBySoftwarePasskey -KeyFilePath '.\admin.passkey'
+
+# Connect by using an Azure Key Vault-backed software passkey file
+Connect-M365PortalBySoftwarePasskey -KeyFilePath '.\admin-kv.passkey' -KeyVaultTenantId '8612f621-73ca-4c12-973c-0da732bc44c2'
 ```
 
 ### Examples

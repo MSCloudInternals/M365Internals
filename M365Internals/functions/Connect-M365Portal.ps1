@@ -18,7 +18,7 @@
           - Microsoft Authenticator phone sign-in
           - interactive browser sign-in
           - browser-based SSO
-          - local software passkey sign-in
+          - local or Azure Key Vault-backed software passkey sign-in
 
         After the session is prepared, the cmdlet validates it against the same-origin
         portal bootstrap endpoints used by the admin experience and stores the live session
@@ -92,7 +92,19 @@
         This flow currently supports Windows only for now.
 
     .PARAMETER KeyFilePath
-        Path to a local software passkey JSON file used for native Entra FIDO sign-in.
+        Path to a software passkey JSON file used for native Entra FIDO sign-in.
+
+    .PARAMETER KeyVaultTenantId
+        Optional Entra tenant ID used when acquiring a Key Vault access token through the
+        Az module or Azure CLI for Azure Key Vault-backed passkeys.
+
+    .PARAMETER KeyVaultClientId
+        Optional client ID of a user-assigned managed identity used when acquiring a Key Vault
+        access token from IMDS for Azure Key Vault-backed passkeys.
+
+    .PARAMETER KeyVaultApiVersion
+        Azure Key Vault REST API version used for the Sign operation when a Key Vault-backed
+        passkey is supplied. Defaults to 7.4.
 
     .PARAMETER UserAgent
         The user agent string used for bootstrap requests.
@@ -161,6 +173,11 @@
 
         Launches a visible browser window and attempts to capture a Microsoft 365 admin session
         through browser-based single sign-on on Windows for now.
+
+    .EXAMPLE
+        Connect-M365Portal -KeyFilePath '.\admin-kv.passkey' -KeyVaultTenantId '8612f621-73ca-4c12-973c-0da732bc44c2'
+
+        Connects by using an Azure Key Vault-backed software passkey.
 
     .OUTPUTS
         M365Portal.Connection
@@ -251,6 +268,15 @@
 
         [Parameter(Mandatory, ParameterSetName = 'SoftwarePasskey')]
         [string]$KeyFilePath,
+
+        [Parameter(ParameterSetName = 'SoftwarePasskey')]
+        [string]$KeyVaultTenantId,
+
+        [Parameter(ParameterSetName = 'SoftwarePasskey')]
+        [string]$KeyVaultClientId,
+
+        [Parameter(ParameterSetName = 'SoftwarePasskey')]
+        [string]$KeyVaultApiVersion = '7.4',
 
         [Parameter(ParameterSetName = 'PortalCookies')]
         [Parameter(ParameterSetName = 'WebSession')]
@@ -520,7 +546,19 @@
                 return Connect-M365AuthArtifactSet -EstsAuthCookieValue $ssoAuth.EstsAuthCookieValue -PortalWebSession $ssoAuth.PortalWebSession -TenantId $TenantId -UserAgent $UserAgent -SkipValidation:$SkipValidation -AuthFlow 'SSO' -ConnectionPreference PreferPortal -FailureLabel 'SSO authentication'
             }
             'SoftwarePasskey' {
-                $portalSession = Invoke-M365PasskeyAuthentication -KeyFilePath $KeyFilePath -UserAgent $UserAgent
+                $passkeyParams = @{
+                    KeyFilePath        = $KeyFilePath
+                    KeyVaultApiVersion = $KeyVaultApiVersion
+                    UserAgent          = $UserAgent
+                }
+                if ($KeyVaultTenantId) {
+                    $passkeyParams.KeyVaultTenantId = $KeyVaultTenantId
+                }
+                if ($KeyVaultClientId) {
+                    $passkeyParams.KeyVaultClientId = $KeyVaultClientId
+                }
+
+                $portalSession = Invoke-M365PasskeyAuthentication @passkeyParams
                 return Connect-M365AuthArtifactSet -PortalWebSession $portalSession -TenantId $TenantId -UserAgent $UserAgent -SkipValidation:$SkipValidation -AuthFlow 'SoftwarePasskey' -ConnectionPreference PreferPortal -FailureLabel 'Software passkey authentication'
             }
         }
