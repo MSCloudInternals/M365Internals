@@ -112,6 +112,45 @@ The current publish-readiness pass included authenticated live validation agains
 
 Known tenant-specific or optional sections should still be expected to return structured informational results instead of hard failures when the live portal behaves the same way.
 
+### Maintainer surface discovery workflow
+
+The repo now keeps the browser-capture and discovery inventory in `build/metadata/portal-surface-registry.json` instead of scattering that knowledge only across ad hoc scripts and extension mappings.
+
+- The registry records normalized request templates without tenant-specific values, discovery-only surfaces, top-level portal routes, route interaction recipes, write-probe candidates, and the header profiles needed for browser-backed captures.
+- `build/Sync-CmdletDocumentation.ps1` still traces representative cmdlet invocations, but it now also consumes registry-backed mapping overrides before writing `M365Ray/CmdletApiMapping.json` and `M365Ray/TrackedRequestPrefixes.json`.
+- `build/export-settings-surface-captures.ps1` now generates its Playwright browser plan from the registry.
+- `build/run-edge-agent-copilot-browser-capture.ps1` generates the Agent/Copilot browser plan from the same registry.
+- `build/run-edge-portal-surface-discovery.ps1` now applies route-specific interaction recipes, records normalized snapshots, and writes a diff against the previous discovery run so maintainers can spot newly introduced portal features or changed request shapes.
+- `build/live-discover-settings-write-routes.ps1` and `build/live-discover-remaining-agent-copilot-routes.ps1` now consume registry-backed write probe plans instead of carrying their own hardcoded candidate lists.
+
+Recommended maintainer setup:
+
+1. Connect to the admin portal in the same PowerShell session that will run the capture script.
+2. Prefer a maintainer workstation with Microsoft Edge available and an account that can open the target admin-center surfaces.
+3. Run the standard Pester pass with `./build/run-maintainer-validation.ps1`.
+4. Run one or more browser-backed discovery scripts such as:
+   - `./build/run-edge-settings-browser-capture.ps1`
+   - `./build/run-edge-agent-copilot-browser-capture.ps1`
+   - `./build/run-edge-portal-surface-discovery.ps1`
+5. Review `TestResults/Artifacts/portal-surface-discovery-diff.json` and the timestamped files under `TestResults/Artifacts/portal-surface-discovery-history/` before deciding whether a registry update is needed.
+6. When you want an agent to do the enrichment loop for you, use this prompt:
+   - `Run build/run-edge-portal-surface-discovery.ps1, inspect the diff/history artifacts, update build/metadata/portal-surface-registry.json to cover any newly observed surfaces or interactions, regenerate derived artifacts with build/Sync-CmdletDocumentation.ps1, and rerun tests/pester.ps1.`
+
+Moving this workflow into CI is still possible later, but it should be treated as a self-hosted-runner path rather than a GitHub-hosted workflow target. The main operational gaps are still:
+
+- browser-capable authenticated admin sign-in without exposing reusable session material on shared infrastructure
+- a safe way to provision and rotate tenant-scoped discovery credentials
+- stable Microsoft Edge and Playwright runtime availability on the runner
+- storage-state export, artifact retention, and review of unexpected-request diffs
+- guardrails for any future route probes that move beyond read-only discovery
+
+For a dedicated self-hosted runner:
+
+1. Prefer a Windows runner with Microsoft Edge, a persistent browser profile, and the `self-hosted` + `windows` labels.
+2. Choose either SSO on the runner account or a locally stored passkey file exposed through `M365_DISCOVERY_PASSKEY_PATH`.
+3. Optionally set `M365_DISCOVERY_TENANT_ID`, `M365_DISCOVERY_KEYVAULT_TENANT_ID`, and `M365_DISCOVERY_KEYVAULT_CLIENT_ID` on the runner when you need tighter tenant or Key Vault scoping.
+4. Trigger the discovery job manually, review the uploaded diff artifact, and only then update `build/metadata/portal-surface-registry.json` or generated projections.
+
 ### Confirmed Write Coverage
 
 The module now exposes write-capable cmdlets for the Settings-family routes that accepted live no-op payload replays from the authenticated admin-center session.

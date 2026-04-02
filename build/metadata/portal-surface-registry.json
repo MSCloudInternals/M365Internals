@@ -1,0 +1,915 @@
+{
+  "SchemaVersion": 2,
+  "TrackedPrefixes": [
+    "/admin/api/",
+    "/adminportal/home/",
+    "/fd/",
+    "/_api/"
+  ],
+  "HeaderProfiles": {
+    "MicrosoftSearch": {
+      "Accept": "application/json;odata=minimalmetadata, text/plain, */*",
+      "x-edge-shopping-flag": "1",
+      "Cache-Control": "no-cache",
+      "Pragma": "no-cache",
+      "Referer": "https://admin.cloud.microsoft/?",
+      "x-adminapp-request": "/MicrosoftSearch",
+      "x-ms-mac-appid": "f00c5fa5-eee4-4f57-88fa-c082d83b3c94",
+      "x-ms-mac-hostingapp": "M365AdminPortal",
+      "x-ms-mac-target-app": "MAC",
+      "x-ms-mac-version": "host-mac_2026.3.2.6"
+    },
+    "Viva": {
+      "Accept": "application/json;odata=minimalmetadata, text/plain, */*",
+      "x-edge-shopping-flag": "1",
+      "Cache-Control": "no-cache",
+      "Pragma": "no-cache",
+      "Referer": "https://admin.cloud.microsoft/",
+      "x-adminapp-request": "/viva",
+      "x-ms-mac-appid": "f00c5fa5-eee4-4f57-88fa-c082d83b3c94",
+      "x-ms-mac-hostingapp": "M365AdminPortal",
+      "x-ms-mac-target-app": "MAC",
+      "x-ms-mac-version": "host-mac_2026.3.2.6"
+    },
+    "GraphEnhancedRestore": {
+      "Accept": "application/json;odata=minimalmetadata, text/plain, */*",
+      "client-request-id": "11111111-1111-4111-8111-111111111111",
+      "x-adminapp-request": "/Settings/enhancedRestore",
+      "x-ms-mac-appid": "f00c5fa5-eee4-4f57-88fa-c082d83b3c94",
+      "x-ms-mac-hostingapp": "M365AdminPortal",
+      "x-ms-mac-target-app": "Graph",
+      "x-anchormailbox": "{TenantAnchorMailbox}"
+    },
+    "PurviewCopilot": {
+      "tenantid": "{TenantId}",
+      "x-tid": "{TenantId}",
+      "client-type": "purview",
+      "x-clientpage": "/",
+      "client-version": "1.0.2774.1",
+      "x-tabvisible": "visible",
+      "x-clientpkgversion": "",
+      "client-request-id": "11111111-1111-4111-8111-111111111111"
+    }
+  },
+  "CmdletMappingOverrides": [
+    {
+      "Cmdlet": "Get-M365AdminEnhancedRestoreStatus",
+      "ApiUri": "https://admin.cloud.microsoft/fd/msgraph/beta/$batch",
+      "Method": "POST",
+      "MatchBodyIncludes": [
+        "solutions/backupRestore/protectionUnits/microsoft.graph.siteProtectionUnit/$count",
+        "solutions/backupRestore/protectionUnits/microsoft.graph.driveProtectionUnit/$count",
+        "solutions/backupRestore/protectionUnits/microsoft.graph.mailboxProtectionUnit/$count"
+      ]
+    }
+  ],
+  "InteractiveSurfaces": [
+    {
+      "Id": "search-account-linking",
+      "Name": "AccountLinking",
+      "PlanIds": [
+        "settings-browser"
+      ],
+      "Cmdlet": "Get-M365AdminSearchSetting",
+      "Parameters": {
+        "Name": "fixed:AccountLinking"
+      },
+      "PortalRoute": "#/Settings/EnterpriseMicrosoftRewards",
+      "DiscoveryState": "InteractiveOnly",
+      "RoleRequirementHints": [
+        "Global admin",
+        "Search administrator"
+      ],
+      "LicenseRequirementHints": [
+        "Microsoft Search"
+      ],
+      "TenantOptionality": "Optional",
+      "SuggestedAction": "Inspect the live portal with browser DevTools during the Account Linking interaction to capture the backing request shape before adding direct module support."
+    },
+    {
+      "Id": "payg-telemetry",
+      "Name": "Telemetry",
+      "PlanIds": [
+        "settings-browser"
+      ],
+      "Cmdlet": "Get-M365AdminPayAsYouGoService",
+      "Parameters": {
+        "Name": "fixed:Telemetry"
+      },
+      "PortalRoute": "#/Settings",
+      "PathTemplate": "/admin/api/km/setting/telemetry",
+      "Method": "POST",
+      "DiscoveryState": "BodyNotCaptured",
+      "RoleRequirementHints": [
+        "Global admin"
+      ],
+      "LicenseRequirementHints": [
+        "Pay-as-you-go services"
+      ],
+      "TenantOptionality": "Optional",
+      "SuggestedAction": "Inspect the live portal telemetry interaction with browser DevTools to capture the exact POST body and any required headers before adding direct module support."
+    }
+  ],
+  "PlaywrightPlans": [
+    {
+      "Id": "settings-browser",
+      "DisplayName": "Settings browser capture",
+      "Groups": [
+        {
+          "Name": "AppSettings",
+          "CoveredByCmdlets": [
+            "Get-M365AdminAppSetting"
+          ],
+          "Requests": [
+            { "Name": "Bookings", "PathTemplate": "/admin/api/settings/apps/bookings" },
+            { "Name": "CalendarSharing", "PathTemplate": "/admin/api/settings/apps/calendarsharing" },
+            { "Name": "DirectorySynchronization", "PathTemplate": "/admin/api/settings/apps/dirsync" },
+            { "Name": "Dynamics365ConnectionGraph", "PathTemplate": "/admin/api/settings/apps/dcg" },
+            { "Name": "Dynamics365SalesInsights", "PathTemplate": "/admin/api/settings/apps/dci" },
+            { "Name": "DynamicsCrm", "PathTemplate": "/admin/api/settings/apps/dynamicscrm" },
+            { "Name": "EndUserCommunications", "PathTemplate": "/admin/api/settings/apps/EndUserCommunications" },
+            { "Name": "Learning", "PathTemplate": "/admin/api/settings/apps/learning" },
+            { "Name": "LoopPolicy", "PathTemplate": "/admin/api/settings/apps/looppolicy" },
+            { "Name": "Mail", "PathTemplate": "/admin/api/settings/apps/mail" },
+            { "Name": "O365DataPlan", "PathTemplate": "/admin/api/settings/apps/o365dataplan" },
+            { "Name": "OfficeForms", "PathTemplate": "/admin/api/settings/apps/officeforms" },
+            { "Name": "OfficeFormsPro", "PathTemplate": "/admin/api/settings/apps/officeformspro", "TimeoutMs": 60000 },
+            { "Name": "OfficeOnline", "PathTemplate": "/admin/api/settings/apps/officeonline" },
+            { "Name": "OfficeScripts", "PathTemplate": "/admin/api/settings/apps/officescripts" },
+            { "Name": "Project", "PathTemplate": "/admin/api/settings/apps/projectonline" },
+            { "Name": "SitesSharing", "PathTemplate": "/admin/api/settings/apps/sitessharing" },
+            { "Name": "SkypeTeams", "PathTemplate": "/admin/api/settings/apps/skypeteams" },
+            { "Name": "Store", "PathTemplate": "/admin/api/settings/apps/store" },
+            { "Name": "Sway", "PathTemplate": "/admin/api/settings/apps/Sway" },
+            { "Name": "UserSoftware", "PathTemplate": "/admin/api/settings/apps/usersoftware" },
+            { "Name": "Whiteboard", "PathTemplate": "/admin/api/settings/apps/whiteboard" }
+          ]
+        },
+        {
+          "Name": "CompanySettings",
+          "CoveredByCmdlets": [
+            "Get-M365AdminCompanySetting",
+            "Get-M365AdminTenantSetting"
+          ],
+          "Requests": [
+            { "Name": "Theme", "PathTemplate": "/admin/api/Settings/company/theme/v2" },
+            { "Name": "Tile", "PathTemplate": "/admin/api/Settings/company/tile" },
+            { "Name": "HelpDesk", "PathTemplate": "/admin/api/Settings/company/helpdesk" },
+            { "Name": "Profile", "PathTemplate": "/admin/api/Settings/company/profile" },
+            { "Name": "ReleaseTrack", "PathTemplate": "/admin/api/Settings/company/releasetrack" },
+            { "Name": "SendFromAddress", "PathTemplate": "/admin/api/Settings/company/sendfromaddress" },
+            { "Name": "SupportIntegration", "PathTemplate": "/admin/api/supportRepository/my" },
+            { "Name": "DataLocationAndCommitments", "PathTemplate": "/admin/api/tenant/datalocationandcommitments" },
+            { "Name": "LocalDataLocation", "PathTemplate": "/admin/api/tenant/localdatalocation" }
+          ]
+        },
+        {
+          "Name": "BrandCenter",
+          "CoveredByCmdlets": [
+            "Get-M365AdminBrandCenterSetting"
+          ],
+          "Requests": [
+            { "Name": "Configuration", "PathTemplate": "/_api/spo.tenant/GetBrandCenterConfiguration" },
+            { "Name": "SiteUrl", "PathTemplate": "/_api/GroupSiteManager/GetValidSiteUrlFromAlias?alias='BrandGuide'&managedPath='sites'" }
+          ]
+        },
+        {
+          "Name": "ContentUnderstanding",
+          "CoveredByCmdlets": [
+            "Get-M365AdminContentUnderstandingSetting"
+          ],
+          "Requests": [
+            { "Name": "AutoFill", "PathTemplate": "/admin/api/contentunderstanding/autofillsetting" },
+            { "Name": "BillingSettings", "PathTemplate": "/admin/api/contentunderstanding/billingSettings" },
+            { "Name": "ESignature", "PathTemplate": "/admin/api/contentunderstanding/esignaturesettings" },
+            { "Name": "ImageTagging", "PathTemplate": "/admin/api/contentunderstanding/imagetaggingsetting" },
+            { "Name": "Licensing", "PathTemplate": "/admin/api/contentunderstanding/licensing" },
+            { "Name": "PlaybackTranscriptTranslation", "PathTemplate": "/admin/api/contentunderstanding/playbacktranscripttranslationsettings" },
+            { "Name": "PowerAppsEnvironments", "PathTemplate": "/admin/api/contentunderstanding/powerAppsEnvironments" },
+            { "Name": "Setting", "PathTemplate": "/admin/api/contentunderstanding/setting" },
+            { "Name": "TaxonomyTagging", "PathTemplate": "/admin/api/contentunderstanding/taxonomytaggingsetting" }
+          ]
+        },
+        {
+          "Name": "DirectorySyncError",
+          "CoveredByCmdlets": [
+            "Get-M365AdminDirectorySyncError"
+          ],
+          "Requests": [
+            { "Name": "ListDirsyncErrors", "PathTemplate": "/admin/api/dirsyncerrors/listdirsyncerrors", "Method": "Post", "Body": {} }
+          ]
+        },
+        {
+          "Name": "IntegratedApps",
+          "CoveredByCmdlets": [
+            "Get-M365AdminIntegratedAppSetting"
+          ],
+          "Requests": [
+            { "Name": "Settings", "PathTemplate": "/fd/addins/api/v2/settings?keys=IsTenantEligibleForEntireOrgEmail,AreFirstPartyAppsAllowed,AreThirdPartyAppsAllowed,AreLOBAppsAllowed,AreMicrosoftCertified3PAppsAllowed,MetaOSCopilotExtensibilitySettings" },
+            { "Name": "AppCatalog", "PathTemplate": "/fd/addins/api/apps?workloads=AzureActiveDirectory,WXPO,MetaOS,SharePoint" },
+            { "Name": "AvailableApps", "PathTemplate": "/fd/addins/api/availableApps?workloads=MetaOS", "TimeoutMs": 60000 },
+            { "Name": "ActionableApps", "PathTemplate": "/fd/addins/api/actionableApps?workloads=MetaOS" },
+            { "Name": "PopularAppRecommendations", "PathTemplate": "/fd/addins/api/recommendations/appRecommendations?appRecommendationType=PopularApps" }
+          ]
+        },
+        {
+          "Name": "Microsoft365Backup",
+          "CoveredByCmdlets": [
+            "Get-M365AdminMicrosoft365BackupSetting",
+            "Get-M365AdminEnhancedRestoreStatus"
+          ],
+          "Requests": [
+            { "Name": "BillingFeature", "PathTemplate": "/_api/v2.1/billingFeatures('M365Backup')" },
+            { "Name": "AzureSubscriptions", "PathTemplate": "/admin/api/syntexbilling/azureSubscriptions" },
+            { "Name": "EnhancedRestoreFeature", "PathTemplate": "/fd/enhancedRestorev2/v1/featureSetting" },
+            {
+              "Name": "EnhancedRestoreStatus",
+              "PathTemplate": "/fd/msgraph/beta/$batch",
+              "Method": "Post",
+              "TimeoutMs": 30000,
+              "HeaderProfile": "GraphEnhancedRestore",
+              "Body": {
+                "requests": [
+                  {
+                    "id": "GetOffboardingSiteProtectionUnits",
+                    "method": "GET",
+                    "url": "solutions/backupRestore/protectionUnits/microsoft.graph.siteProtectionUnit/$count?$filter=offboardRequestedDateTime gt 0001-01-01"
+                  },
+                  {
+                    "id": "GetOffboardingDriveProtectionUnits",
+                    "method": "GET",
+                    "url": "solutions/backupRestore/protectionUnits/microsoft.graph.driveProtectionUnit/$count?$filter=offboardRequestedDateTime gt 0001-01-01"
+                  },
+                  {
+                    "id": "GetOffboardingMailboxProtectionUnits",
+                    "method": "GET",
+                    "url": "solutions/backupRestore/protectionUnits/microsoft.graph.mailboxProtectionUnit/$count?$filter=offboardRequestedDateTime gt 0001-01-01"
+                  }
+                ]
+              },
+              "MatchBodyIncludes": [
+                "solutions/backupRestore/protectionUnits/microsoft.graph.siteProtectionUnit/$count",
+                "solutions/backupRestore/protectionUnits/microsoft.graph.driveProtectionUnit/$count",
+                "solutions/backupRestore/protectionUnits/microsoft.graph.mailboxProtectionUnit/$count"
+              ]
+            },
+            {
+              "Name": "AzureSubscriptionPermissions:{AzureSubscriptionId}",
+              "PathTemplate": "/admin/api/syntexbilling/azureSubscriptions/{AzureSubscriptionId}/permissions",
+              "ExpansionValuesKey": "AzureSubscriptionIds",
+              "ExpansionPlaceholderName": "AzureSubscriptionId"
+            }
+          ]
+        },
+        {
+          "Name": "Microsoft365Group",
+          "CoveredByCmdlets": [
+            "Get-M365AdminMicrosoft365GroupSetting"
+          ],
+          "Requests": [
+            { "Name": "GuestAccess", "PathTemplate": "/admin/api/settings/security/o365guestuser" },
+            { "Name": "GuestUserPolicy", "PathTemplate": "/admin/api/Settings/security/guestUserPolicy" },
+            { "Name": "OwnerlessGroupPolicy", "PathTemplate": "/fd/speedwayB2Service/v1.0/organizations('TID:{TenantId}')/policy/ownerlessGroupPolicy" }
+          ]
+        },
+        {
+          "Name": "Microsoft365InstallationOption",
+          "CoveredByCmdlets": [
+            "Get-M365AdminMicrosoft365InstallationOption"
+          ],
+          "Requests": [
+            { "Name": "UserSoftware", "PathTemplate": "/admin/api/settings/apps/usersoftware" },
+            { "Name": "TenantInfo", "PathTemplate": "/fd/dms/odata/TenantInfo({TenantId})" },
+            { "Name": "DefaultReleaseRule", "PathTemplate": "/fd/dms/odata/C2RReleaseRule?$filter={DefaultReleaseRuleFilter}" },
+            { "Name": "ReleaseManagement", "PathTemplate": "/fd/oacms/api/ReleaseManagement/admin?tenantId={TenantId}" },
+            { "Name": "MecReleaseInfo", "PathTemplate": "/fd/dms/odata/C2RReleaseInfo?$filter={MecReleaseFilter}&$orderby=ReleaseVersion desc&$top=1" },
+            { "Name": "SacReleaseInfo", "PathTemplate": "/fd/dms/odata/C2RReleaseInfo?$filter={SacReleaseFilter}&$orderby=ReleaseVersion desc&$top=1" },
+            { "Name": "MonthlyReleaseInfo", "PathTemplate": "/fd/dms/odata/C2RReleaseInfo?$filter={MonthlyReleaseFilter}&$orderby=ReleaseVersion desc&$top=1" },
+            { "Name": "EligibleToRemoveSac", "PathTemplate": "/admin/api/tenant/isTenantEligibleToRemoveSAC" }
+          ]
+        },
+        {
+          "Name": "MicrosoftEdge",
+          "CoveredByCmdlets": [
+            "Get-M365AdminMicrosoftEdgeSetting",
+            "Get-M365AdminEdgeSiteList"
+          ],
+          "Requests": [
+            { "Name": "ConfigurationPolicies", "PathTemplate": "/fd/OfficePolicyAdmin/v1.0/edge/policies" },
+            { "Name": "DeviceCount", "PathTemplate": "/fd/msgraph/v1.0/devices?$count=true&$top=1", "Headers": { "ConsistencyLevel": "eventual" } },
+            { "Name": "FeatureProfiles", "PathTemplate": "/fd/edgeenterpriseextensionsmanagement/api/featureManagement/profiles" },
+            { "Name": "ExtensionPolicies", "PathTemplate": "/fd/edgeenterpriseextensionsmanagement/api/policies" },
+            { "Name": "ExtensionFeedback", "PathTemplate": "/fd/edgeenterpriseextensionsmanagement/api/extensions/extensionFeedback" },
+            { "Name": "SiteLists", "PathTemplate": "/fd/edgeenterprisesitemanagement/api/v2/emiesitelists" },
+            { "Name": "Notifications", "PathTemplate": "/fd/edgeenterprisesitemanagement/api/v2/notifications" }
+          ]
+        },
+        {
+          "Name": "PartnerRelationships",
+          "CoveredByCmdlets": [
+            "Get-M365AdminPartnerRelationship"
+          ],
+          "Requests": [
+            { "Name": "DAP", "PathTemplate": "/admin/api/partners/AOBOClients?partnerType=DAP" },
+            { "Name": "GDAP", "PathTemplate": "/admin/api/partners/AOBOClients?partnerType=GDAP" }
+          ]
+        },
+        {
+          "Name": "PeopleSettings",
+          "CoveredByCmdlets": [
+            "Get-M365AdminPeopleSetting"
+          ],
+          "Requests": [
+            { "Name": "ProfileCardProperties", "PathTemplate": "/fd/peopleadminservice/{TenantId}/profilecard/properties" },
+            { "Name": "ConnectorProperties", "PathTemplate": "/fd/peopleadminservice/{TenantId}/connectorProperties" },
+            { "Name": "NamePronunciation", "PathTemplate": "/fd/peopleadminservice/{TenantId}/settings/namePronunciation" },
+            { "Name": "Pronouns", "PathTemplate": "/fd/peopleadminservice/{TenantId}/settings/pronouns" }
+          ]
+        },
+        {
+          "Name": "Reports",
+          "CoveredByCmdlets": [
+            "Get-M365AdminReportSetting"
+          ],
+          "Requests": [
+            { "Name": "TenantConfiguration", "PathTemplate": "/admin/api/reports/config/GetTenantConfiguration" },
+            { "Name": "ProductivityScoreConfig", "PathTemplate": "/admin/api/reports/productivityScoreConfig/GetProductivityScoreConfig" },
+            { "Name": "ProductivityScoreCustomerOption", "PathTemplate": "/admin/api/reports/productivityScoreCustomerOption" }
+          ]
+        },
+        {
+          "Name": "Search",
+          "CoveredByCmdlets": [
+            "Get-M365AdminSearchAndIntelligenceSetting",
+            "Get-M365AdminSearchSetting",
+            "Get-M365AdminService"
+          ],
+          "Requests": [
+            { "Name": "UsageAnalytics", "PathTemplate": "/admin/api/services/apps/searchintelligenceanalytics" },
+            { "Name": "SearchIntelligenceHomeCards", "PathTemplate": "/admin/api/searchadminapi/searchintelligencehome/cards", "HeaderProfile": "MicrosoftSearch" },
+            { "Name": "Configurations", "PathTemplate": "/admin/api/searchadminapi/configurations", "HeaderProfile": "MicrosoftSearch", "TimeoutMs": 60000 },
+            { "Name": "ConfigurationSettings", "PathTemplate": "/admin/api/searchadminapi/ConfigurationSettings", "HeaderProfile": "MicrosoftSearch" },
+            {
+              "Name": "FirstRunExperience",
+              "PathTemplate": "/admin/api/searchadminapi/firstrunexperience/get",
+              "Method": "Post",
+              "HeaderProfile": "MicrosoftSearch",
+              "Body": [
+                "SearchHomepageBannerFirstTime",
+                "SearchHomepageBannerReturning",
+                "SearchHomepageLearningFeedback",
+                "SearchHomepageAnalyticsFirstTime",
+                "SearchHomepageAnalyticsReturning"
+              ]
+            },
+            { "Name": "ModernResultTypes", "PathTemplate": "/admin/api/searchadminapi/modernResultTypes", "HeaderProfile": "MicrosoftSearch" },
+            { "Name": "NewsOptions", "PathTemplate": "/admin/api/searchadminapi/news/options/Bing", "HeaderProfile": "MicrosoftSearch" },
+            { "Name": "NewsIndustry", "PathTemplate": "/admin/api/searchadminapi/news/industry/Bing", "HeaderProfile": "MicrosoftSearch" },
+            { "Name": "NewsMsbEnabled", "PathTemplate": "/admin/api/searchadminapi/news/msbenabled/Bing", "HeaderProfile": "MicrosoftSearch" },
+            { "Name": "Pivots", "PathTemplate": "/admin/api/searchadminapi/Pivots", "HeaderProfile": "MicrosoftSearch" },
+            {
+              "Name": "Qnas",
+              "PathTemplate": "/admin/api/searchadminapi/Qnas",
+              "Method": "Post",
+              "HeaderProfile": "MicrosoftSearch",
+              "Body": {
+                "ServiceType": "Bing",
+                "Filter": "Published"
+              }
+            },
+            { "Name": "UdtConnectorsSummary", "PathTemplate": "/admin/api/searchadminapi/UDTConnectorsSummary", "HeaderProfile": "MicrosoftSearch" }
+          ]
+        },
+        {
+          "Name": "Security",
+          "CoveredByCmdlets": [
+            "Get-M365AdminSecuritySetting",
+            "Get-M365AdminTenantSetting"
+          ],
+          "Requests": [
+            { "Name": "ActivityBasedTimeout", "PathTemplate": "/admin/api/settings/security/activitybasedtimeout" },
+            { "Name": "SecurityDefaults", "PathTemplate": "/admin/api/identitysecurity/securitydefaults" },
+            { "Name": "BingDataCollection", "PathTemplate": "/admin/api/settings/security/bingdatacollection" },
+            { "Name": "TenantLockbox", "PathTemplate": "/admin/api/Settings/security/tenantLockbox" },
+            { "Name": "DataAccess", "PathTemplate": "/admin/api/settings/security/dataaccess" },
+            { "Name": "GuestUserPolicy", "PathTemplate": "/admin/api/Settings/security/guestUserPolicy" },
+            { "Name": "MultiFactorAuth", "PathTemplate": "/admin/api/settings/security/multifactorauth" },
+            { "Name": "O365GuestUser", "PathTemplate": "/admin/api/settings/security/o365guestuser" },
+            { "Name": "PasswordPolicy", "PathTemplate": "/admin/api/Settings/security/passwordpolicy" },
+            { "Name": "PrivacyPolicy", "PathTemplate": "/admin/api/Settings/security/privacypolicy" },
+            { "Name": "SecuritySettings", "PathTemplate": "/admin/api/securitysettings/settings" },
+            { "Name": "SecuritySettingsStatus", "PathTemplate": "/admin/api/securitysettings/settings/status" },
+            { "Name": "SecuritySettingsOptIn", "PathTemplate": "/admin/api/securitysettings/optIn" },
+            { "Name": "AADLink", "PathTemplate": "/admin/api/tenant/AADLink" }
+          ]
+        },
+        {
+          "Name": "SelfServicePurchases",
+          "CoveredByCmdlets": [
+            "Get-M365AdminSelfServicePurchaseSetting"
+          ],
+          "Requests": [
+            { "Name": "Products", "PathTemplate": "/admin/api/selfServicePurchasePolicy/products" }
+          ]
+        },
+        {
+          "Name": "Services",
+          "CoveredByCmdlets": [
+            "Get-M365AdminService"
+          ],
+          "Requests": [
+            { "Name": "AzureSpeechServices", "PathTemplate": "/admin/api/services/apps/azurespeechservices" },
+            { "Name": "Cortana", "PathTemplate": "/admin/api/services/apps/cortana" },
+            { "Name": "DeveloperPortal", "PathTemplate": "/admin/api/services/apps/developerportal" },
+            { "Name": "M365Lighthouse", "PathTemplate": "/admin/api/services/apps/m365lighthouse" },
+            { "Name": "ModernAuth", "PathTemplate": "/admin/api/services/apps/modernAuth" },
+            { "Name": "Planner", "PathTemplate": "/admin/api/services/apps/planner" },
+            { "Name": "Todo", "PathTemplate": "/admin/api/services/apps/todo" },
+            { "Name": "VivaInsights", "PathTemplate": "/admin/api/services/apps/vivainsights" }
+          ]
+        },
+        {
+          "Name": "Tenant",
+          "CoveredByCmdlets": [
+            "Get-M365AdminTenantSetting"
+          ],
+          "Requests": [
+            { "Name": "AADLink", "PathTemplate": "/admin/api/tenant/AADLink" },
+            { "Name": "AccountSkus", "PathTemplate": "/admin/api/tenant/accountSkus" },
+            { "Name": "DataLocationAndCommitments", "PathTemplate": "/admin/api/tenant/datalocationandcommitments" },
+            { "Name": "EligibleToRemoveSac", "PathTemplate": "/admin/api/tenant/isTenantEligibleToRemoveSAC" },
+            { "Name": "LocalDataLocation", "PathTemplate": "/admin/api/tenant/localdatalocation" },
+            { "Name": "O365ActivationUserCounts", "PathTemplate": "/admin/api/tenant/o365activationusercounts" },
+            { "Name": "ReportsPrivacyEnabled", "PathTemplate": "/admin/api/tenant/isReportsPrivacyEnabled" }
+          ]
+        },
+        {
+          "Name": "UserOwnedApps",
+          "CoveredByCmdlets": [
+            "Get-M365AdminUserOwnedAppSetting"
+          ],
+          "Requests": [
+            { "Name": "StoreAccess", "PathTemplate": "/admin/api/settings/apps/store" },
+            { "Name": "InAppPurchasesAllowed", "PathTemplate": "/admin/api/storesettings/iwpurchaseallowed" },
+            { "Name": "AutoClaimPolicy", "PathTemplate": "/fd/m365licensing/v1/policies/autoclaim" }
+          ]
+        },
+        {
+          "Name": "Viva",
+          "CoveredByCmdlets": [
+            "Get-M365AdminVivaSetting"
+          ],
+          "Requests": [
+            { "Name": "Modules", "PathTemplate": "/admin/api/viva/modules", "HeaderProfile": "Viva" },
+            { "Name": "Roles", "PathTemplate": "/admin/api/viva/roles", "HeaderProfile": "Viva" },
+            { "Name": "GlintClient", "PathTemplate": "/admin/api/viva/glint/lookupClient", "HeaderProfile": "Viva" }
+          ]
+        }
+      ]
+    },
+    {
+      "Id": "agent-copilot-browser",
+      "DisplayName": "Agent and Copilot browser capture",
+      "Groups": [
+        {
+          "Name": "Agent",
+          "CoveredByCmdlets": [
+            "Get-M365AdminAgent",
+            "Get-M365AdminAgentFrontierAccess",
+            "Get-M365AdminAgentSetting",
+            "Get-M365AdminAgentTool"
+          ],
+          "Requests": [
+            { "Name": "SharedSettings", "PathTemplate": "/fd/addins/api/v2/settings?keys=IsTenantEligibleForEntireOrgEmail,AreFirstPartyAppsAllowed,AreThirdPartyAppsAllowed,AreLOBAppsAllowed,AreMicrosoftCertified3PAppsAllowed,MetaOSCopilotExtensibilitySettings" },
+            { "Name": "RequestSettings", "PathTemplate": "/fd/addins/api/v2/settings?keys=MetaOSCopilotExtensibilitySettings,AreFirstPartyAppsAllowed,AreThirdPartyAppsAllowed,AreLOBAppsAllowed,AdminRoles,AllowOrgWideSharing" },
+            { "Name": "FrontierAccess", "PathTemplate": "/admin/api/settings/company/frontier/access" },
+            { "Name": "Templates", "PathTemplate": "/admin/api/agenttemplates/getagenttemplates" },
+            { "Name": "TemplatePolicies", "PathTemplate": "/admin/api/agenttemplates/getpolicies?expand=true" },
+            { "Name": "TemplateBillingAccounts", "PathTemplate": "/admin/api/tenant/billingAccountsWithShell" },
+            { "Name": "AutoQuotaEnabled", "PathTemplate": "/_api/SPOInternalUseOnly.TenantAdminSettings/AutoQuotaEnabled" },
+            { "Name": "CustomViewFilterDefaults", "PathTemplate": "/admin/api/tenant/customviewfilterdefaults" },
+            { "Name": "UserRoles", "PathTemplate": "/admin/api/users/getuserroles", "Method": "Post", "Body": {} },
+            { "Name": "McpServers", "PathTemplate": "/admin/api/agentssettings/mcpservers" }
+          ]
+        },
+        {
+          "Name": "Copilot",
+          "CoveredByCmdlets": [
+            "Get-M365AdminCopilotBillingUsage",
+            "Get-M365AdminCopilotOverview",
+            "Get-M365AdminCopilotPinPolicy",
+            "Get-M365AdminCopilotSetting"
+          ],
+          "Requests": [
+            { "Name": "SettingsPage", "PathTemplate": "/admin/api/copilotsettings/settings" },
+            { "Name": "PinPolicy", "PathTemplate": "/admin/api/settings/company/copilotpolicy/pin" },
+            { "Name": "Recommendations", "PathTemplate": "/admin/api/recommendations/m365/ccs" },
+            { "Name": "Dismissed", "PathTemplate": "/admin/api/copilotsettings/settings/dismissed" },
+            { "Name": "SecurityCopilotAuth", "PathTemplate": "/admin/api/copilotsettings/securitycopilot/auth" },
+            { "Name": "AzureSubscriptions", "PathTemplate": "/admin/api/syntexbilling/azureSubscriptions" },
+            { "Name": "CopilotChatBillingPolicy", "PathTemplate": "/_api/v2.1/billingPolicies?feature=M365CopilotChat" },
+            { "Name": "AuditEnabled", "PathTemplate": "/fd/purview/apiproxy/adtsch/AuditEnabled" },
+            { "Name": "AIBaselineSummary", "PathTemplate": "/fd/purview/apiproxy/cpm/v1.0/Tenant/AIBaselineSummary", "HeaderProfile": "PurviewCopilot" },
+            { "Name": "PurviewForAISetting", "PathTemplate": "/fd/purview/apiproxy/di/find/PurviewForAISetting?tenantId={EncodedTenantId}" },
+            { "Name": "DefaultDlpPolicy", "PathTemplate": "/fd/purview/apiproxy/di/find/DlpCompliancePolicy?tenantId={EncodedTenantId}&filter={DefaultDlpPolicyFilter}" },
+            { "Name": "ComplianceRecommendation", "PathTemplate": "/fd/purview/apiproxy/di/find/PurviewForAI?tenantId={EncodedTenantId}&filter={ComplianceRecommendationFilter}&startTime={EncodedWindowStartUtc}&endTime={EncodedNowUtc}" }
+          ]
+        }
+      ]
+    }
+  ],
+  "WriteProbePlans": [
+    {
+      "Id": "settings-write-probes",
+      "DisplayName": "Settings write probe candidates",
+      "Requests": [
+        { "Name": "CompanyHelpDesk", "PathTemplate": "/admin/api/Settings/company/helpdesk", "Methods": [ "Post", "Put", "Patch" ] },
+        { "Name": "CompanyProfile", "PathTemplate": "/admin/api/Settings/company/profile", "Methods": [ "Post", "Put", "Patch" ] },
+        { "Name": "CompanyReleaseTrack", "PathTemplate": "/admin/api/Settings/company/releasetrack", "Methods": [ "Post", "Put", "Patch" ] },
+        { "Name": "CompanySendFromAddress", "PathTemplate": "/admin/api/Settings/company/sendfromaddress", "Methods": [ "Post", "Put", "Patch" ] },
+        { "Name": "CompanyTheme", "PathTemplate": "/admin/api/Settings/company/theme/v2", "Methods": [ "Post", "Put", "Patch" ] },
+        { "Name": "CompanyTile", "PathTemplate": "/admin/api/Settings/company/tile", "Methods": [ "Post", "Put", "Patch" ] },
+        { "Name": "ContentUnderstandingSetting", "PathTemplate": "/admin/api/contentunderstanding/setting", "Methods": [ "Post", "Put", "Patch" ] },
+        { "Name": "SecurityActivityBasedTimeout", "PathTemplate": "/admin/api/settings/security/activitybasedtimeout", "Methods": [ "Post", "Put", "Patch" ] },
+        { "Name": "SecurityBingDataCollection", "PathTemplate": "/admin/api/settings/security/bingdatacollection", "Methods": [ "Post", "Put", "Patch" ] },
+        { "Name": "SecurityDataAccess", "PathTemplate": "/admin/api/settings/security/dataaccess", "Methods": [ "Post", "Put", "Patch" ] },
+        { "Name": "SecurityGuestUserPolicy", "PathTemplate": "/admin/api/Settings/security/guestUserPolicy", "Methods": [ "Post", "Put", "Patch" ] },
+        { "Name": "SecurityMultiFactorAuth", "PathTemplate": "/admin/api/settings/security/multifactorauth", "Methods": [ "Post", "Put", "Patch" ] },
+        { "Name": "SecurityO365GuestUser", "PathTemplate": "/admin/api/settings/security/o365guestuser", "Methods": [ "Post", "Put", "Patch" ] },
+        { "Name": "SecurityPasswordPolicy", "PathTemplate": "/admin/api/Settings/security/passwordpolicy", "Methods": [ "Post", "Put", "Patch" ] },
+        { "Name": "SecurityPrivacyPolicy", "PathTemplate": "/admin/api/Settings/security/privacypolicy", "Methods": [ "Post", "Put", "Patch" ] },
+        { "Name": "SecurityTenantLockbox", "PathTemplate": "/admin/api/Settings/security/tenantLockbox", "Methods": [ "Post", "Put", "Patch" ] },
+        { "Name": "SecurityDefaults", "PathTemplate": "/admin/api/identitysecurity/securitydefaults", "Methods": [ "Post", "Put", "Patch" ] },
+        { "Name": "SecuritySettings", "PathTemplate": "/admin/api/securitysettings/settings", "Methods": [ "Post", "Put", "Patch" ] },
+        { "Name": "SecuritySettingsOptIn", "PathTemplate": "/admin/api/securitysettings/optIn", "Methods": [ "Post", "Put", "Patch" ] },
+        { "Name": "PeopleNamePronunciation", "PathTemplate": "/fd/peopleadminservice/{TenantId}/settings/namePronunciation", "Methods": [ "Post", "Put", "Patch" ] },
+        { "Name": "PeoplePronouns", "PathTemplate": "/fd/peopleadminservice/{TenantId}/settings/pronouns", "Methods": [ "Post", "Put", "Patch" ] },
+        { "Name": "PeopleProfileCardProperties", "PathTemplate": "/fd/peopleadminservice/{TenantId}/profilecard/properties", "Methods": [ "Post", "Put", "Patch" ] },
+        { "Name": "SelfServicePurchaseProducts", "PathTemplate": "/admin/api/selfServicePurchasePolicy/products", "Methods": [ "Post", "Put", "Patch" ] },
+        { "Name": "TenantReportsPrivacyEnabled", "PathTemplate": "/admin/api/tenant/isReportsPrivacyEnabled", "Methods": [ "Post", "Put", "Patch" ] }
+      ]
+    },
+    {
+      "Id": "agent-copilot-write-probes",
+      "DisplayName": "Agent and Copilot write probe candidates",
+      "Requests": [
+        { "Name": "AgentSharedSettings-Patch-Full", "PathTemplate": "/fd/addins/api/v2/settings?keys=IsTenantEligibleForEntireOrgEmail,AreFirstPartyAppsAllowed,AreThirdPartyAppsAllowed,AreLOBAppsAllowed,AreMicrosoftCertified3PAppsAllowed,MetaOSCopilotExtensibilitySettings", "Method": "Patch", "BodySource": "AgentSharedSettingsFull" },
+        { "Name": "AgentSharedSettings-Patch-SettingsOnly", "PathTemplate": "/fd/addins/api/v2/settings?keys=IsTenantEligibleForEntireOrgEmail,AreFirstPartyAppsAllowed,AreThirdPartyAppsAllowed,AreLOBAppsAllowed,AreMicrosoftCertified3PAppsAllowed,MetaOSCopilotExtensibilitySettings", "Method": "Patch", "BodySource": "AgentSharedSettingsSettings" },
+        { "Name": "AgentSharedSettings-Patch-SettingsWrapper", "PathTemplate": "/fd/addins/api/v2/settings?keys=IsTenantEligibleForEntireOrgEmail,AreFirstPartyAppsAllowed,AreThirdPartyAppsAllowed,AreLOBAppsAllowed,AreMicrosoftCertified3PAppsAllowed,MetaOSCopilotExtensibilitySettings", "Method": "Patch", "BodySource": "AgentSharedSettingsSettings", "BodyWrapperProperty": "settings" },
+        { "Name": "AgentSharedSettings-Post-SettingsWrapper", "PathTemplate": "/fd/addins/api/v2/settings?keys=IsTenantEligibleForEntireOrgEmail,AreFirstPartyAppsAllowed,AreThirdPartyAppsAllowed,AreLOBAppsAllowed,AreMicrosoftCertified3PAppsAllowed,MetaOSCopilotExtensibilitySettings", "Method": "Post", "BodySource": "AgentSharedSettingsSettings", "BodyWrapperProperty": "settings" },
+        { "Name": "AgentSharedSettings-Put-SettingsWrapper", "PathTemplate": "/fd/addins/api/v2/settings?keys=IsTenantEligibleForEntireOrgEmail,AreFirstPartyAppsAllowed,AreThirdPartyAppsAllowed,AreLOBAppsAllowed,AreMicrosoftCertified3PAppsAllowed,MetaOSCopilotExtensibilitySettings", "Method": "Put", "BodySource": "AgentSharedSettingsSettings", "BodyWrapperProperty": "settings" },
+        { "Name": "AgentRequestSettings-Patch-SettingsWrapper", "PathTemplate": "/fd/addins/api/v2/settings?keys=MetaOSCopilotExtensibilitySettings,AreFirstPartyAppsAllowed,AreThirdPartyAppsAllowed,AreLOBAppsAllowed,AdminRoles,AllowOrgWideSharing", "Method": "Patch", "BodySource": "AgentRequestSettingsSettings", "BodyWrapperProperty": "settings" },
+        { "Name": "AgentRequestSettings-Post-SettingsWrapper", "PathTemplate": "/fd/addins/api/v2/settings?keys=MetaOSCopilotExtensibilitySettings,AreFirstPartyAppsAllowed,AreThirdPartyAppsAllowed,AreLOBAppsAllowed,AdminRoles,AllowOrgWideSharing", "Method": "Post", "BodySource": "AgentRequestSettingsSettings", "BodyWrapperProperty": "settings" },
+        { "Name": "AgentRequestSettings-Put-SettingsWrapper", "PathTemplate": "/fd/addins/api/v2/settings?keys=MetaOSCopilotExtensibilitySettings,AreFirstPartyAppsAllowed,AreThirdPartyAppsAllowed,AreLOBAppsAllowed,AdminRoles,AllowOrgWideSharing", "Method": "Put", "BodySource": "AgentRequestSettingsSettings", "BodyWrapperProperty": "settings" },
+        { "Name": "AgentMcpServers-Post-Empty", "PathTemplate": "/admin/api/agentssettings/mcpservers", "Method": "Post", "BodySource": "EmptyObject" },
+        { "Name": "AgentMcpServers-Put-Empty", "PathTemplate": "/admin/api/agentssettings/mcpservers", "Method": "Put", "BodySource": "EmptyObject" },
+        { "Name": "AgentMcpServers-Patch-Empty", "PathTemplate": "/admin/api/agentssettings/mcpservers", "Method": "Patch", "BodySource": "EmptyObject" },
+        { "Name": "CopilotSettings-Post-Full", "PathTemplate": "/admin/api/copilotsettings/settings", "Method": "Post", "BodySource": "CopilotSettingsFull" },
+        { "Name": "CopilotSettings-Put-Full", "PathTemplate": "/admin/api/copilotsettings/settings", "Method": "Put", "BodySource": "CopilotSettingsFull" },
+        { "Name": "CopilotSettings-Patch-Full", "PathTemplate": "/admin/api/copilotsettings/settings", "Method": "Patch", "BodySource": "CopilotSettingsFull" },
+        { "Name": "CopilotDismissed-Post-Empty", "PathTemplate": "/admin/api/copilotsettings/settings/dismissed", "Method": "Post", "BodySource": "EmptyObject" },
+        { "Name": "CopilotDismissed-Put-Empty", "PathTemplate": "/admin/api/copilotsettings/settings/dismissed", "Method": "Put", "BodySource": "EmptyObject" },
+        { "Name": "CopilotDismissed-Patch-Empty", "PathTemplate": "/admin/api/copilotsettings/settings/dismissed", "Method": "Patch", "BodySource": "EmptyObject" },
+        { "Name": "SecurityCopilotAuth-Post-Unversioned-Bool", "PathTemplate": "/admin/api/copilotsettings/securitycopilot/auth", "Method": "Post", "BodySource": "SecurityCopilotAuthValue" },
+        { "Name": "SecurityCopilotAuth-Put-Unversioned-Bool", "PathTemplate": "/admin/api/copilotsettings/securitycopilot/auth", "Method": "Put", "BodySource": "SecurityCopilotAuthValue" },
+        { "Name": "SecurityCopilotAuth-Patch-Unversioned-Bool", "PathTemplate": "/admin/api/copilotsettings/securitycopilot/auth", "Method": "Patch", "BodySource": "SecurityCopilotAuthValue" },
+        { "Name": "SecurityCopilotAuth-Post-Versioned-Bool", "PathTemplate": "/admin/api/copilotsettings/securitycopilot/auth?api-version=1.0", "Method": "Post", "BodySource": "SecurityCopilotAuthValue" },
+        { "Name": "SecurityCopilotAuth-Put-Versioned-Bool", "PathTemplate": "/admin/api/copilotsettings/securitycopilot/auth?api-version=1.0", "Method": "Put", "BodySource": "SecurityCopilotAuthValue" },
+        { "Name": "SecurityCopilotAuth-Patch-Versioned-Bool", "PathTemplate": "/admin/api/copilotsettings/securitycopilot/auth?api-version=1.0", "Method": "Patch", "BodySource": "SecurityCopilotAuthValue" },
+        { "Name": "SecurityCopilotAuth-Post-Versioned-Wrapper", "PathTemplate": "/admin/api/copilotsettings/securitycopilot/auth?api-version=1.0", "Method": "Post", "BodySource": "SecurityCopilotAuthWrapper" },
+        { "Name": "BillingPolicies-Post-Empty", "PathTemplate": "/_api/v2.1/billingPolicies", "Method": "Post", "BodySource": "EmptyObject" },
+        { "Name": "BillingPolicies-Put-Empty", "PathTemplate": "/_api/v2.1/billingPolicies", "Method": "Put", "BodySource": "EmptyObject" },
+        { "Name": "BillingPolicies-Patch-Empty", "PathTemplate": "/_api/v2.1/billingPolicies", "Method": "Patch", "BodySource": "EmptyObject" },
+        { "Name": "BillingPoliciesFeature-Post-Empty", "PathTemplate": "/_api/v2.1/billingPolicies?feature=M365CopilotChat", "Method": "Post", "BodySource": "EmptyObject" },
+        { "Name": "BillingPoliciesFeature-Put-Empty", "PathTemplate": "/_api/v2.1/billingPolicies?feature=M365CopilotChat", "Method": "Put", "BodySource": "EmptyObject" },
+        { "Name": "BillingPoliciesFeature-Patch-Empty", "PathTemplate": "/_api/v2.1/billingPolicies?feature=M365CopilotChat", "Method": "Patch", "BodySource": "EmptyObject" }
+      ]
+    }
+  ],
+  "DiscoveryRoutes": [
+    {
+      "Name": "Domains",
+      "DisplayName": "Domains",
+      "TopLevelPage": "Domains",
+      "Workload": "Domains",
+      "TenantOptionality": "Core",
+      "RoleRequirementHints": [ "Global admin", "Domain name administrator" ],
+      "LicenseRequirementHints": [],
+      "Route": "#/Domains",
+      "PlanIds": [ "settings-browser" ],
+      "WaitMs": 8000
+    },
+    {
+      "Name": "SearchAndIntelligence",
+      "DisplayName": "Search & intelligence",
+      "TopLevelPage": "Search & intelligence",
+      "Workload": "Search",
+      "TenantOptionality": "Optional",
+      "RoleRequirementHints": [ "Global admin", "Search administrator" ],
+      "LicenseRequirementHints": [ "Microsoft Search" ],
+      "Notes": "This page often lazy-loads section content after the initial route navigation.",
+      "Interactions": [
+        { "Action": "WaitForText", "Text": "Search", "Optional": true, "TimeoutMs": 5000 },
+        { "Action": "ClickText", "Label": "Open Q&A section", "Text": "Q&A", "Optional": true, "TimeoutMs": 5000, "WaitAfterMs": 2000 },
+        { "Action": "ClickText", "Label": "Open News section", "Text": "News", "Optional": true, "TimeoutMs": 5000, "WaitAfterMs": 2000 }
+      ],
+      "Route": "#/MicrosoftSearch",
+      "PlanIds": [ "settings-browser" ],
+      "WaitMs": 9000
+    },
+    {
+      "Name": "Settings",
+      "DisplayName": "Org settings home",
+      "TopLevelPage": "Settings",
+      "Workload": "Settings",
+      "TenantOptionality": "Core",
+      "RoleRequirementHints": [ "Global admin" ],
+      "LicenseRequirementHints": [],
+      "Interactions": [
+        { "Action": "ClickText", "Label": "Open Pay-as-you-go services", "Text": "Pay-as-you-go services", "Optional": true, "TimeoutMs": 5000, "WaitAfterMs": 2000 },
+        { "Action": "ClickText", "Label": "Open Search & intelligence", "Text": "Search & intelligence", "Optional": true, "TimeoutMs": 5000, "WaitAfterMs": 2000 },
+        { "Action": "ClickText", "Label": "Open Integrated apps", "Text": "Integrated apps", "Optional": true, "TimeoutMs": 5000, "WaitAfterMs": 2000 }
+      ],
+      "Route": "#/Settings",
+      "PlanIds": [ "settings-browser" ],
+      "WaitMs": 9000
+    },
+    {
+      "Name": "Microsoft365Backup",
+      "DisplayName": "Microsoft 365 Backup",
+      "TopLevelPage": "Settings",
+      "Workload": "Backup",
+      "TenantOptionality": "Optional",
+      "RoleRequirementHints": [ "Global admin", "Billing admin" ],
+      "LicenseRequirementHints": [ "Microsoft 365 Backup" ],
+      "Interactions": [
+        { "Action": "ClickText", "Label": "Open Azure subscriptions", "Text": "Azure subscriptions", "Optional": true, "TimeoutMs": 5000, "WaitAfterMs": 2000 }
+      ],
+      "Route": "#/Settings/enhancedRestore",
+      "PlanIds": [ "settings-browser" ],
+      "WaitMs": 9000
+    },
+    {
+      "Name": "IntegratedApps",
+      "DisplayName": "Integrated apps",
+      "TopLevelPage": "Settings",
+      "Workload": "Integrated apps",
+      "TenantOptionality": "Optional",
+      "RoleRequirementHints": [ "Global admin" ],
+      "LicenseRequirementHints": [],
+      "Interactions": [
+        { "Action": "ClickText", "Label": "Open available apps", "Text": "Available apps", "Optional": true, "TimeoutMs": 5000, "WaitAfterMs": 2000 },
+        { "Action": "ClickText", "Label": "Open recommendations", "Text": "Recommendations", "Optional": true, "TimeoutMs": 5000, "WaitAfterMs": 2000 }
+      ],
+      "Route": "#/Settings/IntegratedApps",
+      "PlanIds": [ "settings-browser" ],
+      "WaitMs": 9000
+    },
+    {
+      "Name": "DirectorySyncErrors",
+      "DisplayName": "Directory sync errors",
+      "TopLevelPage": "Directory sync",
+      "Workload": "Directory sync",
+      "TenantOptionality": "Optional",
+      "RoleRequirementHints": [ "Global admin", "Hybrid identity administrator" ],
+      "LicenseRequirementHints": [],
+      "Route": "#/dirsyncobjecterrors",
+      "PlanIds": [ "settings-browser" ],
+      "WaitMs": 8000
+    },
+    {
+      "Name": "Viva",
+      "DisplayName": "Viva",
+      "TopLevelPage": "Viva",
+      "Workload": "Viva",
+      "TenantOptionality": "Optional",
+      "RoleRequirementHints": [ "Global admin", "Viva administrator" ],
+      "LicenseRequirementHints": [ "Microsoft Viva" ],
+      "Route": "#/viva",
+      "PlanIds": [ "settings-browser" ],
+      "WaitMs": 8000
+    },
+    {
+      "Name": "Partners",
+      "DisplayName": "Partner relationships",
+      "TopLevelPage": "Partners",
+      "Workload": "Partners",
+      "TenantOptionality": "Optional",
+      "RoleRequirementHints": [ "Global admin", "Billing admin" ],
+      "LicenseRequirementHints": [],
+      "Route": "#/partners",
+      "PlanIds": [ "settings-browser" ],
+      "WaitMs": 8000
+    },
+    {
+      "Name": "MicrosoftEdge",
+      "DisplayName": "Microsoft Edge",
+      "TopLevelPage": "Microsoft Edge",
+      "Workload": "Edge",
+      "TenantOptionality": "Optional",
+      "RoleRequirementHints": [ "Global admin", "Edge administrator" ],
+      "LicenseRequirementHints": [ "Microsoft Edge management" ],
+      "Interactions": [
+        { "Action": "ClickText", "Label": "Open site lists", "Text": "Site lists", "Optional": true, "TimeoutMs": 5000, "WaitAfterMs": 2000 },
+        { "Action": "ClickText", "Label": "Open extensions", "Text": "Extensions", "Optional": true, "TimeoutMs": 5000, "WaitAfterMs": 2000 }
+      ],
+      "Route": "#/Edge",
+      "PlanIds": [ "settings-browser" ],
+      "WaitMs": 9000
+    },
+    {
+      "Name": "CopilotOverview",
+      "DisplayName": "Copilot overview",
+      "TopLevelPage": "Copilot",
+      "Workload": "Copilot",
+      "TenantOptionality": "Optional",
+      "RoleRequirementHints": [ "Global admin", "AI administrator" ],
+      "LicenseRequirementHints": [ "Microsoft 365 Copilot" ],
+      "Interactions": [
+        { "Action": "ClickText", "Label": "Open manage cost panel", "Text": "Manage cost", "Optional": true, "TimeoutMs": 5000, "WaitAfterMs": 2000 },
+        { "Action": "ClickText", "Label": "Open connectors panel", "Text": "Connectors", "Optional": true, "TimeoutMs": 5000, "WaitAfterMs": 2000 }
+      ],
+      "Route": "#/copilot/overview",
+      "PlanIds": [ "agent-copilot-browser" ],
+      "WaitMs": 9000
+    },
+    {
+      "Name": "CopilotSecurity",
+      "DisplayName": "Copilot security",
+      "TopLevelPage": "Copilot",
+      "Workload": "Copilot",
+      "TenantOptionality": "Optional",
+      "RoleRequirementHints": [ "Global admin", "Security administrator" ],
+      "LicenseRequirementHints": [ "Microsoft 365 Copilot" ],
+      "Route": "#/copilot/scc",
+      "PlanIds": [ "agent-copilot-browser" ],
+      "WaitMs": 8000
+    },
+    {
+      "Name": "CopilotUsage",
+      "DisplayName": "Copilot usage",
+      "TopLevelPage": "Copilot",
+      "Workload": "Copilot",
+      "TenantOptionality": "Optional",
+      "RoleRequirementHints": [ "Global admin", "Reports reader" ],
+      "LicenseRequirementHints": [ "Microsoft 365 Copilot" ],
+      "Route": "#/copilot/usage",
+      "PlanIds": [ "agent-copilot-browser" ],
+      "WaitMs": 8000
+    },
+    {
+      "Name": "CopilotAbout",
+      "DisplayName": "Copilot about",
+      "TopLevelPage": "Copilot",
+      "Workload": "Copilot",
+      "TenantOptionality": "Optional",
+      "RoleRequirementHints": [ "Global admin" ],
+      "LicenseRequirementHints": [ "Microsoft 365 Copilot" ],
+      "Route": "#/copilot/discover",
+      "PlanIds": [ "agent-copilot-browser" ],
+      "WaitMs": 8000
+    },
+    {
+      "Name": "CopilotConnectors",
+      "DisplayName": "Copilot connectors",
+      "TopLevelPage": "Copilot",
+      "Workload": "Copilot",
+      "TenantOptionality": "Optional",
+      "RoleRequirementHints": [ "Global admin", "Search administrator" ],
+      "LicenseRequirementHints": [ "Microsoft 365 Copilot" ],
+      "Route": "#/copilot/connectors",
+      "PlanIds": [ "agent-copilot-browser" ],
+      "WaitMs": 8000
+    },
+    {
+      "Name": "CopilotBillingUsage",
+      "DisplayName": "Copilot billing and usage",
+      "TopLevelPage": "Copilot",
+      "Workload": "Copilot",
+      "TenantOptionality": "Optional",
+      "RoleRequirementHints": [ "Global admin", "Billing admin" ],
+      "LicenseRequirementHints": [ "Microsoft 365 Copilot" ],
+      "Interactions": [
+        { "Action": "ClickText", "Label": "Open billing policies", "Text": "Billing policies", "Optional": true, "TimeoutMs": 5000, "WaitAfterMs": 2000 }
+      ],
+      "Route": "#/copilot/managecost",
+      "PlanIds": [ "agent-copilot-browser" ],
+      "WaitMs": 9000
+    },
+    {
+      "Name": "CopilotSettings",
+      "DisplayName": "Copilot settings",
+      "TopLevelPage": "Copilot",
+      "Workload": "Copilot",
+      "TenantOptionality": "Optional",
+      "RoleRequirementHints": [ "Global admin", "AI administrator" ],
+      "LicenseRequirementHints": [ "Microsoft 365 Copilot" ],
+      "Route": "#/copilot/settings/Optimize",
+      "PlanIds": [ "agent-copilot-browser" ],
+      "WaitMs": 8000
+    },
+    {
+      "Name": "AgentsOverview",
+      "DisplayName": "Agents overview",
+      "TopLevelPage": "Agents",
+      "Workload": "Agents",
+      "TenantOptionality": "Optional",
+      "RoleRequirementHints": [ "Global admin", "AI administrator" ],
+      "LicenseRequirementHints": [ "Microsoft 365 Copilot" ],
+      "Route": "#/agents/overview",
+      "PlanIds": [ "agent-copilot-browser" ],
+      "WaitMs": 8000
+    },
+    {
+      "Name": "AgentsAll",
+      "DisplayName": "All agents",
+      "TopLevelPage": "Agents",
+      "Workload": "Agents",
+      "TenantOptionality": "Optional",
+      "RoleRequirementHints": [ "Global admin", "AI administrator" ],
+      "LicenseRequirementHints": [ "Microsoft 365 Copilot" ],
+      "Interactions": [
+        { "Action": "ClickText", "Label": "Open requested tab", "Text": "Requested", "Optional": true, "TimeoutMs": 5000, "WaitAfterMs": 2000 },
+        { "Action": "ClickText", "Label": "Open agent catalog tab", "Text": "Agent catalog", "Optional": true, "TimeoutMs": 5000, "WaitAfterMs": 2000 }
+      ],
+      "Route": "#/agents/all",
+      "PlanIds": [ "agent-copilot-browser" ],
+      "WaitMs": 9000
+    },
+    {
+      "Name": "AgentsMapFrontier",
+      "DisplayName": "Agents map frontier",
+      "TopLevelPage": "Agents",
+      "Workload": "Agents",
+      "TenantOptionality": "Optional",
+      "RoleRequirementHints": [ "Global admin", "AI administrator" ],
+      "LicenseRequirementHints": [ "Microsoft 365 Copilot" ],
+      "Route": "#/agents/all/map",
+      "PlanIds": [ "agent-copilot-browser" ],
+      "WaitMs": 8000
+    },
+    {
+      "Name": "AgentsRequested",
+      "DisplayName": "Requested agents",
+      "TopLevelPage": "Agents",
+      "Workload": "Agents",
+      "TenantOptionality": "Optional",
+      "RoleRequirementHints": [ "Global admin", "AI administrator" ],
+      "LicenseRequirementHints": [ "Microsoft 365 Copilot" ],
+      "Route": "#/agents/all/requested",
+      "PlanIds": [ "agent-copilot-browser" ],
+      "WaitMs": 8000
+    },
+    {
+      "Name": "AgentsCatalog",
+      "DisplayName": "Agent catalog",
+      "TopLevelPage": "Agents",
+      "Workload": "Agents",
+      "TenantOptionality": "Optional",
+      "RoleRequirementHints": [ "Global admin", "AI administrator" ],
+      "LicenseRequirementHints": [ "Microsoft 365 Copilot" ],
+      "Route": "#/agents/all/agent-catalog",
+      "PlanIds": [ "agent-copilot-browser" ],
+      "WaitMs": 8000
+    },
+    {
+      "Name": "AgentsTools",
+      "DisplayName": "Agent tools",
+      "TopLevelPage": "Agents",
+      "Workload": "Agents",
+      "TenantOptionality": "Optional",
+      "RoleRequirementHints": [ "Global admin", "AI administrator" ],
+      "LicenseRequirementHints": [ "Microsoft 365 Copilot" ],
+      "Route": "#/agents/tools",
+      "PlanIds": [ "agent-copilot-browser" ],
+      "WaitMs": 8000
+    },
+    {
+      "Name": "AgentsSettings",
+      "DisplayName": "Agent settings",
+      "TopLevelPage": "Agents",
+      "Workload": "Agents",
+      "TenantOptionality": "Optional",
+      "RoleRequirementHints": [ "Global admin", "AI administrator" ],
+      "LicenseRequirementHints": [ "Microsoft 365 Copilot" ],
+      "Interactions": [
+        { "Action": "ClickText", "Label": "Open templates tab", "Text": "Templates", "Optional": true, "TimeoutMs": 5000, "WaitAfterMs": 2000 }
+      ],
+      "Route": "#/agents/settings",
+      "PlanIds": [ "agent-copilot-browser" ],
+      "WaitMs": 9000
+    },
+    {
+      "Name": "AgentsTemplates",
+      "DisplayName": "Agent templates",
+      "TopLevelPage": "Agents",
+      "Workload": "Agents",
+      "TenantOptionality": "Optional",
+      "RoleRequirementHints": [ "Global admin", "AI administrator" ],
+      "LicenseRequirementHints": [ "Microsoft 365 Copilot" ],
+      "Route": "#/agents/settings/templates",
+      "PlanIds": [ "agent-copilot-browser" ],
+      "WaitMs": 8000
+    }
+  ]
+}

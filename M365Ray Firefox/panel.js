@@ -1,12 +1,8 @@
-﻿let cmdletMapping = [];
+let cmdletMapping = [];
 const capturedRequests = [];
 const compiledMappingCache = new Map();
 const fallbackCmdlet = 'Invoke-M365AdminRestMethod';
-const trackedPrefixes = [
-    '/admin/api/',
-    '/adminportal/home/ClassicModernAdminDataStream',
-    '/fd/msgraph/'
-];
+let trackedPrefixes = null;
 
 fetch('CmdletApiMapping.json')
     .then((response) => response.json())
@@ -14,6 +10,13 @@ fetch('CmdletApiMapping.json')
         cmdletMapping = data;
     })
     .catch((error) => console.error('Failed to load mapping', error));
+
+fetch('TrackedRequestPrefixes.json')
+    .then((response) => response.json())
+    .then((data) => {
+        trackedPrefixes = Array.isArray(data) ? data : [];
+    })
+    .catch((error) => console.error('Failed to load tracked request prefixes', error));
 
 addDisclaimerToUI();
 registerCookieCopyButton('copy-rootauth-btn', 'RootAuthToken', 'Copy RootAuthToken');
@@ -33,7 +36,16 @@ chrome.devtools.network.onRequestFinished.addListener((request) => {
 function shouldCaptureRequest(requestUrl) {
     try {
         const url = new URL(requestUrl);
-        return url.hostname === 'admin.cloud.microsoft' && trackedPrefixes.some((prefix) => url.pathname.startsWith(prefix));
+        if (url.hostname !== 'admin.cloud.microsoft') {
+            return false;
+        }
+
+        const requestPath = url.pathname + url.search;
+        if (!Array.isArray(trackedPrefixes) || trackedPrefixes.length === 0) {
+            return true;
+        }
+
+        return trackedPrefixes.some((prefix) => requestPath.startsWith(prefix));
     } catch (error) {
         console.error('Failed to inspect request URL', error);
         return false;

@@ -6,130 +6,26 @@ const artifactRoot = path.join(__dirname, '..', 'TestResults', 'Artifacts');
 const storageStatePath = process.env.M365_PLAYWRIGHT_STORAGE || path.join(artifactRoot, 'playwright-admin-storage-state.json');
 const metadataPath = process.env.M365_PLAYWRIGHT_METADATA || path.join(artifactRoot, 'playwright-admin-metadata.json');
 const outputPath = process.env.M365_BROWSER_CAPTURE_OUTPUT || path.join(artifactRoot, 'browser-agent-copilot-captures.json');
+const planPath = process.env.M365_BROWSER_CAPTURE_PLAN || path.join(artifactRoot, 'agent-copilot-browser-capture-plan.json');
+
+if (!fs.existsSync(planPath)) {
+  throw new Error(`Agent and Copilot browser capture plan was not found at ${planPath}.`);
+}
 
 const metadata = fs.existsSync(metadataPath)
   ? JSON.parse(fs.readFileSync(metadataPath, 'utf8'))
   : {};
 
-const tenantId = process.env.M365_TENANT_ID || metadata.TenantId;
+const planData = JSON.parse(fs.readFileSync(planPath, 'utf8'));
+
+const tenantId = process.env.M365_TENANT_ID || metadata.TenantId || planData.TenantId;
 
 if (!tenantId) {
   throw new Error(`M365_TENANT_ID was not provided and ${metadataPath} does not contain a tenant ID.`);
 }
 
-const now = new Date();
-const windowStart = new Date(now.getTime() - (31 * 24 * 60 * 60 * 1000));
-const encode = encodeURIComponent;
-const defaultDlpPolicyFilter = encode("Identity eq 'Default DLP policy - Protect sensitive M365 Copilot interactions'");
-const complianceRecommendationFilter = encode("PurviewAIScenario eq 'P4AIAdhocQuery14' and HostNames eq '' and SensitiveInfoTypes eq 'None'");
-
 function getCapturePlan() {
-  return {
-    Agent: [
-      {
-        name: 'SharedSettings',
-        path: '/fd/addins/api/v2/settings?keys=IsTenantEligibleForEntireOrgEmail,AreFirstPartyAppsAllowed,AreThirdPartyAppsAllowed,AreLOBAppsAllowed,AreMicrosoftCertified3PAppsAllowed,MetaOSCopilotExtensibilitySettings'
-      },
-      {
-        name: 'RequestSettings',
-        path: '/fd/addins/api/v2/settings?keys=MetaOSCopilotExtensibilitySettings,AreFirstPartyAppsAllowed,AreThirdPartyAppsAllowed,AreLOBAppsAllowed,AdminRoles,AllowOrgWideSharing'
-      },
-      {
-        name: 'FrontierAccess',
-        path: '/admin/api/settings/company/frontier/access'
-      },
-      {
-        name: 'Templates',
-        path: '/admin/api/agenttemplates/getagenttemplates'
-      },
-      {
-        name: 'TemplatePolicies',
-        path: '/admin/api/agenttemplates/getpolicies?expand=true'
-      },
-      {
-        name: 'TemplateBillingAccounts',
-        path: '/admin/api/tenant/billingAccountsWithShell'
-      },
-      {
-        name: 'AutoQuotaEnabled',
-        path: '/_api/SPOInternalUseOnly.TenantAdminSettings/AutoQuotaEnabled'
-      },
-      {
-        name: 'CustomViewFilterDefaults',
-        path: '/admin/api/tenant/customviewfilterdefaults'
-      },
-      {
-        name: 'UserRoles',
-        path: '/admin/api/users/getuserroles',
-        method: 'POST',
-        body: {}
-      },
-      {
-        name: 'McpServers',
-        path: '/admin/api/agentssettings/mcpservers'
-      }
-    ],
-    Copilot: [
-      {
-        name: 'SettingsPage',
-        path: '/admin/api/copilotsettings/settings'
-      },
-      {
-        name: 'PinPolicy',
-        path: '/admin/api/settings/company/copilotpolicy/pin'
-      },
-      {
-        name: 'Recommendations',
-        path: '/admin/api/recommendations/m365/ccs'
-      },
-      {
-        name: 'Dismissed',
-        path: '/admin/api/copilotsettings/settings/dismissed'
-      },
-      {
-        name: 'SecurityCopilotAuth',
-        path: '/admin/api/copilotsettings/securitycopilot/auth'
-      },
-      {
-        name: 'AzureSubscriptions',
-        path: '/admin/api/syntexbilling/azureSubscriptions'
-      },
-      {
-        name: 'CopilotChatBillingPolicy',
-        path: '/_api/v2.1/billingPolicies?feature=M365CopilotChat'
-      },
-      {
-        name: 'AuditEnabled',
-        path: '/fd/purview/apiproxy/adtsch/AuditEnabled'
-      },
-      {
-        name: 'AIBaselineSummary',
-        path: '/fd/purview/apiproxy/cpm/v1.0/Tenant/AIBaselineSummary',
-        headers: {
-          tenantid: tenantId,
-          'x-tid': tenantId,
-          'client-type': 'purview',
-          'x-clientpage': '/',
-          'client-version': '1.0.2774.1',
-          'x-tabvisible': 'visible',
-          'x-clientpkgversion': '',
-          'client-request-id': '11111111-1111-4111-8111-111111111111'
-        }
-      },
-      {
-        name: 'PurviewForAISetting',
-        path: `/fd/purview/apiproxy/di/find/PurviewForAISetting?tenantId=${encode(tenantId)}`
-      },
-      {
-        name: 'DefaultDlpPolicy',
-        path: `/fd/purview/apiproxy/di/find/DlpCompliancePolicy?tenantId=${encode(tenantId)}&filter=${defaultDlpPolicyFilter}`
-      },
-      {
-        name: 'ComplianceRecommendation',
-        path: `/fd/purview/apiproxy/di/find/PurviewForAI?tenantId=${encode(tenantId)}&filter=${complianceRecommendationFilter}&startTime=${encode(windowStart.toISOString())}&endTime=${encode(now.toISOString())}`
-      }
-    ]
-  };
+  return planData.Requests || planData;
 }
 
 async function fetchCapture(page, request) {

@@ -8,6 +8,7 @@
 			'M365Internals',
 			'M365Ray',
 			'M365Ray Firefox',
+			'build\metadata',
 			'README.md'
 		)
 		$targets = @(
@@ -15,7 +16,9 @@
 			'M365Internals/README.md',
 			'M365Internals/M365Internals.psd1',
 			'M365Ray/CmdletApiMapping.json',
-			'M365Ray Firefox/CmdletApiMapping.json'
+			'M365Ray Firefox/CmdletApiMapping.json',
+			'M365Ray/TrackedRequestPrefixes.json',
+			'M365Ray Firefox/TrackedRequestPrefixes.json'
 		)
 
 		$null = New-Item -Path $tempRoot -ItemType Directory -Force
