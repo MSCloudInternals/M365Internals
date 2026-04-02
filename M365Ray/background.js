@@ -56,7 +56,7 @@ function shouldTrackRequest(requestUrl) {
 
         const requestPath = url.pathname + url.search;
         if (!Array.isArray(trackedPrefixes) || trackedPrefixes.length === 0) {
-            return true;
+            return false;
         }
 
         return trackedPrefixes.some((prefix) => requestPath.startsWith(prefix));

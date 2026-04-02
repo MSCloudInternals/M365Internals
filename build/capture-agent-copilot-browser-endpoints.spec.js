@@ -25,26 +25,30 @@ if (!tenantId) {
 }
 
 function getCapturePlan() {
-  return planData.Requests || planData;
+  return planData.Requests || planData.requests || planData;
 }
 
 async function fetchCapture(page, request) {
   return page.evaluate(async (captureRequest) => {
-    const headers = { ...(captureRequest.headers || {}) };
+    const headers = {
+      ...(captureRequest.DefaultHeaders || captureRequest.defaultHeaders || {}),
+      ...(captureRequest.Headers || captureRequest.headers || {})
+    };
     const controller = new AbortController();
-    const timeoutMs = captureRequest.timeoutMs || 15000;
+    const timeoutMs = captureRequest.TimeoutMs || captureRequest.timeoutMs || 20000;
     const timeoutHandle = setTimeout(() => controller.abort(), timeoutMs);
     const init = {
-      method: captureRequest.method || 'GET',
+      method: captureRequest.Method || captureRequest.method || 'GET',
       credentials: 'include',
       headers,
       signal: controller.signal
     };
 
-    if (typeof captureRequest.body !== 'undefined') {
-      init.body = typeof captureRequest.body === 'string'
-        ? captureRequest.body
-        : JSON.stringify(captureRequest.body);
+    if (typeof captureRequest.Body !== 'undefined' || typeof captureRequest.body !== 'undefined') {
+      const body = typeof captureRequest.Body !== 'undefined' ? captureRequest.Body : captureRequest.body;
+      init.body = typeof body === 'string'
+        ? body
+        : JSON.stringify(body);
 
       const hasContentType = Object.keys(headers).some((key) => key.toLowerCase() === 'content-type');
       if (!hasContentType) {
@@ -53,7 +57,7 @@ async function fetchCapture(page, request) {
     }
 
     try {
-      const response = await fetch(captureRequest.path, init);
+      const response = await fetch(captureRequest.Path || captureRequest.path, init);
       const bodyText = await response.text();
 
       return {
@@ -70,7 +74,7 @@ async function fetchCapture(page, request) {
       return {
         status: null,
         ok: false,
-        url: captureRequest.path,
+        url: captureRequest.Path || captureRequest.path,
         contentType: null,
         bodyText: null,
         timedOut: error && error.name === 'AbortError',
@@ -110,8 +114,12 @@ test('captures Agent and Copilot browser responses', async ({ page }) => {
     results[sectionName] = {};
 
     for (const request of sectionRequests) {
-      console.log(`Capturing ${sectionName}/${request.name}`);
-      const response = await fetchCapture(page, request);
+      const requestName = request.Name || request.name;
+      console.log(`Capturing ${sectionName}/${requestName}`);
+      const response = await fetchCapture(page, {
+        ...request,
+        DefaultHeaders: planData.DefaultHeaders || planData.defaultHeaders || {}
+      });
       let body;
 
       try {
@@ -121,9 +129,9 @@ test('captures Agent and Copilot browser responses', async ({ page }) => {
         body = response.bodyText;
       }
 
-      results[sectionName][request.name] = {
-        path: request.path,
-        method: request.method || 'GET',
+      results[sectionName][requestName] = {
+        path: request.Path || request.path,
+        method: request.Method || request.method || 'GET',
         status: response.status,
         ok: response.ok,
         timedOut: response.timedOut,

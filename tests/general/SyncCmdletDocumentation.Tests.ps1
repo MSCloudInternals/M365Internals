@@ -34,7 +34,7 @@
 			}
 		}
 
-		$syncError = $null
+		Remove-Variable -Name syncError -ErrorAction Ignore
 		try {
 			& $syncScriptPath -RepositoryRoot $tempRoot
 		}
