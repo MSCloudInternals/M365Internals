@@ -1,9 +1,13 @@
-﻿const requestBodies = new Map();
-const trackedPrefixes = [
-    'https://admin.cloud.microsoft/admin/api/',
-    'https://admin.cloud.microsoft/adminportal/home/',
-    'https://admin.cloud.microsoft/fd/msgraph/'
-];
+const requestBodies = new Map();
+let trackedPrefixes = null;
+const runtimeApi = typeof browser !== 'undefined' ? browser : chrome;
+
+fetch(runtimeApi.runtime.getURL('TrackedRequestPrefixes.json'))
+    .then((response) => response.json())
+    .then((data) => {
+        trackedPrefixes = Array.isArray(data) ? data : [];
+    })
+    .catch((error) => console.error('Failed to load tracked request prefixes', error));
 
 setInterval(() => {
     const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
@@ -16,7 +20,7 @@ setInterval(() => {
 
 chrome.webRequest.onBeforeRequest.addListener(
     (details) => {
-        if (!trackedPrefixes.some((prefix) => details.url.startsWith(prefix))) {
+        if (!shouldTrackRequest(details.url)) {
             return;
         }
 
@@ -38,13 +42,31 @@ chrome.webRequest.onBeforeRequest.addListener(
     },
     {
         urls: [
-            'https://admin.cloud.microsoft/admin/api/*',
-            'https://admin.cloud.microsoft/adminportal/home/*',
-            'https://admin.cloud.microsoft/fd/msgraph/*'
+            'https://admin.cloud.microsoft/*'
         ]
     },
     ['requestBody']
 );
+
+function shouldTrackRequest(requestUrl) {
+    try {
+        const url = new URL(requestUrl);
+        if (url.hostname !== 'admin.cloud.microsoft') {
+            return false;
+        }
+
+        const requestPath = url.pathname + url.search;
+        if (!Array.isArray(trackedPrefixes) || trackedPrefixes.length === 0) {
+            return false;
+        }
+
+        return trackedPrefixes.some((prefix) => requestPath.startsWith(prefix));
+    }
+    catch (error) {
+        console.error('Failed to inspect request URL', error);
+        return false;
+    }
+}
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.type === 'GET_REQUEST_BODY') {

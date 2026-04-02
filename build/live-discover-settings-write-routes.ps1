@@ -5,6 +5,7 @@ $logPath = Join-Path $artifactRoot 'live-admin-write-expansion-log.md'
 $resultPath = Join-Path $artifactRoot 'settings-write-route-probes.json'
 
 $null = New-Item -Path $artifactRoot -ItemType Directory -Force
+. (Join-Path $PSScriptRoot 'PortalSurfaceRegistry.ps1')
 
 function Add-RunLog {
     param (
@@ -204,32 +205,16 @@ function Invoke-SettingsWriteProbe {
 }
 
 $tenantId = Get-ResolvedTenantId
-
+$writeProbePlan = New-PortalSurfaceWriteProbePlan -RepositoryRoot (Join-Path $PSScriptRoot '..') -PlanIds 'settings-write-probes' -TenantId $tenantId
 $candidateDefinitions = @(
-    [pscustomobject]@{ Name = 'CompanyHelpDesk'; Path = '/admin/api/Settings/company/helpdesk'; Methods = @('Post', 'Put', 'Patch'); Headers = $null },
-    [pscustomobject]@{ Name = 'CompanyProfile'; Path = '/admin/api/Settings/company/profile'; Methods = @('Post', 'Put', 'Patch'); Headers = $null },
-    [pscustomobject]@{ Name = 'CompanyReleaseTrack'; Path = '/admin/api/Settings/company/releasetrack'; Methods = @('Post', 'Put', 'Patch'); Headers = $null },
-    [pscustomobject]@{ Name = 'CompanySendFromAddress'; Path = '/admin/api/Settings/company/sendfromaddress'; Methods = @('Post', 'Put', 'Patch'); Headers = $null },
-    [pscustomobject]@{ Name = 'CompanyTheme'; Path = '/admin/api/Settings/company/theme/v2'; Methods = @('Post', 'Put', 'Patch'); Headers = $null },
-    [pscustomobject]@{ Name = 'CompanyTile'; Path = '/admin/api/Settings/company/tile'; Methods = @('Post', 'Put', 'Patch'); Headers = $null },
-    [pscustomobject]@{ Name = 'ContentUnderstandingSetting'; Path = '/admin/api/contentunderstanding/setting'; Methods = @('Post', 'Put', 'Patch'); Headers = $null },
-    [pscustomobject]@{ Name = 'SecurityActivityBasedTimeout'; Path = '/admin/api/settings/security/activitybasedtimeout'; Methods = @('Post', 'Put', 'Patch'); Headers = $null },
-    [pscustomobject]@{ Name = 'SecurityBingDataCollection'; Path = '/admin/api/settings/security/bingdatacollection'; Methods = @('Post', 'Put', 'Patch'); Headers = $null },
-    [pscustomobject]@{ Name = 'SecurityDataAccess'; Path = '/admin/api/settings/security/dataaccess'; Methods = @('Post', 'Put', 'Patch'); Headers = $null },
-    [pscustomobject]@{ Name = 'SecurityGuestUserPolicy'; Path = '/admin/api/Settings/security/guestUserPolicy'; Methods = @('Post', 'Put', 'Patch'); Headers = $null },
-    [pscustomobject]@{ Name = 'SecurityMultiFactorAuth'; Path = '/admin/api/settings/security/multifactorauth'; Methods = @('Post', 'Put', 'Patch'); Headers = $null },
-    [pscustomobject]@{ Name = 'SecurityO365GuestUser'; Path = '/admin/api/settings/security/o365guestuser'; Methods = @('Post', 'Put', 'Patch'); Headers = $null },
-    [pscustomobject]@{ Name = 'SecurityPasswordPolicy'; Path = '/admin/api/Settings/security/passwordpolicy'; Methods = @('Post', 'Put', 'Patch'); Headers = $null },
-    [pscustomobject]@{ Name = 'SecurityPrivacyPolicy'; Path = '/admin/api/Settings/security/privacypolicy'; Methods = @('Post', 'Put', 'Patch'); Headers = $null },
-    [pscustomobject]@{ Name = 'SecurityTenantLockbox'; Path = '/admin/api/Settings/security/tenantLockbox'; Methods = @('Post', 'Put', 'Patch'); Headers = $null },
-    [pscustomobject]@{ Name = 'SecurityDefaults'; Path = '/admin/api/identitysecurity/securitydefaults'; Methods = @('Post', 'Put', 'Patch'); Headers = $null },
-    [pscustomobject]@{ Name = 'SecuritySettings'; Path = '/admin/api/securitysettings/settings'; Methods = @('Post', 'Put', 'Patch'); Headers = $null },
-    [pscustomobject]@{ Name = 'SecuritySettingsOptIn'; Path = '/admin/api/securitysettings/optIn'; Methods = @('Post', 'Put', 'Patch'); Headers = $null },
-    [pscustomobject]@{ Name = 'PeopleNamePronunciation'; Path = ('/fd/peopleadminservice/{0}/settings/namePronunciation' -f $tenantId); Methods = @('Post', 'Put', 'Patch'); Headers = $null },
-    [pscustomobject]@{ Name = 'PeoplePronouns'; Path = ('/fd/peopleadminservice/{0}/settings/pronouns' -f $tenantId); Methods = @('Post', 'Put', 'Patch'); Headers = $null },
-    [pscustomobject]@{ Name = 'PeopleProfileCardProperties'; Path = ('/fd/peopleadminservice/{0}/profilecard/properties' -f $tenantId); Methods = @('Post', 'Put', 'Patch'); Headers = $null },
-    [pscustomobject]@{ Name = 'SelfServicePurchaseProducts'; Path = '/admin/api/selfServicePurchasePolicy/products'; Methods = @('Post', 'Put', 'Patch'); Headers = $null },
-    [pscustomobject]@{ Name = 'TenantReportsPrivacyEnabled'; Path = '/admin/api/tenant/isReportsPrivacyEnabled'; Methods = @('Post', 'Put', 'Patch'); Headers = $null }
+    foreach ($request in @($writeProbePlan.Requests)) {
+        [pscustomobject]@{
+            Name = [string]$request.Name
+            Path = [string]$request.Path
+            Methods = if ($request.PSObject.Properties.Name -contains 'Methods') { [string[]]@($request.Methods) } elseif ($request.PSObject.Properties.Name -contains 'Method') { [string[]]@([string]$request.Method) } else { @() }
+            Headers = if ($request.PSObject.Properties.Name -contains 'Headers') { $request.Headers } else { $null }
+        }
+    }
 )
 
 $results = foreach ($candidate in $candidateDefinitions) {
