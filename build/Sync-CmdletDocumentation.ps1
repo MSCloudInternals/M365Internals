@@ -24,6 +24,11 @@ $mappingPaths = @(
     $mappingSeedPath,
     (Join-Path (Join-Path $repoRoot 'M365Ray Firefox') 'CmdletApiMapping.json')
 )
+$trackedPrefixPaths = @(
+    (Join-Path (Join-Path $repoRoot 'M365Ray') 'TrackedRequestPrefixes.json'),
+    (Join-Path (Join-Path $repoRoot 'M365Ray Firefox') 'TrackedRequestPrefixes.json')
+)
+$surfaceRegistryHelperPath = Join-Path $PSScriptRoot 'PortalSurfaceRegistry.ps1'
 
 $script:SyncTenantId = '11111111-1111-1111-1111-111111111111'
 $script:SyncSubscriptionId = '22222222-2222-2222-2222-222222222222'
@@ -33,6 +38,8 @@ $script:InternalPlaceholderMap = [ordered]@{
     $script:SyncTenantId = 'TenantId'
     $script:SyncSubscriptionId = 'SubscriptionId'
 }
+
+. $surfaceRegistryHelperPath
 
 foreach ($file in Get-ChildItem -Path $internalFunctionsPath -Filter '*.ps1' -Recurse) {
     . $file.FullName
@@ -1164,6 +1171,32 @@ function Merge-MappingEntry {
     return $result
 }
 
+function Merge-RegistryMappingEntry {
+    param(
+        [Parameter(Mandatory)]
+        $Base,
+
+        [Parameter(Mandatory)]
+        $Overlay
+    )
+
+    $result = [ordered]@{
+        Cmdlet = $Base.Cmdlet
+        ApiUri = $Base.ApiUri
+    }
+
+    foreach ($propertyName in @('Method', 'Parameters', 'SwitchParameters', 'MatchBodyIncludes')) {
+        if ($Overlay.Contains($propertyName)) {
+            $result[$propertyName] = ConvertTo-OrderedData -InputObject $Overlay[$propertyName]
+        }
+        elseif ($Base.Contains($propertyName)) {
+            $result[$propertyName] = ConvertTo-OrderedData -InputObject $Base[$propertyName]
+        }
+    }
+
+    return $result
+}
+
 function Get-GeneratedMappings {
     param(
         [Parameter(Mandatory)]
@@ -1220,6 +1253,12 @@ function Update-CmdletApiMappings {
     )
 
     $generatedByKey = Get-GeneratedMappings -Cmdlets $Cmdlets
+    $registryMappings = @(Convert-PortalSurfaceRegistryToCmdletApiMappings -RepositoryRoot $repoRoot)
+    $registryByKey = @{}
+    foreach ($mapping in $registryMappings) {
+        $orderedMapping = ConvertTo-OrderedData -InputObject $mapping
+        $registryByKey[(Get-MappingKey -Mapping $orderedMapping)] = $orderedMapping
+    }
     $validCmdletNames = @($Cmdlets.Name | Where-Object { $_ -like 'Get-*' })
     $existingMappings = if (Test-Path -Path $mappingSeedPath) {
         @(((Get-Content -Path $mappingSeedPath -Raw).TrimStart([char]0xFEFF) | ConvertFrom-Json))
@@ -1249,6 +1288,8 @@ function Update-CmdletApiMappings {
     $handledKeys = New-Object System.Collections.Generic.HashSet[string]
     $newCount = 0
     $updatedCount = 0
+    $registryNewCount = 0
+    $registryUpdatedCount = 0
 
     foreach ($mappingKey in $existingOrder) {
         $existing = $existingByKey[$mappingKey]
@@ -1277,8 +1318,37 @@ function Update-CmdletApiMappings {
         $newCount++
     }
 
-    $jsonContent = ConvertTo-Json -InputObject $finalMappings.ToArray() -Depth 20
-    $comparableJsonContent = ConvertTo-Json -InputObject $finalMappings.ToArray() -Depth 20 -Compress
+    $finalMappingsWithRegistry = [System.Collections.Generic.List[object]]::new()
+    $handledRegistryKeys = New-Object System.Collections.Generic.HashSet[string]
+    foreach ($mapping in $finalMappings) {
+        $mappingKey = Get-MappingKey -Mapping $mapping
+        if ($registryByKey.ContainsKey($mappingKey)) {
+            $merged = Merge-RegistryMappingEntry -Base $mapping -Overlay $registryByKey[$mappingKey]
+            $existingJson = (($mapping | ConvertTo-Json -Depth 20) -replace '\s+', '')
+            $mergedJson = (($merged | ConvertTo-Json -Depth 20) -replace '\s+', '')
+            if ($existingJson -cne $mergedJson) {
+                $registryUpdatedCount++
+            }
+
+            $finalMappingsWithRegistry.Add($merged) | Out-Null
+            $handledRegistryKeys.Add($mappingKey) | Out-Null
+            continue
+        }
+
+        $finalMappingsWithRegistry.Add($mapping) | Out-Null
+    }
+
+    foreach ($mappingKey in @($registryByKey.Keys | Sort-Object)) {
+        if ($handledRegistryKeys.Contains($mappingKey)) {
+            continue
+        }
+
+        $finalMappingsWithRegistry.Add($registryByKey[$mappingKey]) | Out-Null
+        $registryNewCount++
+    }
+
+    $jsonContent = ConvertTo-Json -InputObject $finalMappingsWithRegistry.ToArray() -Depth 20
+    $comparableJsonContent = ConvertTo-Json -InputObject $finalMappingsWithRegistry.ToArray() -Depth 20 -Compress
     foreach ($path in $mappingPaths) {
         $existingContent = if (Test-Path -Path $path) { Get-Content -Path $path -Raw } else { '' }
         if (-not [string]::IsNullOrWhiteSpace($existingContent)) {
@@ -1299,7 +1369,25 @@ function Update-CmdletApiMappings {
         Write-TextFile -Path $path -Content $jsonContent
     }
 
-    Write-Host ("API mappings: {0} total ({1} new, {2} updated, {3} removed)" -f $finalMappings.Count, $newCount, $updatedCount, $removedCount) -ForegroundColor Green
+    Write-Host ("API mappings: {0} total ({1} new, {2} updated, {3} removed)" -f $finalMappingsWithRegistry.Count, ($newCount + $registryNewCount), ($updatedCount + $registryUpdatedCount), $removedCount) -ForegroundColor Green
+}
+
+function Update-TrackedRequestPrefixes {
+    $trackedPrefixes = @(Get-PortalSurfaceTrackedRequestPrefixes -RepositoryRoot $repoRoot)
+    $jsonContent = ConvertTo-Json -InputObject $trackedPrefixes -Depth 5
+    $updatedCount = 0
+
+    foreach ($path in $trackedPrefixPaths) {
+        $existingContent = if (Test-Path -Path $path) { (Get-Content -Path $path -Raw).TrimStart([char]0xFEFF) } else { '' }
+        if ($existingContent -ceq $jsonContent) {
+            continue
+        }
+
+        Write-TextFile -Path $path -Content $jsonContent
+        $updatedCount++
+    }
+
+    Write-Host ("Tracked request prefixes: {0} total ({1} file{2} updated)" -f $trackedPrefixes.Count, $updatedCount, $(if ($updatedCount -eq 1) { '' } else { 's' })) -ForegroundColor Green
 }
 
 $cmdlets = Get-PublicCmdletMetadata
@@ -1307,9 +1395,11 @@ if ($cmdlets.Count -eq 0) {
     throw "No public cmdlet files were found under '$functionsPath'."
 }
 
+Test-PortalSurfaceRegistry -RepositoryRoot $repoRoot -ErrorOnIssue | Out-Null
 Write-Host ("Discovered {0} public cmdlets." -f $cmdlets.Count) -ForegroundColor Cyan
 $null = Update-ReadmeCmdletTable -Path $rootReadmePath -Cmdlets $cmdlets
 $null = Update-ReadmeCmdletTable -Path $moduleReadmePath -Cmdlets $cmdlets
 $null = Update-FunctionsToExport -Path $manifestPath -Cmdlets $cmdlets
 Update-CmdletApiMappings -Cmdlets $cmdlets
+Update-TrackedRequestPrefixes
 Write-Host 'Cmdlet documentation synchronization complete.' -ForegroundColor Green
