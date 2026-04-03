@@ -24,6 +24,12 @@
     .PARAMETER ProfilePath
         Optional persistent browser profile path used for SSO.
 
+    .PARAMETER ResetProfile
+        Clears the dedicated SSO browser profile before launching the sign-in flow.
+
+    .PARAMETER PrivateSession
+        Uses a temporary isolated browser profile for the SSO attempt.
+
     .PARAMETER UserAgent
         Optional User-Agent override for the launched browser and follow-up bootstrap requests.
 
@@ -50,6 +56,10 @@
 
         [string]$ProfilePath,
 
+        [switch]$ResetProfile,
+
+        [switch]$PrivateSession,
+
         [string]$UserAgent = (Get-M365DefaultUserAgent),
 
         [switch]$SkipValidation
@@ -71,6 +81,12 @@
         }
         if ($ProfilePath) {
             $connectParams.ProfilePath = $ProfilePath
+        }
+        if ($ResetProfile) {
+            $connectParams.ResetProfile = $true
+        }
+        if ($PrivateSession) {
+            $connectParams.PrivateSession = $true
         }
 
         Connect-M365Portal @connectParams

@@ -31,6 +31,9 @@
     .PARAMETER TenantId
         Optional tenant ID to keep the final admin portal session aligned to a specific tenant.
 
+    .PARAMETER TimeoutSeconds
+        Maximum time to wait for credential MFA to complete.
+
     .PARAMETER UserAgent
         User-Agent string used during the Entra bootstrap and admin portal exchange.
 
@@ -67,6 +70,9 @@
 
         [string]$TenantId,
 
+        [ValidateRange(30, 1800)]
+        [int]$TimeoutSeconds = 300,
+
         [string]$UserAgent = (Get-M365DefaultUserAgent),
 
         [switch]$SkipValidation
@@ -85,6 +91,9 @@
         }
         if ($MfaMethod) {
             $connectParams.MfaMethod = $MfaMethod
+        }
+        if ($PSBoundParameters.ContainsKey('TimeoutSeconds')) {
+            $connectParams.TimeoutSeconds = $TimeoutSeconds
         }
 
         if ($Credential) {

@@ -426,12 +426,18 @@
     }
 
     $landingUri = if ([string]::IsNullOrWhiteSpace($InitialFormAction)) { 'https://admin.cloud.microsoft/landing' } else { $InitialFormAction }
+    $tokenMetadata = Get-M365JwtTokenMetadata -Token $hiddenFields['id_token'] -Source 'AdminPortalIdToken'
 
     try {
         $null = Invoke-WebRequest -MaximumRedirection 20 -WebSession $WebSession -Method Post -Uri $landingUri -Body $hiddenFields -UserAgent $UserAgent -ErrorAction Stop
     }
     catch {
         throw "Failed to complete the admin portal landing flow. $($_.Exception.Message)"
+    }
+
+    if ($tokenMetadata) {
+        $WebSession | Add-Member -NotePropertyName M365TokenMetadata -NotePropertyValue $tokenMetadata -Force
+        $WebSession | Add-Member -NotePropertyName M365TokenRefreshSatisfiedUntilUtc -NotePropertyValue $null -Force
     }
 
     return Invoke-M365PortalPostLandingBootstrap -WebSession $WebSession -UserAgent $UserAgent

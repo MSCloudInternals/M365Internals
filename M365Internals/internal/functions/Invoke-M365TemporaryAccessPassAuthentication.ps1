@@ -2,11 +2,11 @@
     <#
     .SYNOPSIS
         Performs Temporary Access Pass authentication against Entra ID and returns the
-        resulting ESTS authentication cookie value.
+        resulting ESTS authentication artifacts.
 
     .DESCRIPTION
         Implements the Entra ID TAP web sign-in flow used by the Microsoft 365 admin bootstrap,
-        then extracts the resulting ESTS authentication cookie so it can be passed to Connect-M365Portal.
+        then extracts the resulting ESTS authentication artifacts so they can be passed to Connect-M365Portal.
 
         TAP sign-in is tenant-scoped. The same TenantId is used for the Entra authorize request and is
         typically passed on to Connect-M365Portal so the admin portal opens the intended tenant.
@@ -26,13 +26,13 @@
         User-Agent string for HTTP requests.
 
     .OUTPUTS
-        String - the ESTS authentication cookie value suitable for passing to Connect-M365Portal.
+        PSCustomObject - contains the ESTS authentication cookie value and the authenticated web session.
 
     .EXAMPLE
         $tap = ConvertTo-SecureString 'ABC12345' -AsPlainText -Force
         Invoke-M365TemporaryAccessPassAuthentication -Username 'admin@contoso.com' -TemporaryAccessPass $tap -TenantId '8612f621-73ca-4c12-973c-0da732bc44c2'
 
-        Performs the internal TAP sign-in flow and returns the ESTS authentication cookie value.
+        Performs the internal TAP sign-in flow and returns the ESTS authentication artifacts.
     #>
     [CmdletBinding()]
     param(
@@ -167,6 +167,6 @@
     }
 
     Write-Verbose "Obtained ESTS cookie (length: $($bestCookie.Length))"
-    return $bestCookie
+    return New-M365EstsAuthenticationResult -WebSession $session -EstsAuthCookieValue $bestCookie
 }
 

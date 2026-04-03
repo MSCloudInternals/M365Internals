@@ -3,9 +3,12 @@
     .SYNOPSIS
         Connects to the Microsoft 365 admin portal from captured authentication artifacts.
     #>
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', '', Justification = 'Parameters are consumed by nested helper closures or retained for compatibility across auth flows.')]
     [CmdletBinding()]
     param(
         [string]$EstsAuthCookieValue,
+
+        [Microsoft.PowerShell.Commands.WebRequestSession]$EstsWebSession,
 
         [Microsoft.PowerShell.Commands.WebRequestSession]$PortalWebSession,
 
@@ -25,100 +28,126 @@
         [string]$FailureLabel = 'Authentication'
     )
 
-    $hasEsts = -not [string]::IsNullOrWhiteSpace($EstsAuthCookieValue)
+    function Set-ResolvedAuthFlow {
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '', Justification = 'Private helper that updates only the in-memory connection object.')]
+        param(
+            [Parameter(Mandatory)]
+            $Connection
+        )
+
+        if ($Connection -and -not [string]::IsNullOrWhiteSpace($AuthFlow)) {
+            $Connection.AuthFlow = $AuthFlow
+        }
+
+        return $Connection
+    }
+
+    function Connect-FromPortalWebSession {
+        param(
+            [Parameter(Mandatory)]
+            [Microsoft.PowerShell.Commands.WebRequestSession]$WebSession
+        )
+
+        $connection = Set-M365PortalConnectionSettings -WebSession $WebSession -AuthSource 'WebSession' -AuthFlow 'WebSession' -UserAgent $UserAgent -SkipValidation:$SkipValidation
+        Set-ResolvedAuthFlow -Connection $connection
+    }
+
+    function Connect-FromEstsWebSession {
+        param(
+            [Parameter(Mandatory)]
+            [Microsoft.PowerShell.Commands.WebRequestSession]$WebSession
+        )
+
+        if ($UserAgent) {
+            $WebSession.UserAgent = $UserAgent
+        }
+
+        $portalSession = Complete-M365AdminPortalSignIn -WebSession $WebSession -UserAgent $UserAgent
+        $connection = Set-M365PortalConnectionSettings -WebSession $portalSession -AuthSource 'ESTSAUTHPERSISTENT' -AuthFlow 'EstsCookie' -UserAgent $UserAgent -SkipValidation:$SkipValidation
+        Set-ResolvedAuthFlow -Connection $connection
+    }
+
+    function Connect-FromEstsCookieValue {
+        param(
+            [Parameter(Mandatory)]
+            [string]$CookieValue
+        )
+
+        $webSession = [Microsoft.PowerShell.Commands.WebRequestSession]::new()
+        if ($UserAgent) {
+            $webSession.UserAgent = $UserAgent
+        }
+
+        $null = Invoke-WebRequest -MaximumRedirection 10 -ErrorAction SilentlyContinue -WebSession $webSession -Method Get -Uri 'https://login.microsoftonline.com/error'
+        foreach ($cookieName in @('ESTSAUTH', 'ESTSAUTHPERSISTENT')) {
+            $cookie = [System.Net.Cookie]::new($cookieName, $CookieValue, '/', 'login.microsoftonline.com')
+            $webSession.Cookies.Add($cookie)
+        }
+
+        Connect-FromEstsWebSession -WebSession $webSession
+    }
+
+    if ([string]::IsNullOrWhiteSpace($EstsAuthCookieValue) -and $EstsWebSession) {
+        $EstsAuthCookieValue = Get-M365BestEstsCookieValue -Session $EstsWebSession
+    }
+
+    $hasEsts = (-not [string]::IsNullOrWhiteSpace($EstsAuthCookieValue)) -or ($null -ne $EstsWebSession)
     $hasPortalSession = $null -ne $PortalWebSession
 
     if (-not $hasEsts -and -not $hasPortalSession) {
         throw "$FailureLabel failed - no supported authentication artifacts were returned."
     }
 
-    $estsConnectParams = $null
-    if ($hasEsts) {
-        $estsConnectParams = @{
-            EstsAuthCookieValue = $EstsAuthCookieValue
-            UserAgent           = $UserAgent
-            SkipValidation      = $SkipValidation
-        }
-        if ($TenantId) {
-            $estsConnectParams.TenantId = $TenantId
-        }
-    }
-
-    $portalConnectParams = $null
-    if ($hasPortalSession) {
-        $portalConnectParams = @{
-            WebSession     = $PortalWebSession
-            UserAgent      = $UserAgent
-            SkipValidation = $SkipValidation
-        }
-    }
-
     $primaryAttempt = $ConnectionPreference
     $attemptErrors = New-Object System.Collections.Generic.List[string]
 
-    if ($primaryAttempt -eq 'PreferPortal' -and $portalConnectParams) {
+    if ($primaryAttempt -eq 'PreferPortal' -and $hasPortalSession) {
         try {
-            $connection = Connect-M365Portal @portalConnectParams
-            if (-not [string]::IsNullOrWhiteSpace($AuthFlow)) {
-                $connection.AuthFlow = $AuthFlow
-            }
-
-            return $connection
+            return Connect-FromPortalWebSession -WebSession $PortalWebSession
         }
         catch {
             $attemptErrors.Add("Portal session: $($_.Exception.Message)")
-            if (-not $estsConnectParams) {
+            if (-not $hasEsts) {
                 throw
             }
-
-            Write-Verbose 'Captured admin portal cookies were not sufficient on the first attempt. Falling back to the captured ESTS cookie.'
-            $connection = Connect-M365Portal @estsConnectParams
-            if (-not [string]::IsNullOrWhiteSpace($AuthFlow)) {
-                $connection.AuthFlow = $AuthFlow
-            }
-
-            return $connection
         }
     }
 
-    if ($estsConnectParams) {
+    if ($EstsWebSession) {
         try {
-            $connection = Connect-M365Portal @estsConnectParams
-            if (-not [string]::IsNullOrWhiteSpace($AuthFlow)) {
-                $connection.AuthFlow = $AuthFlow
+            return Connect-FromEstsWebSession -WebSession $EstsWebSession
+        }
+        catch {
+            $attemptErrors.Add("ESTS session bootstrap: $($_.Exception.Message)")
+        }
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($EstsAuthCookieValue)) {
+        try {
+            if ($EstsWebSession) {
+                Write-Verbose 'The session-based ESTS bootstrap did not complete successfully. Falling back to a new session built from the captured ESTS cookie value.'
             }
 
-            return $connection
+            return Connect-FromEstsCookieValue -CookieValue $EstsAuthCookieValue
         }
         catch {
             $attemptErrors.Add("ESTS bootstrap: $($_.Exception.Message)")
-            if (-not $FallbackToPortalOnEstsBootstrapFailure -or -not $portalConnectParams) {
-                throw
-            }
-
-            Write-Verbose 'ESTS bootstrap failed. Falling back to the captured admin portal cookie set.'
-            $connection = Connect-M365Portal @portalConnectParams
-            if (-not [string]::IsNullOrWhiteSpace($AuthFlow)) {
-                $connection.AuthFlow = $AuthFlow
-            }
-
-            return $connection
         }
     }
 
-    if ($portalConnectParams) {
+    if ($FallbackToPortalOnEstsBootstrapFailure -and $hasPortalSession) {
         try {
-            $connection = Connect-M365Portal @portalConnectParams
-            if (-not [string]::IsNullOrWhiteSpace($AuthFlow)) {
-                $connection.AuthFlow = $AuthFlow
-            }
-
-            return $connection
+            Write-Verbose 'ESTS bootstrap failed. Falling back to the captured admin portal cookie set.'
+            return Connect-FromPortalWebSession -WebSession $PortalWebSession
         }
         catch {
             $attemptErrors.Add("Portal session: $($_.Exception.Message)")
             throw
         }
+    }
+
+    if ($primaryAttempt -eq 'PreferPortal' -and $hasPortalSession) {
+        throw "$FailureLabel failed. $($attemptErrors -join ' | ')"
     }
 
     if ($attemptErrors.Count -gt 0) {
