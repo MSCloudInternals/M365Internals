@@ -186,6 +186,65 @@ $Config = {"pgid":"ConvergedSignIn","arrSessions":[{"id":"session-123"}],"urlLog
         }
     }
 
+    Describe 'JWT freshness helpers' {
+        It 'omits raw claims by default' {
+            $expiresAt = [DateTimeOffset]::UtcNow.AddMinutes(30).ToUnixTimeSeconds()
+            $headerSegment = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes('{"alg":"none","typ":"JWT"}')).TrimEnd('=') -replace '\+', '-' -replace '/', '_'
+            $payloadSegment = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes("{""exp"":$expiresAt,""iat"":$($expiresAt - 300),""nbf"":$($expiresAt - 360),""aud"":""https://admin.cloud.microsoft/"",""tid"":""11111111-1111-1111-1111-111111111111"",""preferred_username"":""admin@contoso.com""}")).TrimEnd('=') -replace '\+', '-' -replace '/', '_'
+            $token = "$headerSegment.$payloadSegment."
+
+            $metadata = Get-M365JwtTokenMetadata -Token $token -Source 'UnitTest'
+
+            $metadata.Source | Should -Be 'UnitTest'
+            $metadata.Username | Should -Be 'admin@contoso.com'
+            $metadata.PSObject.Properties.Name | Should -Not -Contain 'Claims'
+        }
+
+        It 'includes raw claims only when requested' {
+            $expiresAt = [DateTimeOffset]::UtcNow.AddMinutes(30).ToUnixTimeSeconds()
+            $headerSegment = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes('{"alg":"none","typ":"JWT"}')).TrimEnd('=') -replace '\+', '-' -replace '/', '_'
+            $payloadSegment = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes("{""exp"":$expiresAt,""iat"":$($expiresAt - 300),""nbf"":$($expiresAt - 360),""aud"":""https://admin.cloud.microsoft/"",""tid"":""11111111-1111-1111-1111-111111111111"",""preferred_username"":""admin@contoso.com""}")).TrimEnd('=') -replace '\+', '-' -replace '/', '_'
+            $token = "$headerSegment.$payloadSegment."
+
+            $metadata = Get-M365JwtTokenMetadata -Token $token -Source 'UnitTest' -IncludeClaims
+
+            $metadata.Claims.preferred_username | Should -Be 'admin@contoso.com'
+        }
+
+        It 'throws a clear error for invalid base64url length' {
+            { ConvertFrom-M365Base64UrlSegment -Value 'a' } | Should -Throw '*Base64Url value has an invalid length*'
+        }
+    }
+
+    Describe 'Invoke-M365PortalRequest self-heal behavior' {
+        BeforeEach {
+            $script:m365PortalSession = [Microsoft.PowerShell.Commands.WebRequestSession]::new()
+            $script:m365PortalHeaders = @{
+                AjaxSessionKey      = 'ajax-session'
+                'x-portal-routekey' = 'route-key'
+            }
+            $script:m365PortalConnection = [pscustomobject]@{
+                TokenRefreshRecommended = $false
+            }
+
+            Mock Update-M365PortalConnectionSettings { }
+            Mock Invoke-M365PortalPostLandingBootstrap { throw 'bootstrap failed' }
+            Mock Invoke-WebRequest { throw [System.Exception]::new('Unauthorized') }
+        }
+
+        AfterEach {
+            Set-Variable -Scope Script -Name m365PortalSession -Value $null
+            Set-Variable -Scope Script -Name m365PortalHeaders -Value $null
+            Set-Variable -Scope Script -Name m365PortalConnection -Value $null
+        }
+
+        It 'does not retry when bootstrap replay fails' {
+            { Invoke-M365PortalRequest -Path '/admin/api/navigation' } | Should -Throw '*Unauthorized*'
+
+            Assert-MockCalled Invoke-WebRequest -Times 1
+        }
+    }
+
     Describe 'browser launch argument handling' {
         It 'forces interactive browser sign-in to show account selection' {
             Mock Get-M365AdminLoginState {

@@ -13,6 +13,10 @@
     .PARAMETER Source
         A label describing where the token was captured from, such as id_token or access_token.
 
+    .PARAMETER IncludeClaims
+        Includes the raw decoded JWT claims in the returned object. This is intended only for
+        callers that explicitly need the full claim set.
+
     .EXAMPLE
         Get-M365JwtTokenMetadata -Token $idToken -Source 'id_token'
 
@@ -27,7 +31,9 @@
     param(
         [string]$Token,
 
-        [string]$Source = 'Jwt'
+        [string]$Source = 'Jwt',
+
+        [switch]$IncludeClaims
     )
 
     if ([string]::IsNullOrWhiteSpace($Token)) {
@@ -65,7 +71,7 @@
         $null
     }
 
-    [pscustomobject]@{
+    $metadata = [ordered]@{
         Source              = $Source
         ExpiresOnUtc        = $expiresOnUtc
         FreshUntilUtc       = $expiresOnUtc.AddMinutes(-5)
@@ -75,6 +81,11 @@
         Audience            = if ($claims.PSObject.Properties['aud']) { $claims.aud } else { $null }
         Subject             = if ($claims.PSObject.Properties['sub']) { $claims.sub } else { $null }
         Username            = if ($claims.PSObject.Properties['preferred_username']) { $claims.preferred_username } elseif ($claims.PSObject.Properties['upn']) { $claims.upn } else { $null }
-        Claims              = $claims
     }
+
+    if ($IncludeClaims) {
+        $metadata['Claims'] = $claims
+    }
+
+    [pscustomobject]$metadata
 }

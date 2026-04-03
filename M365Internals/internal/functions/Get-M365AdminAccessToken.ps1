@@ -100,7 +100,13 @@
         throw "The M365 admin access token endpoint returned an empty token for '$TokenType'."
     }
 
-    $tokenMetadata = Get-M365JwtTokenMetadata -Token $token -Source "AdminAccessToken:$TokenType"
+    $tokenMetadata = Get-M365JwtTokenMetadata -Token $token -Source "AdminAccessToken:$TokenType" -IncludeClaims
+    $storedTokenMetadata = if ($tokenMetadata) {
+        $tokenMetadata | Select-Object Source, ExpiresOnUtc, FreshUntilUtc, IssuedAtUtc, NotBeforeUtc, TenantId, Audience, Subject, Username
+    }
+    else {
+        $null
+    }
     $claims = if ($tokenMetadata) { $tokenMetadata.Claims } else { $null }
     $expiresOn = (Get-Date).AddMinutes(45)
     if ($tokenMetadata) {
@@ -122,12 +128,12 @@
     }
     $result.PSObject.TypeNames.Insert(0, 'M365Portal.AccessToken')
 
-    if ($tokenMetadata) {
-        $script:m365PortalSession | Add-Member -NotePropertyName M365TokenMetadata -NotePropertyValue $tokenMetadata -Force
+    if ($storedTokenMetadata) {
+        $script:m365PortalSession | Add-Member -NotePropertyName M365TokenMetadata -NotePropertyValue $storedTokenMetadata -Force
         $script:m365PortalSession | Add-Member -NotePropertyName M365TokenRefreshSatisfiedUntilUtc -NotePropertyValue $null -Force
         if ($script:m365PortalConnection) {
             $script:m365PortalConnection | Add-Member -NotePropertyName TokenRefreshSatisfiedUntilUtc -NotePropertyValue $null -Force
-            $null = Set-M365PortalConnectionFreshness -Connection $script:m365PortalConnection -TokenMetadata $tokenMetadata
+            $null = Set-M365PortalConnectionFreshness -Connection $script:m365PortalConnection -TokenMetadata $storedTokenMetadata
         }
     }
 

@@ -37,11 +37,13 @@
         return $true
     }
 
-    if ($Headers) {
-        foreach ($requiredHeader in @('AjaxSessionKey', 'x-portal-routekey')) {
-            if (-not $Headers.ContainsKey($requiredHeader) -or [string]::IsNullOrWhiteSpace([string]$Headers[$requiredHeader])) {
-                return $true
-            }
+    if (-not $Headers -or $Headers.Count -eq 0) {
+        return $true
+    }
+
+    foreach ($requiredHeader in @('AjaxSessionKey', 'x-portal-routekey')) {
+        if (-not $Headers.ContainsKey($requiredHeader) -or [string]::IsNullOrWhiteSpace([string]$Headers[$requiredHeader])) {
+            return $true
         }
     }
 

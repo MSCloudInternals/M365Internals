@@ -139,8 +139,10 @@
             return $false
         }
 
+        $bootstrapReplaySucceeded = $false
         try {
             $null = Invoke-M365PortalPostLandingBootstrap -WebSession $resolvedSession -UserAgent $resolvedSession.UserAgent
+            $bootstrapReplaySucceeded = $true
         }
         catch {
             Write-Verbose "The portal self-heal bootstrap replay did not complete successfully: $($_.Exception.Message)"
@@ -148,7 +150,7 @@
 
         try {
             $null = Update-M365PortalConnectionSettings
-            return $true
+            return $bootstrapReplaySucceeded
         }
         catch {
             Write-Verbose "Refreshing the stored portal connection after the self-heal attempt failed: $($_.Exception.Message)"

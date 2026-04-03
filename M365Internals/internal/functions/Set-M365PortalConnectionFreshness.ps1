@@ -43,6 +43,19 @@
     else {
         $null
     }
+    if ($effectiveTokenMetadata) {
+        $effectiveTokenMetadata = [pscustomobject]@{
+            Source       = $effectiveTokenMetadata.Source
+            ExpiresOnUtc = $effectiveTokenMetadata.ExpiresOnUtc
+            FreshUntilUtc = $effectiveTokenMetadata.FreshUntilUtc
+            IssuedAtUtc  = $effectiveTokenMetadata.IssuedAtUtc
+            NotBeforeUtc = $effectiveTokenMetadata.NotBeforeUtc
+            TenantId     = $effectiveTokenMetadata.TenantId
+            Audience     = $effectiveTokenMetadata.Audience
+            Subject      = $effectiveTokenMetadata.Subject
+            Username     = $effectiveTokenMetadata.Username
+        }
+    }
 
     $utcNow = [datetime]::UtcNow
     $tokenExpiresOnUtc = if ($effectiveTokenMetadata) { $effectiveTokenMetadata.ExpiresOnUtc } else { $null }

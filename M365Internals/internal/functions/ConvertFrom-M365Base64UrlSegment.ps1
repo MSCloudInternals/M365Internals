@@ -26,6 +26,7 @@
 
     $normalizedValue = $Value.Replace('-', '+').Replace('_', '/')
     switch ($normalizedValue.Length % 4) {
+        1 { throw 'The supplied Base64Url value has an invalid length.' }
         2 { $normalizedValue += '==' }
         3 { $normalizedValue += '=' }
     }

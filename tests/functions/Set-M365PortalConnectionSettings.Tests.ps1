@@ -378,4 +378,14 @@
             Assert-MockCalled Invoke-M365PortalPostLandingBootstrap -Times 1
         }
     }
+
+    Describe 'Test-M365PortalConnectionNeedsRefresh' {
+        It 'treats a missing header map as needing refresh' {
+            $connection = [pscustomobject]@{
+                TokenRefreshRecommended = $false
+            }
+
+            (Test-M365PortalConnectionNeedsRefresh -Connection $connection) | Should -BeTrue
+        }
+    }
 }
