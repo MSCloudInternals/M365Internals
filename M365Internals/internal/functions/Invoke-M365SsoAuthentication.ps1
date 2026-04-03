@@ -62,6 +62,8 @@ function Get-M365SsoLaunchArgumentList {
         [Parameter(Mandatory)]
         [string]$StartUrl,
 
+        [string]$PrivateModeArgument,
+
         [switch]$Visible,
 
         [string]$UserAgent
@@ -87,6 +89,10 @@ function Get-M365SsoLaunchArgumentList {
             '--disable-background-networking',
             '--disable-component-update'
         ) + $arguments
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($PrivateModeArgument)) {
+        $arguments = @($PrivateModeArgument) + $arguments
     }
 
     if ($UserAgent) {
@@ -145,6 +151,12 @@ function Invoke-M365SsoAuthentication {
     .PARAMETER ProfilePath
         Optional persistent browser profile path used for SSO.
 
+    .PARAMETER ResetProfile
+        Clears the selected SSO browser profile before launching the sign-in flow.
+
+    .PARAMETER PrivateSession
+        Uses a temporary isolated browser profile for the SSO attempt.
+
     .PARAMETER UserAgent
         Optional User-Agent override for the launched browser.
 
@@ -177,6 +189,10 @@ function Invoke-M365SsoAuthentication {
 
         [string]$ProfilePath,
 
+        [switch]$ResetProfile,
+
+        [switch]$PrivateSession,
+
         [string]$UserAgent
     )
 
@@ -185,7 +201,8 @@ function Invoke-M365SsoAuthentication {
     }
 
     $browser = Resolve-M365BrowserPath -BrowserPath $BrowserPath
-    $resolvedProfilePath = if ($ProfilePath) { $ProfilePath } else { Get-M365SsoDefaultProfilePath }
+    $profileConfiguration = Resolve-M365BrowserProfileConfiguration -ProfilePath $(if ($ProfilePath) { $ProfilePath } else { Get-M365SsoDefaultProfilePath }) -ResetProfile:$ResetProfile -PrivateSession:$PrivateSession
+    $resolvedProfilePath = $profileConfiguration.ProfilePath
     Initialize-M365SsoProfile -ProfilePath $resolvedProfilePath
 
     $debugPort = Get-M365BrowserFreeTcpPort
@@ -198,7 +215,8 @@ function Invoke-M365SsoAuthentication {
     } else {
         'https://admin.cloud.microsoft/'
     }
-    $arguments = Get-M365SsoLaunchArgumentList -ProfilePath $resolvedProfilePath -DebugPort $debugPort -StartUrl $startUrl -Visible:$Visible -UserAgent $UserAgent
+    $privateModeArgument = if ($profileConfiguration.UsePrivateSession) { Get-M365BrowserPrivateModeArgument -Browser $browser } else { $null }
+    $arguments = Get-M365SsoLaunchArgumentList -ProfilePath $resolvedProfilePath -DebugPort $debugPort -StartUrl $startUrl -PrivateModeArgument $privateModeArgument -Visible:$Visible -UserAgent $UserAgent
     $browserProcess = $null
     $browserWebSocketUrl = $null
 
@@ -298,6 +316,11 @@ function Invoke-M365SsoAuthentication {
         if ($browserProcess) {
             Stop-M365BrowserProcess -Process $browserProcess -BrowserWebSocketUrl $browserWebSocketUrl
             Remove-M365BrowserProcessRedirectFiles -Process $browserProcess
+        }
+
+        if ($profileConfiguration.CleanupProfileOnExit) {
+            Start-Sleep -Milliseconds 500
+            Remove-Item -LiteralPath $resolvedProfilePath -Recurse -Force -ErrorAction SilentlyContinue
         }
     }
 }

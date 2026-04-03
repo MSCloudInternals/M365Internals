@@ -43,21 +43,6 @@
         [switch]$Force
     )
 
-    function ConvertFrom-Base64UrlSegment {
-        param (
-            [Parameter(Mandatory)]
-            [string]$Value
-        )
-
-        $normalizedValue = $Value.Replace('-', '+').Replace('_', '/')
-        switch ($normalizedValue.Length % 4) {
-            2 { $normalizedValue += '==' }
-            3 { $normalizedValue += '=' }
-        }
-
-        [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($normalizedValue))
-    }
-
     Update-M365PortalConnectionSettings
 
     $cacheKey = if ([string]::IsNullOrWhiteSpace($Scenario)) {
@@ -115,19 +100,20 @@
         throw "The M365 admin access token endpoint returned an empty token for '$TokenType'."
     }
 
-    $jwtParts = $token.Split('.')
-    $claims = $null
+    $tokenMetadata = Get-M365JwtTokenMetadata -Token $token -Source "AdminAccessToken:$TokenType" -IncludeClaims
+    $storedTokenMetadata = if ($tokenMetadata) {
+        $tokenMetadata | Select-Object Source, ExpiresOnUtc, FreshUntilUtc, IssuedAtUtc, NotBeforeUtc, TenantId, Audience, Subject, Username
+    }
+    else {
+        $null
+    }
+    $claims = if ($tokenMetadata) { $tokenMetadata.Claims } else { $null }
     $expiresOn = (Get-Date).AddMinutes(45)
-    if ($jwtParts.Count -ge 2) {
-        try {
-            $claims = ConvertFrom-Base64UrlSegment -Value $jwtParts[1] | ConvertFrom-Json -Depth 20
-            if ($claims.exp) {
-                $expiresOn = [DateTimeOffset]::FromUnixTimeSeconds([long]$claims.exp).UtcDateTime
-            }
-        }
-        catch {
-            Write-Verbose "Unable to parse claims for $TokenType token: $($_.Exception.Message)"
-        }
+    if ($tokenMetadata) {
+        $expiresOn = $tokenMetadata.ExpiresOnUtc
+    }
+    elseif ($token.Contains('.')) {
+        Write-Verbose "Unable to parse claims for $TokenType token. Falling back to a conservative cache TTL."
     }
 
     $result = [pscustomobject]@{
@@ -141,6 +127,15 @@
         Claims    = $claims
     }
     $result.PSObject.TypeNames.Insert(0, 'M365Portal.AccessToken')
+
+    if ($storedTokenMetadata) {
+        $script:m365PortalSession | Add-Member -NotePropertyName M365TokenMetadata -NotePropertyValue $storedTokenMetadata -Force
+        $script:m365PortalSession | Add-Member -NotePropertyName M365TokenRefreshSatisfiedUntilUtc -NotePropertyValue $null -Force
+        if ($script:m365PortalConnection) {
+            $script:m365PortalConnection | Add-Member -NotePropertyName TokenRefreshSatisfiedUntilUtc -NotePropertyValue $null -Force
+            $null = Set-M365PortalConnectionFreshness -Connection $script:m365PortalConnection -TokenMetadata $storedTokenMetadata
+        }
+    }
 
     $ttlMinutes = [Math]::Floor((New-TimeSpan -Start (Get-Date) -End $expiresOn.AddMinutes(-5)).TotalMinutes)
     if ($ttlMinutes -lt 1) {

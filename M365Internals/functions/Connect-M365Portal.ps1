@@ -77,6 +77,10 @@
         Preferred MFA method for credential-based sign-in. Supported values are
         PhoneAppOTP, PhoneAppNotification, and OneWaySMS.
 
+    .PARAMETER TimeoutSeconds
+        Maximum time to wait for credential MFA, phone sign-in, browser sign-in, or SSO
+        authentication to complete.
+
     .PARAMETER TemporaryAccessPass
         The Temporary Access Pass to use for Entra sign-in. Alias: TAP.
 
@@ -112,9 +116,6 @@
     .PARAMETER SkipValidation
         Skips the admin portal validation probes after the session is prepared.
 
-    .PARAMETER TimeoutSeconds
-        Maximum time to wait for phone sign-in, browser sign-in, or SSO authentication to complete.
-
     .PARAMETER BrowserPath
         Optional Chromium-based browser executable path or command name used by the browser
         and SSO authentication flows.
@@ -123,10 +124,11 @@
         Optional browser profile path used by the browser or SSO authentication flows.
 
     .PARAMETER ResetProfile
-        Clears the dedicated browser profile before launching browser sign-in.
+        Clears the dedicated browser or SSO profile before launching the selected sign-in flow.
 
     .PARAMETER PrivateSession
-        Uses a temporary private/incognito browser session for interactive browser sign-in.
+        Uses a temporary private/incognito browser session for browser sign-in or a temporary
+        isolated profile for SSO.
 
     .PARAMETER Visible
         Shows the browser window during SSO authentication instead of using the default headless launch.
@@ -307,6 +309,8 @@
         [Parameter(ParameterSetName = 'PhoneSignIn')]
         [Parameter(ParameterSetName = 'BrowserSignIn')]
         [Parameter(ParameterSetName = 'SSO')]
+        [Parameter(ParameterSetName = 'Credential')]
+        [Parameter(ParameterSetName = 'CredentialExplicit')]
         [ValidateRange(30, 1800)]
         [int]$TimeoutSeconds = 300,
 
@@ -319,9 +323,11 @@
         [string]$ProfilePath,
 
         [Parameter(ParameterSetName = 'BrowserSignIn')]
+        [Parameter(ParameterSetName = 'SSO')]
         [switch]$ResetProfile,
 
         [Parameter(ParameterSetName = 'BrowserSignIn')]
+        [Parameter(ParameterSetName = 'SSO')]
         [switch]$PrivateSession,
 
         [Parameter(ParameterSetName = 'SSO')]
@@ -365,6 +371,31 @@
 
             $cookie = [System.Net.Cookie]::new($Name, $Value, '/', $Domain)
             $Session.Cookies.Add($cookie)
+        }
+
+        function Resolve-EstsAuthenticationArtifact {
+            param (
+                $Artifact
+            )
+
+            if ($null -eq $Artifact) {
+                return [pscustomobject]@{
+                    EstsAuthCookieValue = $null
+                    WebSession          = $null
+                }
+            }
+
+            if ($Artifact -is [string]) {
+                return [pscustomobject]@{
+                    EstsAuthCookieValue = [string]$Artifact
+                    WebSession          = $null
+                }
+            }
+
+            return [pscustomobject]@{
+                EstsAuthCookieValue = if ($Artifact.PSObject.Properties['EstsAuthCookieValue']) { [string]$Artifact.EstsAuthCookieValue } else { $null }
+                WebSession          = if ($Artifact.PSObject.Properties['WebSession']) { $Artifact.WebSession } else { $null }
+            }
         }
 
         function New-PortalCookieSession {
@@ -425,6 +456,9 @@
                     Password  = $Credential.Password
                     UserAgent = $UserAgent
                 }
+                if ($PSBoundParameters.ContainsKey('TimeoutSeconds')) {
+                    $credentialAuthParams.TimeoutSeconds = $TimeoutSeconds
+                }
                 if (-not [string]::IsNullOrWhiteSpace($TotpSecret)) {
                     $credentialAuthParams.TotpSecret = $TotpSecret
                 }
@@ -432,8 +466,8 @@
                     $credentialAuthParams.MfaMethod = $MfaMethod
                 }
 
-                $estsAuth = Invoke-M365CredentialAuthentication @credentialAuthParams
-                return Connect-M365AuthArtifactSet -EstsAuthCookieValue $estsAuth -TenantId $TenantId -UserAgent $UserAgent -SkipValidation:$SkipValidation -AuthFlow 'Credential' -FailureLabel 'Credential authentication'
+                $estsAuth = Resolve-EstsAuthenticationArtifact -Artifact (Invoke-M365CredentialAuthentication @credentialAuthParams)
+                return Connect-M365AuthArtifactSet -EstsAuthCookieValue $estsAuth.EstsAuthCookieValue -EstsWebSession $estsAuth.WebSession -TenantId $TenantId -UserAgent $UserAgent -SkipValidation:$SkipValidation -AuthFlow 'Credential' -FailureLabel 'Credential authentication'
             }
             'CredentialExplicit' {
                 $resolvedUsername = $Username
@@ -450,6 +484,9 @@
                     Password  = $Password
                     UserAgent = $UserAgent
                 }
+                if ($PSBoundParameters.ContainsKey('TimeoutSeconds')) {
+                    $credentialAuthParams.TimeoutSeconds = $TimeoutSeconds
+                }
                 if (-not [string]::IsNullOrWhiteSpace($TotpSecret)) {
                     $credentialAuthParams.TotpSecret = $TotpSecret
                 }
@@ -457,8 +494,8 @@
                     $credentialAuthParams.MfaMethod = $MfaMethod
                 }
 
-                $estsAuth = Invoke-M365CredentialAuthentication @credentialAuthParams
-                return Connect-M365AuthArtifactSet -EstsAuthCookieValue $estsAuth -TenantId $TenantId -UserAgent $UserAgent -SkipValidation:$SkipValidation -AuthFlow 'Credential' -FailureLabel 'Credential authentication'
+                $estsAuth = Resolve-EstsAuthenticationArtifact -Artifact (Invoke-M365CredentialAuthentication @credentialAuthParams)
+                return Connect-M365AuthArtifactSet -EstsAuthCookieValue $estsAuth.EstsAuthCookieValue -EstsWebSession $estsAuth.WebSession -TenantId $TenantId -UserAgent $UserAgent -SkipValidation:$SkipValidation -AuthFlow 'Credential' -FailureLabel 'Credential authentication'
             }
             'TemporaryAccessPass' {
                 $resolvedUsername = $Username
@@ -471,8 +508,8 @@
                 }
 
                 $resolvedTenantId = if ($TenantId) { $TenantId } else { Resolve-M365TenantIdFromUsername -Username $resolvedUsername -UserAgent $UserAgent }
-                $estsAuth = Invoke-M365TemporaryAccessPassAuthentication -Username $resolvedUsername -TemporaryAccessPass $TemporaryAccessPass -TenantId $resolvedTenantId -UserAgent $UserAgent
-                return Connect-M365AuthArtifactSet -EstsAuthCookieValue $estsAuth -TenantId $resolvedTenantId -UserAgent $UserAgent -SkipValidation:$SkipValidation -AuthFlow 'TemporaryAccessPass' -FailureLabel 'Temporary Access Pass authentication'
+                $estsAuth = Resolve-EstsAuthenticationArtifact -Artifact (Invoke-M365TemporaryAccessPassAuthentication -Username $resolvedUsername -TemporaryAccessPass $TemporaryAccessPass -TenantId $resolvedTenantId -UserAgent $UserAgent)
+                return Connect-M365AuthArtifactSet -EstsAuthCookieValue $estsAuth.EstsAuthCookieValue -EstsWebSession $estsAuth.WebSession -TenantId $resolvedTenantId -UserAgent $UserAgent -SkipValidation:$SkipValidation -AuthFlow 'TemporaryAccessPass' -FailureLabel 'Temporary Access Pass authentication'
             }
             'PhoneSignIn' {
                 $resolvedUsername = $Username
@@ -492,8 +529,8 @@
                     $phoneParams.TimeoutSeconds = $TimeoutSeconds
                 }
 
-                $estsAuth = Invoke-M365PhoneSignInAuthentication @phoneParams
-                return Connect-M365AuthArtifactSet -EstsAuthCookieValue $estsAuth -TenantId $TenantId -UserAgent $UserAgent -SkipValidation:$SkipValidation -AuthFlow 'PhoneSignIn' -FailureLabel 'Phone sign-in'
+                $estsAuth = Resolve-EstsAuthenticationArtifact -Artifact (Invoke-M365PhoneSignInAuthentication @phoneParams)
+                return Connect-M365AuthArtifactSet -EstsAuthCookieValue $estsAuth.EstsAuthCookieValue -EstsWebSession $estsAuth.WebSession -TenantId $TenantId -UserAgent $UserAgent -SkipValidation:$SkipValidation -AuthFlow 'PhoneSignIn' -FailureLabel 'Phone sign-in'
             }
             'BrowserSignIn' {
                 $browserParams = @{
@@ -540,6 +577,12 @@
                 }
                 if ($ProfilePath) {
                     $ssoParams.ProfilePath = $ProfilePath
+                }
+                if ($ResetProfile) {
+                    $ssoParams.ResetProfile = $true
+                }
+                if ($PrivateSession) {
+                    $ssoParams.PrivateSession = $true
                 }
 
                 $ssoAuth = Invoke-M365SsoAuthentication @ssoParams

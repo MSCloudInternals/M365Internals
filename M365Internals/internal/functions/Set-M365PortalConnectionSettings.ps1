@@ -136,29 +136,6 @@
         return ($Value -match '^[0-9a-fA-F-]{36}$')
     }
 
-    function Test-IsUnexpectedHtmlBootstrapShell {
-        param (
-            [string]$Content
-        )
-
-        if ([string]::IsNullOrWhiteSpace($Content)) {
-            return $false
-        }
-
-        $trimmedContent = $Content.TrimStart()
-        if (-not $trimmedContent.StartsWith('<')) {
-            return $false
-        }
-
-        if ($Content -match 'O365\.TID=' -or
-            $Content -match '\$Config\s*=\s*\{' -or
-            $Content -match '"TID"\s*:\s*"?[0-9a-fA-F-]{36}') {
-            return $false
-        }
-
-        return $true
-    }
-
     function Get-BootstrapFailureDetails {
         $bootstrapState = $script:m365PortalLastBootstrapState
         if (-not $bootstrapState) {
@@ -195,9 +172,9 @@
 
         while ($true) {
             $attempt++
-            $response = Invoke-M365PortalRequest -Path $Path -Headers $Headers -RawResponse
+            $response = Invoke-M365PortalRequest -Path $Path -Headers $Headers -RawResponse -SkipConnectionRefresh -SkipAutoHeal
 
-            if (-not (Test-IsUnexpectedHtmlBootstrapShell -Content $response.Content)) {
+            if (-not (Test-M365PortalUnexpectedHtmlShell -Content $response.Content)) {
                 return $response
             }
 
@@ -241,6 +218,25 @@
     $previousConnection = $script:m365PortalConnection
     $previousBootstrapState = $script:m365PortalLastBootstrapState
     $script:m365PortalLastBootstrapState = $null
+    $isCurrentSessionRefresh = ($null -ne $previousSession -and $WebSession -eq $previousSession)
+    $tokenRefreshSatisfiedUntilUtc = if ($WebSession.PSObject.Properties['M365TokenRefreshSatisfiedUntilUtc']) {
+        $WebSession.M365TokenRefreshSatisfiedUntilUtc
+    }
+    elseif ($isCurrentSessionRefresh -and $previousConnection -and $previousConnection.PSObject.Properties['TokenRefreshSatisfiedUntilUtc']) {
+        $previousConnection.TokenRefreshSatisfiedUntilUtc
+    }
+    else {
+        $null
+    }
+    $tokenMetadata = if ($WebSession.PSObject.Properties['M365TokenMetadata']) {
+        $WebSession.M365TokenMetadata
+    }
+    elseif ($isCurrentSessionRefresh -and $previousConnection -and $previousConnection.PSObject.Properties['TokenMetadata']) {
+        $previousConnection.TokenMetadata
+    }
+    else {
+        $null
+    }
 
     $script:m365PortalSession = $WebSession
     $script:m365PortalHeaders = @{
@@ -301,7 +297,7 @@
     $resolvedTenantId = if (Test-IsGuidValue -Value $cookieValues['s.UserTenantId']) {
         $cookieValues['s.UserTenantId']
     }
-    elseif ($previousConnection -and (Test-IsGuidValue -Value $previousConnection.TenantId)) {
+    elseif ($isCurrentSessionRefresh -and $previousConnection -and (Test-IsGuidValue -Value $previousConnection.TenantId)) {
         $previousConnection.TenantId
     }
     else {
@@ -357,7 +353,7 @@
                 @{ Name = 'FeatureAll'; Path = '/admin/api/features/all' }
             )) {
                 try {
-                    $probeResponse = Invoke-M365PortalRequest -Path $validationProbe.Path -RawResponse
+                    $probeResponse = Invoke-M365PortalRequest -Path $validationProbe.Path -RawResponse -SkipConnectionRefresh -SkipAutoHeal
                     $validationResults.Add([pscustomobject]@{
                         Name       = $validationProbe.Name
                         Path       = $validationProbe.Path
@@ -385,7 +381,7 @@
             if (Test-IsGuidValue -Value $cookieValues['s.UserTenantId']) {
                 $resolvedTenantId = $cookieValues['s.UserTenantId']
             }
-            elseif ($previousConnection -and (Test-IsGuidValue -Value $previousConnection.TenantId)) {
+            elseif ($isCurrentSessionRefresh -and $previousConnection -and (Test-IsGuidValue -Value $previousConnection.TenantId)) {
                 $resolvedTenantId = $previousConnection.TenantId
             }
         }
@@ -393,7 +389,7 @@
         $resolvedAuthFlow = if (-not [string]::IsNullOrWhiteSpace($AuthFlow)) {
             $AuthFlow
         }
-        elseif ($previousConnection -and $previousConnection.PSObject.Properties['AuthFlow'] -and -not [string]::IsNullOrWhiteSpace([string]$previousConnection.AuthFlow)) {
+        elseif ($isCurrentSessionRefresh -and $previousConnection -and $previousConnection.PSObject.Properties['AuthFlow'] -and -not [string]::IsNullOrWhiteSpace([string]$previousConnection.AuthFlow)) {
             [string]$previousConnection.AuthFlow
         }
         else {
@@ -403,6 +399,12 @@
         $resolvedUsername = Resolve-UsernameFromCookieValue -Value $cookieValues['s.userid']
 
         $connection = [System.Management.Automation.PSObject]::new()
+        $connectedAt = if ($isCurrentSessionRefresh -and $previousConnection -and $previousConnection.PSObject.Properties['ConnectedAt']) {
+            $previousConnection.ConnectedAt
+        }
+        else {
+            Get-Date
+        }
         $connection | Add-Member -NotePropertyName PortalHost -NotePropertyValue 'admin.cloud.microsoft'
         $connection | Add-Member -NotePropertyName TenantId -NotePropertyValue $resolvedTenantId
         # Keep both property names: Username is canonical, while UserId preserves the
@@ -413,9 +415,12 @@
         $connection | Add-Member -NotePropertyName RouteKeyPresent -NotePropertyValue (-not [string]::IsNullOrWhiteSpace($cookieValues['x-portal-routekey']))
         $connection | Add-Member -NotePropertyName Source -NotePropertyValue $AuthSource
         $connection | Add-Member -NotePropertyName AuthFlow -NotePropertyValue $resolvedAuthFlow
-        $connection | Add-Member -NotePropertyName ConnectedAt -NotePropertyValue (Get-Date)
+        $connection | Add-Member -NotePropertyName ConnectedAt -NotePropertyValue $connectedAt
+        $connection | Add-Member -NotePropertyName RefreshedAt -NotePropertyValue (Get-Date)
         $connection | Add-Member -NotePropertyName Validated -NotePropertyValue (-not $SkipValidation)
         $connection | Add-Member -NotePropertyName Validation -NotePropertyValue ([object[]]$validationResults.ToArray())
+        $connection | Add-Member -NotePropertyName TokenRefreshSatisfiedUntilUtc -NotePropertyValue $tokenRefreshSatisfiedUntilUtc -Force
+        $null = Set-M365PortalConnectionFreshness -Connection $connection -TokenMetadata $tokenMetadata
         $connection.PSObject.TypeNames.Insert(0, 'M365Portal.Connection')
 
         $script:m365PortalConnection = $connection

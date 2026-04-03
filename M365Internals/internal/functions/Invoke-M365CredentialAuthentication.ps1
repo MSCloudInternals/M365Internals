@@ -554,6 +554,9 @@ function Invoke-M365CredentialAuthentication {
         that method is actually offered. Otherwise, the function chooses the only supported inline
         method or prompts you when multiple supported inline methods are available.
 
+    .PARAMETER TimeoutSeconds
+        Maximum time to wait for MFA approval or verification to complete.
+
     .PARAMETER UserAgent
         User-Agent string for HTTP requests.
 
@@ -561,10 +564,10 @@ function Invoke-M365CredentialAuthentication {
         $password = ConvertTo-SecureString "MyPassword" -AsPlainText -Force
         Invoke-M365CredentialAuthentication -Username "admin@contoso.com" -Password $password -TotpSecret "JBSWY3DPEHPK3PXP"
 
-        Authenticates with a SecureString password and returns the ESTS authentication cookie value.
+        Authenticates with a SecureString password and returns the ESTS authentication artifacts.
 
     .OUTPUTS
-        String - the ESTS authentication cookie value suitable for passing to Connect-M365Portal.
+        PSCustomObject - contains the ESTS authentication cookie value and the authenticated web session.
     #>
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingWriteHost', '')]
     [CmdletBinding()]
@@ -579,6 +582,9 @@ function Invoke-M365CredentialAuthentication {
 
         [ValidateSet('PhoneAppOTP', 'PhoneAppNotification', 'OneWaySMS')]
         [string]$MfaMethod,
+
+        [ValidateRange(30, 1800)]
+        [int]$TimeoutSeconds = 300,
 
         [string]$UserAgent = (Get-M365DefaultUserAgent)
     )
@@ -711,7 +717,7 @@ function Invoke-M365CredentialAuthentication {
                     Write-Host "Approve the sign-in request in your Authenticator app."
                 }
 
-                $pollOutcome = Invoke-M365SasPushNotificationPolling -SelectedMethod $selectedMethod -BeginAuth $beginAuth -AuthState $authState -Session $session -Headers $sasHeaders -EndAuthUri 'https://login.microsoftonline.com/common/SAS/EndAuth' -Deadline (Get-Date).AddSeconds(180) -FailureLabel 'Push notification' -TimeoutMessage 'Push notification timed out after {0} seconds.'
+                $pollOutcome = Invoke-M365SasPushNotificationPolling -SelectedMethod $selectedMethod -BeginAuth $beginAuth -AuthState $authState -Session $session -Headers $sasHeaders -EndAuthUri 'https://login.microsoftonline.com/common/SAS/EndAuth' -Deadline (Get-Date).AddSeconds($TimeoutSeconds) -FailureLabel 'Push notification' -TimeoutMessage 'Push notification timed out after {0} seconds.'
                 $beginAuth = $pollOutcome.BeginAuth
                 $processAuthPollStart = $pollOutcome.ProcessAuthPollStart
                 $processAuthPollEnd = $pollOutcome.ProcessAuthPollEnd
@@ -910,7 +916,7 @@ function Invoke-M365CredentialAuthentication {
     ) | Where-Object { $_ } | Sort-Object { $_.Value.Length } -Descending | Select-Object -First 1
 
     Write-Verbose "Obtained $($bestCookie.Name) cookie (length: $($bestCookie.Value.Length))"
-    return $bestCookie.Value
+    return New-M365EstsAuthenticationResult -WebSession $session -EstsAuthCookieValue $bestCookie.Value
     #endregion
 }
 

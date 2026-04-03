@@ -32,6 +32,18 @@ Describe 'Connect-M365Portal auth surface' {
         $secureStringParameterSet.Parameters.Name | Should -Contain 'TenantId'
     }
 
+    It 'exposes credential timeout and SSO profile controls on the core auth parameter sets' {
+        $command = Get-Command Connect-M365Portal
+        $credentialParameterSet = $command.ParameterSets | Where-Object Name -EQ 'Credential'
+        $credentialExplicitParameterSet = $command.ParameterSets | Where-Object Name -EQ 'CredentialExplicit'
+        $ssoParameterSet = $command.ParameterSets | Where-Object Name -EQ 'SSO'
+
+        $credentialParameterSet.Parameters.Name | Should -Contain 'TimeoutSeconds'
+        $credentialExplicitParameterSet.Parameters.Name | Should -Contain 'TimeoutSeconds'
+        $ssoParameterSet.Parameters.Name | Should -Contain 'ResetProfile'
+        $ssoParameterSet.Parameters.Name | Should -Contain 'PrivateSession'
+    }
+
     It 'exports the public auth wrapper cmdlets' {
         $wrapperCommands = @(
             'Connect-M365PortalByBrowser'
@@ -51,12 +63,15 @@ Describe 'Connect-M365Portal auth surface' {
     It 'exposes the expected key parameters on the public auth wrappers' {
         (Get-Command Connect-M365PortalByBrowser).Parameters.Keys | Should -Contain 'PrivateSession'
         (Get-Command Connect-M365PortalByCredential).Parameters.Keys | Should -Contain 'MfaMethod'
+        (Get-Command Connect-M365PortalByCredential).Parameters.Keys | Should -Contain 'TimeoutSeconds'
         (Get-Command Connect-M365PortalByEstsCookie).Parameters.Keys | Should -Contain 'SecureEstsAuthCookieValue'
         (Get-Command Connect-M365PortalByPhoneSignIn).Parameters.Keys | Should -Contain 'TimeoutSeconds'
         (Get-Command Connect-M365PortalBySoftwarePasskey).Parameters.Keys | Should -Contain 'KeyFilePath'
         (Get-Command Connect-M365PortalBySoftwarePasskey).Parameters.Keys | Should -Contain 'KeyVaultTenantId'
         (Get-Command Connect-M365PortalBySoftwarePasskey).Parameters.Keys | Should -Contain 'KeyVaultClientId'
         (Get-Command Connect-M365PortalBySSO).Parameters.Keys | Should -Contain 'Visible'
+        (Get-Command Connect-M365PortalBySSO).Parameters.Keys | Should -Contain 'ResetProfile'
+        (Get-Command Connect-M365PortalBySSO).Parameters.Keys | Should -Contain 'PrivateSession'
         (Get-Command Connect-M365PortalByTemporaryAccessPass).Parameters.Keys | Should -Contain 'TemporaryAccessPass'
         (Get-Command Connect-M365PortalByTemporaryAccessPass).Parameters['TemporaryAccessPass'].Aliases | Should -Contain 'TAP'
     }
@@ -171,6 +186,65 @@ $Config = {"pgid":"ConvergedSignIn","arrSessions":[{"id":"session-123"}],"urlLog
         }
     }
 
+    Describe 'JWT freshness helpers' {
+        It 'omits raw claims by default' {
+            $expiresAt = [DateTimeOffset]::UtcNow.AddMinutes(30).ToUnixTimeSeconds()
+            $headerSegment = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes('{"alg":"none","typ":"JWT"}')).TrimEnd('=') -replace '\+', '-' -replace '/', '_'
+            $payloadSegment = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes("{""exp"":$expiresAt,""iat"":$($expiresAt - 300),""nbf"":$($expiresAt - 360),""aud"":""https://admin.cloud.microsoft/"",""tid"":""11111111-1111-1111-1111-111111111111"",""preferred_username"":""admin@contoso.com""}")).TrimEnd('=') -replace '\+', '-' -replace '/', '_'
+            $token = "$headerSegment.$payloadSegment."
+
+            $metadata = Get-M365JwtTokenMetadata -Token $token -Source 'UnitTest'
+
+            $metadata.Source | Should -Be 'UnitTest'
+            $metadata.Username | Should -Be 'admin@contoso.com'
+            $metadata.PSObject.Properties.Name | Should -Not -Contain 'Claims'
+        }
+
+        It 'includes raw claims only when requested' {
+            $expiresAt = [DateTimeOffset]::UtcNow.AddMinutes(30).ToUnixTimeSeconds()
+            $headerSegment = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes('{"alg":"none","typ":"JWT"}')).TrimEnd('=') -replace '\+', '-' -replace '/', '_'
+            $payloadSegment = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes("{""exp"":$expiresAt,""iat"":$($expiresAt - 300),""nbf"":$($expiresAt - 360),""aud"":""https://admin.cloud.microsoft/"",""tid"":""11111111-1111-1111-1111-111111111111"",""preferred_username"":""admin@contoso.com""}")).TrimEnd('=') -replace '\+', '-' -replace '/', '_'
+            $token = "$headerSegment.$payloadSegment."
+
+            $metadata = Get-M365JwtTokenMetadata -Token $token -Source 'UnitTest' -IncludeClaims
+
+            $metadata.Claims.preferred_username | Should -Be 'admin@contoso.com'
+        }
+
+        It 'throws a clear error for invalid base64url length' {
+            { ConvertFrom-M365Base64UrlSegment -Value 'a' } | Should -Throw '*Base64Url value has an invalid length*'
+        }
+    }
+
+    Describe 'Invoke-M365PortalRequest self-heal behavior' {
+        BeforeEach {
+            $script:m365PortalSession = [Microsoft.PowerShell.Commands.WebRequestSession]::new()
+            $script:m365PortalHeaders = @{
+                AjaxSessionKey      = 'ajax-session'
+                'x-portal-routekey' = 'route-key'
+            }
+            $script:m365PortalConnection = [pscustomobject]@{
+                TokenRefreshRecommended = $false
+            }
+
+            Mock Update-M365PortalConnectionSettings { }
+            Mock Invoke-M365PortalPostLandingBootstrap { throw 'bootstrap failed' }
+            Mock Invoke-WebRequest { throw [System.Exception]::new('Unauthorized') }
+        }
+
+        AfterEach {
+            Set-Variable -Scope Script -Name m365PortalSession -Value $null
+            Set-Variable -Scope Script -Name m365PortalHeaders -Value $null
+            Set-Variable -Scope Script -Name m365PortalConnection -Value $null
+        }
+
+        It 'does not retry when bootstrap replay fails' {
+            { Invoke-M365PortalRequest -Path '/admin/api/navigation' } | Should -Throw '*Unauthorized*'
+
+            Assert-MockCalled Invoke-WebRequest -Times 1
+        }
+    }
+
     Describe 'browser launch argument handling' {
         It 'forces interactive browser sign-in to show account selection' {
             Mock Get-M365AdminLoginState {
@@ -238,10 +312,12 @@ $Config = {"pgid":"ConvergedSignIn","arrSessions":[{"id":"session-123"}],"urlLog
                 -ProfilePath 'C:\Users\Test User\AppData\Local\M365Internals\SSO Profile' `
                 -DebugPort 9333 `
                 -StartUrl 'https://admin.cloud.microsoft/' `
+                -PrivateModeArgument '--inprivate' `
                 -UserAgent 'Mozilla/5.0 Test Agent'
 
             $formattedArguments = Format-M365BrowserProcessArgumentList -Arguments $arguments
 
+            $formattedArguments | Should -Contain '--inprivate'
             $formattedArguments | Should -Contain '--user-agent="Mozilla/5.0 Test Agent"'
             $formattedArguments | Should -Contain '--user-data-dir="C:\Users\Test User\AppData\Local\M365Internals\SSO Profile"'
         }
@@ -412,13 +488,43 @@ $Config = {"pgid":"ConvergedSignIn","arrSessions":[{"id":"session-123"}],"urlLog
     Describe 'Connect-M365Portal credential forwarding' {
         BeforeEach {
             $script:credentialAuthMfaBound = $null
+            $script:credentialAuthTimeoutBound = $null
+            $script:credentialArtifactParams = $null
+            $script:credentialAuthSession = [Microsoft.PowerShell.Commands.WebRequestSession]::new()
 
             Mock Invoke-M365CredentialAuthentication {
+                param(
+                    $Username,
+                    $Password,
+                    $TotpSecret,
+                    $MfaMethod,
+                    $TimeoutSeconds,
+                    $UserAgent
+                )
+
                 $script:credentialAuthMfaBound = $PSBoundParameters.ContainsKey('MfaMethod')
-                'ests-cookie'
+                $script:credentialAuthTimeoutBound = $PSBoundParameters.ContainsKey('TimeoutSeconds')
+                [pscustomobject]@{
+                    EstsAuthCookieValue = 'ests-cookie'
+                    WebSession          = $script:credentialAuthSession
+                }
             }
 
             Mock Connect-M365AuthArtifactSet {
+                param(
+                    $EstsAuthCookieValue,
+                    $EstsWebSession,
+                    $PortalWebSession,
+                    $TenantId,
+                    $UserAgent,
+                    $ConnectionPreference,
+                    $AuthFlow,
+                    [switch]$FallbackToPortalOnEstsBootstrapFailure,
+                    [switch]$SkipValidation,
+                    $FailureLabel
+                )
+
+                $script:credentialArtifactParams = $PSBoundParameters
                 [pscustomobject]@{
                     Connected = $true
                 }
@@ -439,6 +545,68 @@ $Config = {"pgid":"ConvergedSignIn","arrSessions":[{"id":"session-123"}],"urlLog
             Assert-MockCalled Invoke-M365CredentialAuthentication -Times 1 -ParameterFilter {
                 -not $PSBoundParameters.ContainsKey('MfaMethod')
             }
+            $script:credentialArtifactParams.EstsAuthCookieValue | Should -Be 'ests-cookie'
+            $script:credentialArtifactParams.EstsWebSession | Should -Be $script:credentialAuthSession
+        }
+
+        It 'forwards credential timeout when specified' {
+            $credential = [pscredential]::new(
+                'admin@contoso.com',
+                (ConvertTo-SecureString 'Password123!' -AsPlainText -Force)
+            )
+
+            $result = Connect-M365Portal -Credential $credential -TimeoutSeconds 420 -SkipValidation
+
+            $result.Connected | Should -BeTrue
+            $script:credentialAuthTimeoutBound | Should -BeTrue
+
+            Assert-MockCalled Invoke-M365CredentialAuthentication -Times 1 -ParameterFilter {
+                $TimeoutSeconds -eq 420
+            }
+        }
+    }
+
+    Describe 'Connect-M365Portal SSO forwarding' {
+        BeforeEach {
+            $script:lastSsoAuthParams = $null
+
+            Mock Invoke-M365SsoAuthentication {
+                param(
+                    $TenantId,
+                    [switch]$Visible,
+                    $TimeoutSeconds,
+                    $BrowserPath,
+                    $ProfilePath,
+                    [switch]$ResetProfile,
+                    [switch]$PrivateSession,
+                    $UserAgent
+                )
+
+                $script:lastSsoAuthParams = $PSBoundParameters
+                [pscustomobject]@{
+                    EstsAuthCookieValue = 'ests-cookie'
+                    PortalWebSession    = [Microsoft.PowerShell.Commands.WebRequestSession]::new()
+                }
+            }
+
+            Mock Connect-M365AuthArtifactSet {
+                [pscustomobject]@{
+                    Connected = $true
+                }
+            }
+        }
+
+        It 'forwards SSO profile reset and private session options' {
+            $result = Connect-M365Portal -SSO -TenantId '8612f621-73ca-4c12-973c-0da732bc44c2' -TimeoutSeconds 120 -BrowserPath 'msedge.exe' -ProfilePath 'C:\Temp\M365SsoProfile' -ResetProfile -PrivateSession -Visible -SkipValidation
+
+            $result.Connected | Should -BeTrue
+            $script:lastSsoAuthParams.TenantId | Should -Be '8612f621-73ca-4c12-973c-0da732bc44c2'
+            $script:lastSsoAuthParams.TimeoutSeconds | Should -Be 120
+            $script:lastSsoAuthParams.BrowserPath | Should -Be 'msedge.exe'
+            $script:lastSsoAuthParams.ProfilePath | Should -Be 'C:\Temp\M365SsoProfile'
+            $script:lastSsoAuthParams.ResetProfile | Should -BeTrue
+            $script:lastSsoAuthParams.PrivateSession | Should -BeTrue
+            $script:lastSsoAuthParams.Visible | Should -BeTrue
         }
     }
 

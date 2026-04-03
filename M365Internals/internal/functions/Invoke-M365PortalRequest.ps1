@@ -29,6 +29,14 @@
     .PARAMETER WebSession
         The web session to use. When omitted, the current portal connection session is used.
 
+    .PARAMETER SkipConnectionRefresh
+        Skips the normal refresh of the stored portal connection before the request is sent.
+        This is used by internal validation probes to avoid recursive refresh loops.
+
+    .PARAMETER SkipAutoHeal
+        Skips the retry path that replays the portal bootstrap after authentication drift or
+        unexpected HTML shell responses. This is used by internal validation probes.
+
     .PARAMETER RawResponse
         Returns the full web response object instead of parsed content.
 
@@ -56,12 +64,131 @@
 
         [Microsoft.PowerShell.Commands.WebRequestSession]$WebSession,
 
+        [switch]$SkipConnectionRefresh,
+
+        [switch]$SkipAutoHeal,
+
         [switch]$RawResponse
     )
 
     $resolvedSession = if ($WebSession) { $WebSession } else { $script:m365PortalSession }
     if (-not $resolvedSession) {
         throw 'No Microsoft 365 admin portal session is available. Run Connect-M365Portal first or provide -WebSession.'
+    }
+
+    $usingStoredSession = ($resolvedSession -eq $script:m365PortalSession)
+
+    function Get-ResolvedPortalHeaders {
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseSingularNouns', '', Justification = 'Private helper returns a merged header map for the current request.')]
+        param()
+
+        $currentHeaders = @{}
+        if ($script:m365PortalHeaders) {
+            foreach ($headerEntry in @($script:m365PortalHeaders.GetEnumerator())) {
+                $currentHeaders[$headerEntry.Key] = $headerEntry.Value
+            }
+        }
+        if ($Headers) {
+            foreach ($headerEntry in @($Headers.GetEnumerator())) {
+                $currentHeaders[$headerEntry.Key] = $headerEntry.Value
+            }
+        }
+
+        return $currentHeaders
+    }
+
+    function Get-PortalRequestStatusCode {
+        param(
+            $ErrorRecord
+        )
+
+        if ($null -eq $ErrorRecord -or -not $ErrorRecord.Exception -or -not $ErrorRecord.Exception.Response) {
+            return $null
+        }
+
+        try {
+            return [int]$ErrorRecord.Exception.Response.StatusCode
+        }
+        catch {
+            return $null
+        }
+    }
+
+    function Test-IsRetryablePortalRequestError {
+        param(
+            $ErrorRecord
+        )
+
+        $statusCode = Get-PortalRequestStatusCode -ErrorRecord $ErrorRecord
+        if ($statusCode -in @(401, 403)) {
+            return $true
+        }
+
+        $exceptionMessage = if ($ErrorRecord -and $ErrorRecord.Exception) {
+            [string]$ErrorRecord.Exception.Message
+        }
+        else {
+            ''
+        }
+
+        return ($exceptionMessage -match 'AjaxSessionKey|Unauthorized|Forbidden|authentication|authorization')
+    }
+
+    function Invoke-PortalRequestSelfHeal {
+        if (-not $usingStoredSession -or $SkipAutoHeal) {
+            return $false
+        }
+
+        $bootstrapReplaySucceeded = $false
+        try {
+            $null = Invoke-M365PortalPostLandingBootstrap -WebSession $resolvedSession -UserAgent $resolvedSession.UserAgent
+            $bootstrapReplaySucceeded = $true
+        }
+        catch {
+            Write-Verbose "The portal self-heal bootstrap replay did not complete successfully: $($_.Exception.Message)"
+        }
+
+        try {
+            $null = Update-M365PortalConnectionSettings
+            return $bootstrapReplaySucceeded
+        }
+        catch {
+            Write-Verbose "Refreshing the stored portal connection after the self-heal attempt failed: $($_.Exception.Message)"
+            return $false
+        }
+    }
+
+    if ($usingStoredSession -and -not $SkipConnectionRefresh) {
+        $null = Update-M365PortalConnectionSettings
+
+        if (-not $SkipAutoHeal -and (Test-M365PortalConnectionNeedsRefresh -Connection $script:m365PortalConnection -Headers $script:m365PortalHeaders)) {
+            $lastRefreshAttemptAt = if ($resolvedSession.PSObject.Properties['M365LastTokenRefreshAttemptAt']) {
+                $resolvedSession.M365LastTokenRefreshAttemptAt
+            }
+            else {
+                $null
+            }
+            $currentTokenFreshUntilUtc = if ($script:m365PortalConnection -and $script:m365PortalConnection.PSObject.Properties['TokenFreshUntilUtc']) {
+                $script:m365PortalConnection.TokenFreshUntilUtc
+            }
+            else {
+                $null
+            }
+
+            if (-not $lastRefreshAttemptAt -or $lastRefreshAttemptAt -lt (Get-Date).AddMinutes(-5)) {
+                $resolvedSession | Add-Member -NotePropertyName M365LastTokenRefreshAttemptAt -NotePropertyValue (Get-Date) -Force
+                Write-Verbose 'The observed portal freshness metadata indicates the session may be stale. Replaying the portal bootstrap before issuing the request.'
+                if (Invoke-PortalRequestSelfHeal) {
+                    if ($currentTokenFreshUntilUtc) {
+                        $resolvedSession | Add-Member -NotePropertyName M365TokenRefreshSatisfiedUntilUtc -NotePropertyValue $currentTokenFreshUntilUtc -Force
+                        if ($script:m365PortalConnection) {
+                            $script:m365PortalConnection | Add-Member -NotePropertyName TokenRefreshSatisfiedUntilUtc -NotePropertyValue $currentTokenFreshUntilUtc -Force
+                            $null = Set-M365PortalConnectionFreshness -Connection $script:m365PortalConnection
+                        }
+                    }
+                }
+            }
+        }
     }
 
     $requestUri = if ($PSCmdlet.ParameterSetName -eq 'Uri') {
@@ -74,46 +201,50 @@
         'https://admin.cloud.microsoft/{0}' -f $Path
     }
 
-    $resolvedHeaders = @{}
-    if ($script:m365PortalHeaders) {
-        foreach ($headerEntry in @($script:m365PortalHeaders.GetEnumerator())) {
-            $resolvedHeaders[$headerEntry.Key] = $headerEntry.Value
+    $maxAttempts = if ($usingStoredSession -and -not $SkipAutoHeal) { 2 } else { 1 }
+    $response = $null
+    for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
+        $invokeParams = @{
+            Uri         = $requestUri
+            Method      = $Method
+            WebSession  = $resolvedSession
+            Headers     = (Get-ResolvedPortalHeaders)
+            ErrorAction = 'Stop'
         }
-    }
-    if ($Headers) {
-        foreach ($headerEntry in @($Headers.GetEnumerator())) {
-            $resolvedHeaders[$headerEntry.Key] = $headerEntry.Value
-        }
-    }
 
-    $invokeParams = @{
-        Uri        = $requestUri
-        Method     = $Method
-        WebSession = $resolvedSession
-        Headers    = $resolvedHeaders
-        ErrorAction = 'Stop'
-    }
+        if ($PSBoundParameters.ContainsKey('Body')) {
+            if ($PSBoundParameters.ContainsKey('ContentType')) {
+                $invokeParams.ContentType = $ContentType
+                $invokeParams.Body = $Body
+            }
+            elseif ($Body -is [string]) {
+                $invokeParams.ContentType = 'application/json'
+                $invokeParams.Body = $Body
+            }
+            else {
+                $invokeParams.ContentType = 'application/json'
+                $invokeParams.Body = $Body | ConvertTo-Json -Depth 10
+            }
+        }
 
-    if ($PSBoundParameters.ContainsKey('Body')) {
-        if ($PSBoundParameters.ContainsKey('ContentType')) {
-            $invokeParams.ContentType = $ContentType
-            $invokeParams.Body = $Body
+        try {
+            $response = Invoke-WebRequest @invokeParams
         }
-        elseif ($Body -is [string]) {
-            $invokeParams.ContentType = 'application/json'
-            $invokeParams.Body = $Body
-        }
-        else {
-            $invokeParams.ContentType = 'application/json'
-            $invokeParams.Body = $Body | ConvertTo-Json -Depth 10
-        }
-    }
+        catch {
+            if ($attempt -lt $maxAttempts -and (Test-IsRetryablePortalRequestError -ErrorRecord $_) -and (Invoke-PortalRequestSelfHeal)) {
+                Write-Verbose "The portal request returned an authentication-related failure. Retrying once after refreshing the portal session state."
+                continue
+            }
 
-    try {
-        $response = Invoke-WebRequest @invokeParams
-    }
-    catch {
-        throw "Portal request failed for $Method $requestUri. $($_.Exception.Message)"
+            throw "Portal request failed for $Method $requestUri. $($_.Exception.Message)"
+        }
+
+        if ($attempt -lt $maxAttempts -and (Test-M365PortalUnexpectedHtmlShell -Content $response.Content) -and (Invoke-PortalRequestSelfHeal)) {
+            Write-Verbose 'The portal request returned the admin HTML shell instead of the expected payload. Retrying once after refreshing the portal session state.'
+            continue
+        }
+
+        break
     }
 
     if ($RawResponse) {

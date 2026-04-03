@@ -51,6 +51,7 @@ Describe 'Connect-M365Portal public wrappers' {
                     $TotpSecret,
                     $MfaMethod,
                     $TenantId,
+                    $TimeoutSeconds,
                     $UserAgent,
                     [switch]$SkipValidation
                 )
@@ -69,7 +70,7 @@ Describe 'Connect-M365Portal public wrappers' {
         It 'forwards PSCredential and MFA options to Connect-M365Portal' {
             $credential = [pscredential]::new('user@contoso.com', (New-TestSecureString -Value 'Password123!'))
 
-            $result = Connect-M365PortalByCredential -Credential $credential -TotpSecret 'JBSWY3DPEHPK3PXP' -MfaMethod 'PhoneAppOTP' -TenantId '8612f621-73ca-4c12-973c-0da732bc44c2' -UserAgent 'Custom-Agent/1.0' -SkipValidation
+            $result = Connect-M365PortalByCredential -Credential $credential -TotpSecret 'JBSWY3DPEHPK3PXP' -MfaMethod 'PhoneAppOTP' -TenantId '8612f621-73ca-4c12-973c-0da732bc44c2' -TimeoutSeconds 420 -UserAgent 'Custom-Agent/1.0' -SkipValidation
 
             $result.Connected | Should -BeTrue
             Should -Invoke Connect-M365Portal -ModuleName M365Internals -Times 1 -Exactly
@@ -77,6 +78,7 @@ Describe 'Connect-M365Portal public wrappers' {
             $script:lastCredentialConnectParams.TotpSecret | Should -Be 'JBSWY3DPEHPK3PXP'
             $script:lastCredentialConnectParams.MfaMethod | Should -Be 'PhoneAppOTP'
             $script:lastCredentialConnectParams.TenantId | Should -Be '8612f621-73ca-4c12-973c-0da732bc44c2'
+            $script:lastCredentialConnectParams.TimeoutSeconds | Should -Be 420
             $script:lastCredentialConnectParams.UserAgent | Should -Be 'Custom-Agent/1.0'
             $script:lastCredentialConnectParams.SkipValidation | Should -BeTrue
         }
@@ -197,7 +199,7 @@ Describe 'Connect-M365Portal public wrappers' {
         }
 
         It 'forwards SSO browser options to Connect-M365Portal' {
-            $result = Connect-M365PortalBySSO -TenantId '8612f621-73ca-4c12-973c-0da732bc44c2' -Visible -TimeoutSeconds 120 -BrowserPath 'msedge.exe' -ProfilePath 'C:\Temp\M365SsoProfile' -UserAgent 'Custom-Agent/1.0' -SkipValidation
+            $result = Connect-M365PortalBySSO -TenantId '8612f621-73ca-4c12-973c-0da732bc44c2' -Visible -TimeoutSeconds 120 -BrowserPath 'msedge.exe' -ProfilePath 'C:\Temp\M365SsoProfile' -ResetProfile -PrivateSession -UserAgent 'Custom-Agent/1.0' -SkipValidation
 
             $result.Connected | Should -BeTrue
             Should -Invoke Connect-M365Portal -ModuleName M365Internals -Times 1 -Exactly -ParameterFilter {
@@ -207,6 +209,8 @@ Describe 'Connect-M365Portal public wrappers' {
                 $TimeoutSeconds -eq 120 -and
                 $BrowserPath -eq 'msedge.exe' -and
                 $ProfilePath -eq 'C:\Temp\M365SsoProfile' -and
+                $ResetProfile -and
+                $PrivateSession -and
                 $UserAgent -eq 'Custom-Agent/1.0' -and
                 $SkipValidation
             }
@@ -243,6 +247,7 @@ InModuleScope M365Internals {
     Describe 'Connect-M365AuthArtifactSet' {
         BeforeEach {
             $script:portalWebSession = [Microsoft.PowerShell.Commands.WebRequestSession]::new()
+            $script:estsArtifactSession = [Microsoft.PowerShell.Commands.WebRequestSession]::new()
             $script:estsResolvedSession = [Microsoft.PowerShell.Commands.WebRequestSession]::new()
 
             Mock Invoke-WebRequest {
@@ -250,6 +255,8 @@ InModuleScope M365Internals {
                     StatusCode = 200
                 }
             }
+
+            Mock Get-M365BestEstsCookieValue { 'ests-cookie-value' }
 
             Mock Complete-M365AdminPortalSignIn {
                 $script:estsResolvedSession
@@ -349,6 +356,32 @@ InModuleScope M365Internals {
             Assert-MockCalled Set-M365PortalConnectionSettings -Times 1 -ParameterFilter {
                 $WebSession -eq $script:estsResolvedSession -and $AuthSource -eq 'ESTSAUTHPERSISTENT' -and $AuthFlow -eq 'EstsCookie'
             }
+        }
+
+        It 'prefers session-based ESTS bootstrap before falling back to a cookie-only replay' {
+            $result = Connect-M365AuthArtifactSet -EstsWebSession $script:estsArtifactSession -EstsAuthCookieValue 'ests-cookie-value' -UserAgent 'Custom-Agent/1.0' -AuthFlow 'Credential' -FailureLabel 'Credential authentication'
+
+            $result.ConnectedBy | Should -Be 'Ests'
+            Assert-MockCalled Complete-M365AdminPortalSignIn -Times 1 -ParameterFilter {
+                $WebSession -eq $script:estsArtifactSession -and $UserAgent -eq 'Custom-Agent/1.0'
+            }
+            Assert-MockCalled Invoke-WebRequest -Times 0
+        }
+
+        It 'falls back to cookie-only ESTS bootstrap when the session-based replay fails' {
+            Mock Complete-M365AdminPortalSignIn {
+                if ($WebSession -eq $script:estsArtifactSession) {
+                    throw 'Session bootstrap failed.'
+                }
+
+                $script:estsResolvedSession
+            }
+
+            $result = Connect-M365AuthArtifactSet -EstsWebSession $script:estsArtifactSession -EstsAuthCookieValue 'ests-cookie-value' -UserAgent 'Custom-Agent/1.0' -AuthFlow 'Credential' -FailureLabel 'Credential authentication'
+
+            $result.ConnectedBy | Should -Be 'Ests'
+            Assert-MockCalled Complete-M365AdminPortalSignIn -Times 2
+            Assert-MockCalled Invoke-WebRequest -Times 1
         }
 
         It 'throws when no supported authentication artifacts are provided' {

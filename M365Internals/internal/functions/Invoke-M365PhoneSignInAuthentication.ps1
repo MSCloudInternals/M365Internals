@@ -725,13 +725,13 @@ function Invoke-M365PhoneSignInAuthentication {
         User-Agent string used for the underlying Entra ID web requests.
 
     .OUTPUTS
-        String - the ESTS authentication cookie value suitable for passing to Connect-M365Portal.
+        PSCustomObject - contains the ESTS authentication cookie value and the authenticated web session.
 
     .EXAMPLE
         $cookie = Invoke-M365PhoneSignInAuthentication -Username 'admin@contoso.com'
 
         Starts phone sign-in, waits for Microsoft Authenticator approval, and returns the
-        captured ESTS authentication cookie.
+        captured ESTS authentication artifacts.
     #>
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingWriteHost', '')]
     [CmdletBinding()]
@@ -743,6 +743,19 @@ function Invoke-M365PhoneSignInAuthentication {
 
         [string]$UserAgent = (Get-M365DefaultUserAgent)
     )
+
+    function New-PhoneSignInAuthenticationResult {
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '', Justification = 'Private helper that shapes an in-memory authentication result only.')]
+        param(
+            [Parameter(Mandatory)]
+            [Microsoft.PowerShell.Commands.WebRequestSession]$Session,
+
+            [Parameter(Mandatory)]
+            [string]$CookieValue
+        )
+
+        New-M365EstsAuthenticationResult -WebSession $Session -EstsAuthCookieValue $CookieValue
+    }
 
     if (-not $Username) {
         throw 'No username provided.'
@@ -765,7 +778,7 @@ function Invoke-M365PhoneSignInAuthentication {
         $sasOutcome = Invoke-M365PhoneSignInSasAuthentication -Username $Username -AuthState $authState -Session $session -Deadline $deadline
         $currentCookie = Get-M365BestEstsCookieValue -Session $session
         if ($currentCookie) {
-            return $currentCookie
+            return New-PhoneSignInAuthenticationResult -Session $session -CookieValue $currentCookie
         }
 
         if ($sasOutcome.Outcome.AuthState -and $sasOutcome.Outcome.AuthState.sErrorCode) {
@@ -817,7 +830,7 @@ function Invoke-M365PhoneSignInAuthentication {
 
         $currentCookie = Get-M365BestEstsCookieValue -Session $session
         if ($currentCookie) {
-            return $currentCookie
+            return New-PhoneSignInAuthenticationResult -Session $session -CookieValue $currentCookie
         }
 
         if ($submitResult.AuthState -and $submitResult.AuthState.sErrorCode) {
@@ -837,7 +850,7 @@ function Invoke-M365PhoneSignInAuthentication {
         $sasOutcome = Invoke-M365PhoneSignInSasAuthentication -Username $Username -AuthState $fidoBootstrap.AuthState -Session $session -Deadline $deadline -BootstrapNumberCode $numberCode
         $currentCookie = Get-M365BestEstsCookieValue -Session $session
         if ($currentCookie) {
-            return $currentCookie
+            return New-PhoneSignInAuthenticationResult -Session $session -CookieValue $currentCookie
         }
 
         if ($sasOutcome.Outcome.AuthState -and $sasOutcome.Outcome.AuthState.sErrorCode) {
@@ -863,7 +876,7 @@ function Invoke-M365PhoneSignInAuthentication {
         $sasOutcome = Invoke-M365PhoneSignInSasAuthentication -Username $Username -AuthState $currentAuthState -Session $session -Deadline $deadline -BootstrapNumberCode $numberCode
         $currentCookie = Get-M365BestEstsCookieValue -Session $session
         if ($currentCookie) {
-            return $currentCookie
+            return New-PhoneSignInAuthenticationResult -Session $session -CookieValue $currentCookie
         }
 
         if ($sasOutcome.Outcome.AuthState -and $sasOutcome.Outcome.AuthState.sErrorCode) {
