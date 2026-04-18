@@ -28,11 +28,23 @@ Describe 'Portal surface registry' {
         $plan = New-PortalSurfaceBrowserCapturePlan -RepositoryRoot $repoRoot -PlanIds 'settings-browser' -TenantId $tenantId -DefaultHeaders @{ AjaxSessionKey = 'ajax-key' } -ExpansionValues @{
             AzureSubscriptionIds = @($subscriptionId)
         }
+        $officeOnline = $plan.Requests.AppSettings | Where-Object Name -eq 'OfficeOnline'
+        $brandCenter = $plan.Requests.BrandCenter | Where-Object Name -eq 'Configuration'
+        $backupBillingFeature = $plan.Requests.Microsoft365Backup | Where-Object Name -eq 'BillingFeature'
+        $backupGraph = $plan.Requests.Microsoft365Backup | Where-Object Name -eq 'EnhancedRestoreStatus'
 
         $plan.TenantId | Should -Be $tenantId
         $plan.DefaultHeaders.AjaxSessionKey | Should -Be 'ajax-key'
         ($plan.Requests.Microsoft365Backup | Where-Object Name -eq "AzureSubscriptionPermissions:$subscriptionId").Path | Should -Be "/admin/api/syntexbilling/azureSubscriptions/$subscriptionId/permissions"
         ($plan.Requests.Search | Where-Object Name -eq 'Qnas').Headers.'x-adminapp-request' | Should -Be '/MicrosoftSearch'
+        $officeOnline.Headers.'x-adminapp-request' | Should -Be '/Settings/Services/:/Settings/L1/OfficeOnline'
+        $officeOnline.Headers.'x-ms-mac-appid' | Should -Be '3fda709f-4f6c-4ba7-8da3-b3d031a4d675'
+        $brandCenter.Headers.'x-ms-mac-target-app' | Should -Be 'SPO'
+        $brandCenter.Headers.'x-ms-mac-appid' | Should -Be '9f8918eb-b2b7-4b90-b5bd-86b38f6d4d23'
+        $backupBillingFeature.Headers.'x-adminapp-request' | Should -Be '/Settings/enhancedRestore'
+        $backupBillingFeature.Headers.'x-ms-mac-appid' | Should -Be '08a68b73-8058-4c59-8bd5-7b6833e2af21'
+        $backupGraph.Headers.'x-ms-mac-target-app' | Should -Be 'Graph'
+        $backupGraph.Headers.'x-ms-mac-version' | Should -Be 'host-mac_2026.4.2.8'
     }
 
     It 'generates an agent and copilot browser plan with resolved Purview headers' {

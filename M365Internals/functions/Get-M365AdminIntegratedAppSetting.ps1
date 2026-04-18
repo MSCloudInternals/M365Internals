@@ -46,16 +46,24 @@
     process {
         switch ($Name) {
             'All' {
-                $result = [pscustomobject]@{
-                    Settings                  = Get-M365AdminPortalData -Path '/fd/addins/api/v2/settings?keys=IsTenantEligibleForEntireOrgEmail,AreFirstPartyAppsAllowed,AreThirdPartyAppsAllowed,AreLOBAppsAllowed,AreMicrosoftCertified3PAppsAllowed,MetaOSCopilotExtensibilitySettings' -CacheKey 'M365AdminIntegratedAppSetting:Settings' -Force:$Force
-                    AppCatalog                = Get-M365AdminPortalData -Path '/fd/addins/api/apps?workloads=AzureActiveDirectory,WXPO,MetaOS,SharePoint' -CacheKey 'M365AdminIntegratedAppSetting:AppCatalog' -Force:$Force
-                    AvailableApps             = Get-M365AdminPortalData -Path '/fd/addins/api/availableApps?workloads=MetaOS' -CacheKey 'M365AdminIntegratedAppSetting:AvailableApps' -Force:$Force
-                    ActionableApps            = Get-M365AdminPortalData -Path '/fd/addins/api/actionableApps?workloads=MetaOS' -CacheKey 'M365AdminIntegratedAppSetting:ActionableApps' -Force:$Force
+                $rawResult = [ordered]@{
+                    Settings = Get-M365AdminPortalData -Path '/fd/addins/api/v2/settings?keys=IsTenantEligibleForEntireOrgEmail,AreFirstPartyAppsAllowed,AreThirdPartyAppsAllowed,AreLOBAppsAllowed,AreMicrosoftCertified3PAppsAllowed,MetaOSCopilotExtensibilitySettings' -CacheKey 'M365AdminIntegratedAppSetting:Settings' -Force:$Force
+                    AppCatalog = Get-M365AdminPortalData -Path '/fd/addins/api/apps?workloads=AzureActiveDirectory,WXPO,MetaOS,SharePoint' -CacheKey 'M365AdminIntegratedAppSetting:AppCatalog' -Force:$Force
+                    AvailableApps = Get-M365AdminPortalData -Path '/fd/addins/api/availableApps?workloads=MetaOS' -CacheKey 'M365AdminIntegratedAppSetting:AvailableApps' -Force:$Force
+                    ActionableApps = Get-M365AdminPortalData -Path '/fd/addins/api/actionableApps?workloads=MetaOS' -CacheKey 'M365AdminIntegratedAppSetting:ActionableApps' -Force:$Force
                     PopularAppRecommendations = Get-M365AdminPortalData -Path '/fd/addins/api/recommendations/appRecommendations?appRecommendationType=PopularApps' -CacheKey 'M365AdminIntegratedAppSetting:PopularAppRecommendations' -Force:$Force
                 }
 
-                $result = Add-M365TypeName -InputObject $result -TypeName 'M365Admin.IntegratedAppSetting'
-                return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
+                $items = [ordered]@{
+                    Settings = ConvertTo-M365AdminResult -InputObject $rawResult.Settings -TypeName 'M365Admin.IntegratedAppSetting.Settings' -Category 'Integrated apps' -ItemName 'Settings' -Endpoint '/fd/addins/api/v2/settings?keys=IsTenantEligibleForEntireOrgEmail,AreFirstPartyAppsAllowed,AreThirdPartyAppsAllowed,AreLOBAppsAllowed,AreMicrosoftCertified3PAppsAllowed,MetaOSCopilotExtensibilitySettings'
+                    AppCatalog = ConvertTo-M365AdminResult -InputObject $rawResult.AppCatalog -TypeName 'M365Admin.IntegratedAppSetting.AppCatalog' -Category 'Integrated apps' -ItemName 'AppCatalog' -Endpoint '/fd/addins/api/apps?workloads=AzureActiveDirectory,WXPO,MetaOS,SharePoint'
+                    AvailableApps = ConvertTo-M365AdminResult -InputObject $rawResult.AvailableApps -TypeName 'M365Admin.IntegratedAppSetting.AvailableApps' -Category 'Integrated apps' -ItemName 'AvailableApps' -Endpoint '/fd/addins/api/availableApps?workloads=MetaOS'
+                    ActionableApps = ConvertTo-M365AdminResult -InputObject $rawResult.ActionableApps -TypeName 'M365Admin.IntegratedAppSetting.ActionableApps' -Category 'Integrated apps' -ItemName 'ActionableApps' -Endpoint '/fd/addins/api/actionableApps?workloads=MetaOS'
+                    PopularAppRecommendations = ConvertTo-M365AdminResult -InputObject $rawResult.PopularAppRecommendations -TypeName 'M365Admin.IntegratedAppSetting.PopularAppRecommendations' -Category 'Integrated apps' -ItemName 'PopularAppRecommendations' -Endpoint '/fd/addins/api/recommendations/appRecommendations?appRecommendationType=PopularApps'
+                }
+
+                $result = New-M365AdminResultBundle -TypeName 'M365Admin.IntegratedAppSetting' -Category 'Integrated apps' -Items $items -RawData ([pscustomobject]$rawResult)
+                return Resolve-M365AdminOutput -DefaultValue $result -RawValue ([pscustomobject]$rawResult) -Raw:$Raw -RawJson:$RawJson
             }
             'Settings' {
                 $path = '/fd/addins/api/v2/settings?keys=IsTenantEligibleForEntireOrgEmail,AreFirstPartyAppsAllowed,AreThirdPartyAppsAllowed,AreLOBAppsAllowed,AreMicrosoftCertified3PAppsAllowed,MetaOSCopilotExtensibilitySettings'
@@ -74,7 +82,8 @@
             }
         }
 
-        $result = Get-M365AdminPortalData -Path $path -CacheKey "M365AdminIntegratedAppSetting:$Name" -Force:$Force
-        return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
+        $rawResult = Get-M365AdminPortalData -Path $path -CacheKey "M365AdminIntegratedAppSetting:$Name" -Force:$Force
+        $result = ConvertTo-M365AdminResult -InputObject $rawResult -TypeName ("M365Admin.IntegratedAppSetting.{0}" -f $Name) -Category 'Integrated apps' -ItemName $Name -Endpoint $path
+        return Resolve-M365AdminOutput -DefaultValue $result -RawValue $rawResult -Raw:$Raw -RawJson:$RawJson
     }
 }

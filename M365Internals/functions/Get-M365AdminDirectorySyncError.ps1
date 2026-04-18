@@ -45,14 +45,16 @@
         $currentCacheValue = Get-M365Cache -CacheKey $cacheKey -ErrorAction SilentlyContinue
         if (-not $Force -and $currentCacheValue -and $currentCacheValue.NotValidAfter -gt (Get-Date)) {
             Write-Verbose "Using cached $cacheKey data"
-            return Resolve-M365AdminOutput -DefaultValue $currentCacheValue.Value -Raw:$Raw -RawJson:$RawJson
+            $result = ConvertTo-M365AdminResult -InputObject $currentCacheValue.Value -TypeName 'M365Admin.DirectorySyncError' -Category 'Directory synchronization' -ItemName 'DirectorySyncErrors' -Endpoint '/admin/api/dirsyncerrors/listdirsyncerrors'
+            return Resolve-M365AdminOutput -DefaultValue $result -RawValue $currentCacheValue.Value -Raw:$Raw -RawJson:$RawJson
         }
         elseif ($Force) {
             Clear-M365Cache -CacheKey $cacheKey
         }
 
-        $result = Invoke-M365AdminRestMethod -Path '/admin/api/dirsyncerrors/listdirsyncerrors' -Method Post
-        Set-M365Cache -CacheKey $cacheKey -Value $result -TTLMinutes 15 | Out-Null
-        return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
+        $rawResult = Invoke-M365AdminRestMethod -Path '/admin/api/dirsyncerrors/listdirsyncerrors' -Method Post
+        Set-M365Cache -CacheKey $cacheKey -Value $rawResult -TTLMinutes 15 | Out-Null
+        $result = ConvertTo-M365AdminResult -InputObject $rawResult -TypeName 'M365Admin.DirectorySyncError' -Category 'Directory synchronization' -ItemName 'DirectorySyncErrors' -Endpoint '/admin/api/dirsyncerrors/listdirsyncerrors'
+        return Resolve-M365AdminOutput -DefaultValue $result -RawValue $rawResult -Raw:$Raw -RawJson:$RawJson
     }
 }

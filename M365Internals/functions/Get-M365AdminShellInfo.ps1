@@ -50,7 +50,8 @@
         $currentCacheValue = Get-M365Cache -CacheKey $cacheKey -ErrorAction SilentlyContinue
         if (-not $Force -and $currentCacheValue -and $currentCacheValue.NotValidAfter -gt (Get-Date)) {
             Write-Verbose 'Using cached M365 admin shell info'
-            return Resolve-M365AdminOutput -DefaultValue $currentCacheValue.Value -Raw:$Raw -RawJson:$RawJson
+            $result = ConvertTo-M365AdminResult -InputObject $currentCacheValue.Value -TypeName 'M365Admin.ShellInfo' -Category 'Platform metadata' -ItemName 'ShellInfo' -Endpoint '/admin/api/coordinatedbootstrap/shellinfo'
+            return Resolve-M365AdminOutput -DefaultValue $result -RawValue $currentCacheValue.Value -Raw:$Raw -RawJson:$RawJson
         }
         elseif ($Force) {
             Write-Verbose 'Force parameter specified, bypassing cache'
@@ -58,9 +59,10 @@
         }
 
         try {
-            $result = Invoke-M365PortalRequest -Path '/admin/api/coordinatedbootstrap/shellinfo' -Headers (Get-M365PortalContextHeaders -Context Homepage)
-            Set-M365Cache -CacheKey $cacheKey -Value $result -TTLMinutes 15 | Out-Null
-            return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
+            $rawResult = Invoke-M365PortalRequest -Path '/admin/api/coordinatedbootstrap/shellinfo' -Headers (Get-M365PortalContextHeaders -Context Homepage)
+            Set-M365Cache -CacheKey $cacheKey -Value $rawResult -TTLMinutes 15 | Out-Null
+            $result = ConvertTo-M365AdminResult -InputObject $rawResult -TypeName 'M365Admin.ShellInfo' -Category 'Platform metadata' -ItemName 'ShellInfo' -Endpoint '/admin/api/coordinatedbootstrap/shellinfo'
+            return Resolve-M365AdminOutput -DefaultValue $result -RawValue $rawResult -Raw:$Raw -RawJson:$RawJson
         }
         catch {
             throw "Failed to retrieve M365 admin shell info: $($_.Exception.Message)"

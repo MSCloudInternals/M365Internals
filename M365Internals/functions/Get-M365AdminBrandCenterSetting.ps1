@@ -45,28 +45,66 @@
     )
 
     process {
-        switch ($Name) {
-            'All' {
-                $configuration = Get-M365AdminPortalData -Path '/_api/spo.tenant/GetBrandCenterConfiguration' -CacheKey 'M365AdminBrandCenterSetting:Configuration' -Force:$Force
-                $siteUrl = Get-M365AdminPortalData -Path "/_api/GroupSiteManager/GetValidSiteUrlFromAlias?alias='BrandGuide'&managedPath='sites'" -CacheKey 'M365AdminBrandCenterSetting:SiteUrl' -Force:$Force
+        $forceRequested = $Force
 
-                $result = [pscustomobject]@{
-                    Configuration = $configuration
-                    SiteUrl        = $siteUrl
+        function Get-BrandCenterHeader {
+            $headers = Get-M365PortalContextHeaders -Context BrandCenter
+
+            try {
+                $sharePointToken = Get-M365AdminAccessToken -TokenType SharePoint -AdminAppRequest '/brandcenter'
+                if ($sharePointToken -and -not [string]::IsNullOrWhiteSpace([string]$sharePointToken.Token)) {
+                    $headers['Authorization'] = 'Bearer {0}' -f $sharePointToken.Token
                 }
+            }
+            catch {
+                Write-Verbose "Unable to acquire a SharePoint bearer token for Brand center. Falling back to cookie-only headers. $($_.Exception.Message)"
+            }
 
-                $result = Add-M365TypeName -InputObject $result -TypeName 'M365Admin.BrandCenterSetting'
-                return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
+            return $headers
+        }
+
+        $brandCenterHeaders = Get-BrandCenterHeader
+
+        function Get-BrandCenterView {
+            param (
+                [Parameter(Mandatory)]
+                [ValidateSet('Configuration', 'SiteUrl')]
+                [string]$ViewName
+            )
+
+            $path = switch ($ViewName) {
+                'Configuration' { '/_api/spo.tenant/GetBrandCenterConfiguration' }
+                'SiteUrl' { "/_api/GroupSiteManager/GetValidSiteUrlFromAlias?alias='BrandGuide'&managedPath='sites'" }
             }
-            'Configuration' {
-                $path = '/_api/spo.tenant/GetBrandCenterConfiguration'
-            }
-            'SiteUrl' {
-                $path = "/_api/GroupSiteManager/GetValidSiteUrlFromAlias?alias='BrandGuide'&managedPath='sites'"
+
+            $rawResult = Get-M365AdminPortalData -Path $path -CacheKey "M365AdminBrandCenterSetting:$ViewName" -Headers $brandCenterHeaders -Force:$forceRequested
+            $defaultResult = ConvertTo-M365AdminResult -InputObject $rawResult -TypeName ("M365Admin.BrandCenterSetting.{0}" -f $ViewName) -Category 'Brand center settings' -ItemName $ViewName -Endpoint $path
+
+            return [pscustomobject]@{
+                Name = $ViewName
+                Path = $path
+                Raw = $rawResult
+                Default = $defaultResult
             }
         }
 
-        $result = Get-M365AdminPortalData -Path $path -CacheKey "M365AdminBrandCenterSetting:$Name" -Force:$Force
-        return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
+        switch ($Name) {
+            'All' {
+                $rawResults = [ordered]@{}
+                $defaultResults = [ordered]@{}
+
+                foreach ($viewName in @('Configuration', 'SiteUrl')) {
+                    $view = Get-BrandCenterView -ViewName $viewName
+                    $rawResults[$viewName] = $view.Raw
+                    $defaultResults[$viewName] = $view.Default
+                }
+
+                $result = New-M365AdminResultBundle -TypeName 'M365Admin.BrandCenterSetting' -Category 'Brand center settings' -Items $defaultResults -RawData ([pscustomobject]$rawResults)
+                return Resolve-M365AdminOutput -DefaultValue $result -RawValue ([pscustomobject]$rawResults) -Raw:$Raw -RawJson:$RawJson
+            }
+        }
+
+        $view = Get-BrandCenterView -ViewName $Name
+        return Resolve-M365AdminOutput -DefaultValue $view.Default -RawValue $view.Raw -Raw:$Raw -RawJson:$RawJson
     }
 }

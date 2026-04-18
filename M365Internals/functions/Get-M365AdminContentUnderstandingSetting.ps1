@@ -57,7 +57,8 @@
             'TaxonomyTagging' { '/admin/api/contentunderstanding/taxonomytaggingsetting' }
         }
 
-        $result = Get-M365AdminPortalData -Path $path -CacheKey "M365AdminContentUnderstandingSetting:$Name" -Force:$Force
-        return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
+        $rawResult = Get-M365AdminPortalData -Path $path -CacheKey "M365AdminContentUnderstandingSetting:$Name" -Force:$Force
+        $result = ConvertTo-M365AdminResult -InputObject $rawResult -TypeName ("M365Admin.ContentUnderstandingSetting.{0}" -f $Name) -Category 'Content understanding' -ItemName $Name -Endpoint $path
+        return Resolve-M365AdminOutput -DefaultValue $result -RawValue $rawResult -Raw:$Raw -RawJson:$RawJson
     }
 }

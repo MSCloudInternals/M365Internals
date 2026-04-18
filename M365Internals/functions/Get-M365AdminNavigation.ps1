@@ -57,7 +57,9 @@
             '/admin/api/navigation'
         }
 
-        $result = Get-M365AdminPortalData -Path $path -CacheKey $cacheKey -Force:$Force
-        return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
+        $itemName = if ($Async) { 'Async' } else { 'Primary' }
+        $rawResult = Get-M365AdminPortalData -Path $path -CacheKey $cacheKey -Force:$Force
+        $result = ConvertTo-M365AdminResult -InputObject $rawResult -TypeName ("M365Admin.Navigation.{0}" -f $itemName) -Category 'Navigation' -ItemName $itemName -Endpoint $path
+        return Resolve-M365AdminOutput -DefaultValue $result -RawValue $rawResult -Raw:$Raw -RawJson:$RawJson
     }
 }

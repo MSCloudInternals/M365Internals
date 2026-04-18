@@ -230,18 +230,15 @@ function Get-ReadmeCmdletGroups {
         [object[]]$Cmdlets
     )
 
-    $preferredGroupOrder = @('Connect', 'Get', 'Set', 'Invoke')
+    $groupDefinitions = @(Get-M365AdminCommandCatalogGroupDefinitions | Sort-Object Order)
     $groupMap = @{}
 
-    foreach ($cmdlet in $Cmdlets | Sort-Object Name) {
-        $verb = ($cmdlet.Name -split '-', 2)[0]
-        $groupName = if ($verb -in $preferredGroupOrder) {
-            $verb
-        }
-        else {
-            'Other'
-        }
+    foreach ($groupDefinition in $groupDefinitions) {
+        $groupMap[$groupDefinition.Name] = [System.Collections.Generic.List[object]]::new()
+    }
 
+    foreach ($cmdlet in $Cmdlets | Sort-Object Name) {
+        $groupName = Get-M365AdminCommandCatalogGroupName -CmdletName $cmdlet.Name
         if (-not $groupMap.ContainsKey($groupName)) {
             $groupMap[$groupName] = [System.Collections.Generic.List[object]]::new()
         }
@@ -250,22 +247,16 @@ function Get-ReadmeCmdletGroups {
     }
 
     $orderedGroups = [System.Collections.Generic.List[object]]::new()
-    foreach ($groupName in $preferredGroupOrder + 'Other') {
-        if (-not $groupMap.ContainsKey($groupName)) {
+    foreach ($groupDefinition in $groupDefinitions) {
+        if (-not $groupMap.ContainsKey($groupDefinition.Name) -or $groupMap[$groupDefinition.Name].Count -eq 0) {
             continue
         }
 
-        $title = if ($groupName -eq 'Other') {
-            'Other Cmdlets'
-        }
-        else {
-            "${groupName} Cmdlets"
-        }
-
         $orderedGroups.Add([pscustomobject]@{
-            Name    = $groupName
-            Title   = $title
-            Cmdlets = @($groupMap[$groupName])
+            Name = $groupDefinition.Name
+            Title = $groupDefinition.Title
+            Description = $groupDefinition.Description
+            Cmdlets = @($groupMap[$groupDefinition.Name] | Sort-Object Name)
         }) | Out-Null
     }
 
@@ -315,6 +306,10 @@ function Update-ReadmeCmdletTable {
     foreach ($group in Get-ReadmeCmdletGroups -Cmdlets $Cmdlets) {
         $sectionLines += "### $($group.Title)"
         $sectionLines += ''
+        if (-not [string]::IsNullOrWhiteSpace($group.Description)) {
+            $sectionLines += $group.Description
+            $sectionLines += ''
+        }
         $sectionLines += '| Cmdlet | Description |'
         $sectionLines += '| --- | --- |'
 

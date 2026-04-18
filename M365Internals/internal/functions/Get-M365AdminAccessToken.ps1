@@ -72,13 +72,12 @@
     }
 
     $uri = 'https://admin.cloud.microsoft/admin/api/users/getuseraccesstoken?{0}' -f ($queryParameters -join '&')
-    $headers = @{
-        Accept                 = 'application/json;odata=minimalmetadata, text/plain, */*'
-        'x-adminapp-request'   = $AdminAppRequest
-        'x-ms-mac-appid'       = 'f00c5fa5-eee4-4f57-88fa-c082d83b3c94'
-        'x-ms-mac-hostingapp'  = 'M365AdminPortal'
-        'x-ms-mac-target-app'  = 'MAC'
-    }
+    $requestContext = Resolve-M365PortalRequestContext -AdminAppRequest $AdminAppRequest
+    $headers = Get-M365PortalContextHeaders -Context $requestContext
+    $headers['Accept'] = 'application/json;odata=minimalmetadata, text/plain, */*'
+    $headers['x-adminapp-request'] = $AdminAppRequest
+    $headers['x-ms-mac-hostingapp'] = 'M365AdminPortal'
+    $headers['x-ms-mac-target-app'] = 'MAC'
 
     $resolvedHeaders = @{}
     foreach ($headerEntry in @($script:m365PortalHeaders.GetEnumerator())) {

@@ -32,6 +32,7 @@
         'Get-M365AdminAppSetting',
         'Get-M365AdminBookingsSetting',
         'Get-M365AdminBrandCenterSetting',
+        'Get-M365AdminCommandCatalog',
         'Get-M365AdminCompanySetting',
         'Get-M365AdminContentUnderstandingSetting',
         'Get-M365AdminCopilotBillingUsage',

@@ -54,7 +54,14 @@
             'ReportsPrivacyEnabled' { '/admin/api/tenant/isReportsPrivacyEnabled' }
         }
 
-        $result = Get-M365AdminPortalData -Path $path -CacheKey "M365AdminTenantSetting:$Name" -Force:$Force
+        $portalHeaders = if ($Name -in @('DataLocationAndCommitments', 'LocalDataLocation')) { Get-M365PortalContextHeaders -Context DataLocation } else { $null }
+        if ($null -ne $portalHeaders) {
+            $result = Get-M365AdminPortalData -Path $path -CacheKey "M365AdminTenantSetting:$Name" -Headers $portalHeaders -Force:$Force
+        }
+        else {
+            $result = Get-M365AdminPortalData -Path $path -CacheKey "M365AdminTenantSetting:$Name" -Force:$Force
+        }
+
         $result = Add-M365TypeName -InputObject $result -TypeName ("M365Admin.TenantSetting.{0}" -f $Name)
         return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
     }

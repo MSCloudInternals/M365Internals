@@ -166,7 +166,9 @@ For higher-impact Settings routes, live validation used no-op roundtrips with th
 
 ## Available Cmdlets
 
-### Connect Cmdlets
+### Authentication
+
+Connection and sign-in helpers for establishing or reusing admin-center sessions.
 
 | Cmdlet | Description |
 | --- | --- |
@@ -179,7 +181,9 @@ For higher-impact Settings routes, live validation used no-op roundtrips with th
 | Connect-M365PortalBySSO | Connect to the Microsoft 365 admin center by using browser-based single sign-on |
 | Connect-M365PortalByTemporaryAccessPass | Connect to the Microsoft 365 admin center by using a Temporary Access Pass |
 
-### Get Cmdlets
+### Agents & Copilot
+
+Agent inventory, policy, tool, and Copilot management surfaces.
 
 | Cmdlet | Description |
 | --- | --- |
@@ -188,48 +192,79 @@ For higher-impact Settings routes, live validation used no-op roundtrips with th
 | Get-M365AdminAgentOverview | Retrieve Agents overview inventory, adoption, and risky-agent payloads |
 | Get-M365AdminAgentSetting | Retrieve Agents settings, sharing, templates, and user-access payloads |
 | Get-M365AdminAgentTool | Retrieve Agents tools payloads such as the MCP server inventory |
-| Get-M365AdminAppSetting | Retrieve app settings such as Bookings, Mail, Office Online, Office Scripts, Project, Store, and Whiteboard |
-| Get-M365AdminBookingsSetting | Retrieve the Bookings org settings flyout with friendly property names |
-| Get-M365AdminBrandCenterSetting | Retrieve Brand center configuration and BrandGuide site URL data |
-| Get-M365AdminCompanySetting | Retrieve company settings such as profile, help desk, release track, and theme |
-| Get-M365AdminContentUnderstandingSetting | Retrieve Content Understanding settings and related admin payloads |
 | Get-M365AdminCopilotBillingUsage | Retrieve Copilot Billing & usage tab payloads and billing policy data |
 | Get-M365AdminCopilotConnector | Retrieve Copilot Connectors gallery and connection inventory payloads |
 | Get-M365AdminCopilotOverview | Retrieve Copilot Overview, Security, Usage, and About payloads |
 | Get-M365AdminCopilotPinPolicy | Retrieve the Copilot pin policy payload |
 | Get-M365AdminCopilotSetting | Retrieve Copilot Settings optimize and view-all payloads |
-| Get-M365AdminDirectorySyncError | Retrieve directory sync error rows from the admin center settings surface |
-| Get-M365AdminDomain | Retrieve domain inventory, records, DNS health, and dependency data |
-| Get-M365AdminEdgeSiteList | Retrieve Microsoft Edge enterprise site lists and notifications |
-| Get-M365AdminEnhancedRestoreStatus | Retrieve Enhanced Restore status by using the admin center Graph proxy |
-| Get-M365AdminFeature | Retrieve feature metadata and startup configuration from the admin center |
-| Get-M365AdminGroup | Retrieve group lists, labels, and group permission payloads |
-| Get-M365AdminHomeData | Retrieve the home page ClassicModernAdminDataStream payload |
+
+### Org Settings & Workloads
+
+Org settings, workload settings, and workload-specific configuration cmdlets.
+
+| Cmdlet | Description |
+| --- | --- |
+| Get-M365AdminAppSetting | Retrieve app settings such as Bookings, Mail, Office Online, Office Scripts, Project, Store, and Whiteboard |
+| Get-M365AdminBookingsSetting | Retrieve the Bookings org settings flyout with friendly property names |
+| Get-M365AdminBrandCenterSetting | Retrieve Brand center configuration and BrandGuide site URL data |
+| Get-M365AdminCompanySetting | Retrieve company settings such as profile, help desk, release track, and theme |
+| Get-M365AdminContentUnderstandingSetting | Retrieve Content Understanding settings and related admin payloads |
 | Get-M365AdminIntegratedAppSetting | Retrieve the Settings > Integrated apps landing-page payloads |
 | Get-M365AdminMicrosoft365BackupSetting | Retrieve the Settings > Microsoft 365 Backup landing-page payloads |
 | Get-M365AdminMicrosoft365GroupSetting | Retrieve Microsoft 365 Groups guest access and ownerless group policy data |
 | Get-M365AdminMicrosoft365InstallationOption | Retrieve Microsoft 365 installation options and release-management data |
 | Get-M365AdminMicrosoftEdgeSetting | Retrieve the Settings > Microsoft Edge landing-page payloads |
-| Get-M365AdminNavigation | Retrieve primary or asynchronous navigation payloads from the admin center |
-| Get-M365AdminPartnerClient | Retrieve delegated partner client data for DAP and GDAP scenarios |
-| Get-M365AdminPartnerRelationship | Retrieve the Settings > Partner relationships payloads |
 | Get-M365AdminPayAsYouGoService | Retrieve pay-as-you-go billing, backup, and Content Understanding payloads |
 | Get-M365AdminPeopleSetting | Retrieve People settings such as profile card properties, name pronunciation, and pronouns |
+| Get-M365AdminSecuritySetting | Retrieve security settings such as MFA, guest access, and security defaults |
+| Get-M365AdminSelfServicePurchaseSetting | Retrieve self-service trials and purchases product policy data |
+| Get-M365AdminService | Retrieve service configuration such as Modern Auth, Planner, and Viva data |
+| Get-M365AdminUserOwnedAppSetting | Retrieve user-owned apps and services settings such as store access, in-app purchases, and auto-claim policy |
+| Get-M365AdminVivaSetting | Retrieve Viva module, role, and Glint client lookup settings |
+
+### Search, Reports & Insights
+
+Search, reporting, recommendations, and insights-focused read surfaces.
+
+| Cmdlet | Description |
+| --- | --- |
+| Get-M365AdminEnhancedRestoreStatus | Retrieve Enhanced Restore status by using the admin center Graph proxy |
 | Get-M365AdminRecommendation | Retrieve recommendations, alerts, and suggestions from the admin center |
 | Get-M365AdminReportSetting | Retrieve reporting configuration and productivity score settings |
 | Get-M365AdminSearchAndIntelligenceSetting | Retrieve the Settings > Search & intelligence landing-page sections |
 | Get-M365AdminSearchSetting | Retrieve search configuration, result types, QnA, news, and connector data |
-| Get-M365AdminSecuritySetting | Retrieve security settings such as MFA, guest access, and security defaults |
-| Get-M365AdminSelfServicePurchaseSetting | Retrieve self-service trials and purchases product policy data |
-| Get-M365AdminService | Retrieve service configuration such as Modern Auth, Planner, and Viva data |
-| Get-M365AdminShellInfo | Retrieve coordinated bootstrap shell information from the admin center |
+
+### Tenant, Users & Relationships
+
+Tenant, user, group, domain, partner, and relationship management surfaces.
+
+| Cmdlet | Description |
+| --- | --- |
+| Get-M365AdminDomain | Retrieve domain inventory, records, DNS health, and dependency data |
+| Get-M365AdminGroup | Retrieve group lists, labels, and group permission payloads |
+| Get-M365AdminPartnerClient | Retrieve delegated partner client data for DAP and GDAP scenarios |
+| Get-M365AdminPartnerRelationship | Retrieve the Settings > Partner relationships payloads |
 | Get-M365AdminTenantRelationship | Retrieve multi-tenant organization and user sync relationship data |
 | Get-M365AdminTenantSetting | Retrieve tenant settings such as account SKUs, data location, and privacy state |
-| Get-M365AdminUserOwnedAppSetting | Retrieve user-owned apps and services settings such as store access, in-app purchases, and auto-claim policy |
 | Get-M365AdminUserSetting | Retrieve current-user, role, product, dashboard-layout, and token-broker admin data |
-| Get-M365AdminVivaSetting | Retrieve Viva module, role, and Glint client lookup settings |
 
-### Set Cmdlets
+### Platform & Utilities
+
+Navigation, shell, feature, bootstrap, and supporting platform metadata.
+
+| Cmdlet | Description |
+| --- | --- |
+| Get-M365AdminCommandCatalog | Retrieves the functional command catalog for M365Internals. |
+| Get-M365AdminDirectorySyncError | Retrieve directory sync error rows from the admin center settings surface |
+| Get-M365AdminEdgeSiteList | Retrieve Microsoft Edge enterprise site lists and notifications |
+| Get-M365AdminFeature | Retrieve feature metadata and startup configuration from the admin center |
+| Get-M365AdminHomeData | Retrieve the home page ClassicModernAdminDataStream payload |
+| Get-M365AdminNavigation | Retrieve primary or asynchronous navigation payloads from the admin center |
+| Get-M365AdminShellInfo | Retrieve coordinated bootstrap shell information from the admin center |
+
+### Write Operations
+
+State-changing cmdlets that post, put, or patch admin-center settings.
 
 | Cmdlet | Description |
 | --- | --- |
@@ -242,7 +277,9 @@ For higher-impact Settings routes, live validation used no-op roundtrips with th
 | Set-M365AdminSecuritySetting | Update supported security settings payloads such as Bing data collection, guest access, privacy policy, and security defaults |
 | Set-M365AdminUserOwnedAppSetting | Update Office Store access, trials, and auto-claim settings for user-owned apps and services |
 
-### Invoke Cmdlets
+### Advanced Access
+
+Low-level REST access helpers for authenticated admin-center requests.
 
 | Cmdlet | Description |
 | --- | --- |

@@ -49,9 +49,9 @@
     #>
     [CmdletBinding()]
     param (
-        [Parameter(Mandatory)]
-        [ValidateSet('AdministrativeUnits', 'CommonDvPreferences', 'ContextualAlerts', 'CurrentUser', 'DashboardLayout', 'GccTenant', 'ListUsers', 'Products', 'Roles', 'SvInfo', 'TeamsSettingsInfo', 'TokenWithExpiry')]
-        [string]$Name,
+        [Parameter()]
+        [ValidateSet('All', 'AdministrativeUnits', 'CommonDvPreferences', 'ContextualAlerts', 'CurrentUser', 'DashboardLayout', 'GccTenant', 'ListUsers', 'Products', 'Roles', 'SvInfo', 'TeamsSettingsInfo', 'TokenWithExpiry')]
+        [string]$Name = 'All',
 
         [Parameter()]
         [int]$CardCategory = 1,
@@ -73,81 +73,141 @@
     )
 
     process {
-        $cacheKey = switch ($Name) {
-            'DashboardLayout' {
-                'M365AdminUserSetting:{0}:{1}:{2}' -f $Name, $CardCategory, $Culture
+        $cardCategoryValue = $CardCategory
+        $cultureValue = $Culture
+        $tokenAudienceValue = $TokenAudience
+        $forceRequested = $Force
+        $allNames = @(
+            'AdministrativeUnits',
+            'CommonDvPreferences',
+            'ContextualAlerts',
+            'CurrentUser',
+            'DashboardLayout',
+            'GccTenant',
+            'ListUsers',
+            'Products',
+            'Roles',
+            'SvInfo',
+            'TeamsSettingsInfo',
+            'TokenWithExpiry'
+        )
+
+        function Get-UserSettingView {
+            param (
+                [Parameter(Mandatory)]
+                [string]$RequestedName
+            )
+
+            $cacheKey = switch ($RequestedName) {
+                'DashboardLayout' {
+                    'M365AdminUserSetting:{0}:{1}:{2}' -f $RequestedName, $cardCategoryValue, $cultureValue
+                }
+                'TokenWithExpiry' {
+                    'M365AdminUserSetting:{0}:{1}' -f $RequestedName, $tokenAudienceValue
+                }
+                default {
+                    'M365AdminUserSetting:{0}' -f $RequestedName
+                }
             }
-            'TokenWithExpiry' {
-                'M365AdminUserSetting:{0}:{1}' -f $Name, $TokenAudience
+
+            $additionalProperties = @{}
+            $path = $null
+
+            switch ($RequestedName) {
+                'ContextualAlerts' {
+                    $path = '/admin/api/users/contextualalerts'
+                    $rawResult = Get-M365AdminPortalData -Path $path -CacheKey $cacheKey -Method Post -Body @{} -Force:$forceRequested
+                }
+                'ListUsers' {
+                    $path = '/admin/api/Users/ListUsers'
+                    $body = @{
+                        ListAction       = -1
+                        SortDirection    = 0
+                        SortPropertyName = 'DisplayName'
+                        ListContext      = $null
+                        SearchText       = ''
+                        SelectedView     = $null
+                        SelectedViewType = $null
+                        ServerContext    = $null
+                    }
+
+                    $rawResult = Get-M365AdminPortalData -Path $path -CacheKey $cacheKey -Method Post -Body $body -Force:$forceRequested
+                }
+                'Roles' {
+                    $path = '/admin/api/users/getuserroles'
+                    $currentUser = Get-M365AdminUserSetting -Name CurrentUser -Force:$forceRequested -Raw
+                    $principalId = $null
+                    if ($null -ne $currentUser) {
+                        if ($currentUser.PSObject.Properties.Match('UserInfo').Count -gt 0 -and $null -ne $currentUser.UserInfo) {
+                            $principalId = $currentUser.UserInfo.ObjectId
+                        }
+                        elseif ($currentUser.PSObject.Properties.Match('ObjectId').Count -gt 0) {
+                            $principalId = $currentUser.ObjectId
+                        }
+                    }
+
+                    $body = if ([string]::IsNullOrWhiteSpace($principalId)) {
+                        @{}
+                    }
+                    else {
+                        @{
+                            PrincipalId        = $principalId
+                            UserSecurityGroups = @()
+                        }
+                    }
+
+                    $rawResult = Get-M365AdminPortalData -Path $path -CacheKey $cacheKey -Method Post -Body $body -Force:$forceRequested
+                }
+                'TokenWithExpiry' {
+                    $path = '/admin/api/users/tokenWithExpiry'
+                    $additionalProperties.TokenAudience = $tokenAudienceValue
+                    $rawResult = Get-M365AdminPortalData -Path $path -CacheKey $cacheKey -Method Post -ContentType 'application/x-www-form-urlencoded; charset=UTF-8' -Body ('={0}' -f $tokenAudienceValue) -Force:$forceRequested
+                }
+                default {
+                    $path = switch ($RequestedName) {
+                        'AdministrativeUnits' { '/admin/api/users/administrativeunits' }
+                        'CommonDvPreferences' { '/admin/api/users/getcommondvpreferences' }
+                        'CurrentUser' { '/admin/api/users/currentUser' }
+                        'DashboardLayout' { '/admin/api/users/dashboardlayout?cardCategory={0}&culture={1}' -f $cardCategoryValue, [uri]::EscapeDataString($cultureValue) }
+                        'GccTenant' { '/admin/api/users/isGCCTenant' }
+                        'Products' { '/admin/api/users/products' }
+                        'SvInfo' { '/admin/api/users/svinfo' }
+                        'TeamsSettingsInfo' { '/admin/api/users/teamssettingsinfo' }
+                    }
+
+                    if ($RequestedName -eq 'DashboardLayout') {
+                        $additionalProperties.CardCategory = $cardCategoryValue
+                        $additionalProperties.Culture = $cultureValue
+                    }
+
+                    $rawResult = Get-M365AdminPortalData -Path $path -CacheKey $cacheKey -Force:$forceRequested
+                }
             }
-            default {
-                'M365AdminUserSetting:{0}' -f $Name
+
+            $defaultResult = ConvertTo-M365AdminResult -InputObject $rawResult -TypeName ("M365Admin.UserSetting.{0}" -f $RequestedName) -Category 'User settings' -ItemName $RequestedName -Endpoint $path -AdditionalProperties $additionalProperties
+            return [pscustomobject]@{
+                Name = $RequestedName
+                Path = $path
+                Raw = $rawResult
+                Default = $defaultResult
             }
         }
 
-        switch ($Name) {
-            'ContextualAlerts' {
-                $result = Get-M365AdminPortalData -Path '/admin/api/users/contextualalerts' -CacheKey $cacheKey -Method Post -Body @{} -Force:$Force
-                return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
-            }
-            'ListUsers' {
-                $body = @{
-                    ListAction       = -1
-                    SortDirection    = 0
-                    SortPropertyName = 'DisplayName'
-                    ListContext      = $null
-                    SearchText       = ''
-                    SelectedView     = $null
-                    SelectedViewType = $null
-                    ServerContext    = $null
-                }
+        if ($Name -eq 'All') {
+            $rawResults = [ordered]@{}
+            $defaultResults = [ordered]@{}
 
-                $result = Get-M365AdminPortalData -Path '/admin/api/Users/ListUsers' -CacheKey $cacheKey -Method Post -Body $body -Force:$Force
-                return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
+            foreach ($itemName in $allNames) {
+                $view = Get-UserSettingView -RequestedName $itemName
+                $rawResults[$itemName] = $view.Raw
+                $defaultResults[$itemName] = $view.Default
             }
-            'Roles' {
-                $currentUser = Get-M365AdminUserSetting -Name CurrentUser -Force:$Force
-                $principalId = $null
-                if ($null -ne $currentUser) {
-                    if ($currentUser.PSObject.Properties.Match('UserInfo').Count -gt 0 -and $null -ne $currentUser.UserInfo) {
-                        $principalId = $currentUser.UserInfo.ObjectId
-                    }
-                    elseif ($currentUser.PSObject.Properties.Match('ObjectId').Count -gt 0) {
-                        $principalId = $currentUser.ObjectId
-                    }
-                }
 
-                $body = if ([string]::IsNullOrWhiteSpace($principalId)) {
-                    @{}
-                }
-                else {
-                    @{
-                        PrincipalId        = $principalId
-                        UserSecurityGroups = @()
-                    }
-                }
-
-                $result = Get-M365AdminPortalData -Path '/admin/api/users/getuserroles' -CacheKey $cacheKey -Method Post -Body $body -Force:$Force
-                return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
-            }
-            'TokenWithExpiry' {
-                $result = Get-M365AdminPortalData -Path '/admin/api/users/tokenWithExpiry' -CacheKey $cacheKey -Method Post -ContentType 'application/x-www-form-urlencoded; charset=UTF-8' -Body ('={0}' -f $TokenAudience) -Force:$Force
-                return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
-            }
+            $result = New-M365AdminResultBundle -TypeName 'M365Admin.UserSetting' -Category 'User settings' -Items $defaultResults -RawData ([pscustomobject]$rawResults)
+            return Resolve-M365AdminOutput -DefaultValue $result -RawValue ([pscustomobject]$rawResults) -Raw:$Raw -RawJson:$RawJson
         }
 
-        $path = switch ($Name) {
-            'AdministrativeUnits' { '/admin/api/users/administrativeunits' }
-            'CommonDvPreferences' { '/admin/api/users/getcommondvpreferences' }
-            'CurrentUser' { '/admin/api/users/currentUser' }
-            'DashboardLayout' { '/admin/api/users/dashboardlayout?cardCategory={0}&culture={1}' -f $CardCategory, [uri]::EscapeDataString($Culture) }
-            'GccTenant' { '/admin/api/users/isGCCTenant' }
-            'Products' { '/admin/api/users/products' }
-            'SvInfo' { '/admin/api/users/svinfo' }
-            'TeamsSettingsInfo' { '/admin/api/users/teamssettingsinfo' }
-        }
-
-        $result = Get-M365AdminPortalData -Path $path -CacheKey $cacheKey -Force:$Force
-        return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
+        $view = Get-UserSettingView -RequestedName $Name
+        return Resolve-M365AdminOutput -DefaultValue $view.Default -RawValue $view.Raw -Raw:$Raw -RawJson:$RawJson
     }
 }

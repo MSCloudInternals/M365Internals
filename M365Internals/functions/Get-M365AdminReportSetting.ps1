@@ -54,7 +54,12 @@
             }
 
             $result = Add-M365TypeName -InputObject $result -TypeName 'M365Admin.ReportSetting.AdoptionScore'
-            return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
+            $rawResult = [pscustomobject]@{
+                ProductivityScoreConfig         = $productivityScoreConfig
+                ProductivityScoreCustomerOption = $productivityScoreCustomerOption
+            }
+
+            return Resolve-M365AdminOutput -DefaultValue $result -RawValue $rawResult -Raw:$Raw -RawJson:$RawJson
         }
 
         $path = switch ($Name) {
@@ -64,7 +69,8 @@
             'Reports' { '/admin/api/reports/config/GetTenantConfiguration' }
         }
 
-        $result = Get-M365AdminPortalData -Path $path -CacheKey "M365AdminReportSetting:$Name" -Force:$Force
-        return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
+        $rawResult = Get-M365AdminPortalData -Path $path -CacheKey "M365AdminReportSetting:$Name" -Force:$Force
+        $result = ConvertTo-M365AdminResult -InputObject $rawResult -TypeName ("M365Admin.ReportSetting.{0}" -f $Name) -Category 'Reports' -ItemName $Name -Endpoint $path
+        return Resolve-M365AdminOutput -DefaultValue $result -RawValue $rawResult -Raw:$Raw -RawJson:$RawJson
     }
 }

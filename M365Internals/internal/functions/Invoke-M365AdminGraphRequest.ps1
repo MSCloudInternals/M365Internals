@@ -69,7 +69,9 @@
 
     Update-M365PortalConnectionSettings
 
+    $requestContext = Resolve-M365PortalRequestContext -AdminAppRequest $AdminAppRequest
     $graphToken = Get-M365AdminAccessToken -TokenType GraphAT -Scenario $GraphScenario -AdminAppRequest $AdminAppRequest
+    $contextHeaders = Get-M365PortalContextHeaders -Context $requestContext
 
     $requestUri = if ($PSCmdlet.ParameterSetName -eq 'Uri') {
         $Uri
@@ -92,10 +94,13 @@
         $resolvedHeaders[$headerEntry.Key] = $headerEntry.Value
     }
 
+    foreach ($headerEntry in @($contextHeaders.GetEnumerator())) {
+        $resolvedHeaders[$headerEntry.Key] = $headerEntry.Value
+    }
+
     $resolvedHeaders['Accept'] = 'application/json;odata=minimalmetadata, text/plain, */*'
     $resolvedHeaders['client-request-id'] = [guid]::NewGuid().Guid
     $resolvedHeaders['x-adminapp-request'] = $AdminAppRequest
-    $resolvedHeaders['x-ms-mac-appid'] = 'f00c5fa5-eee4-4f57-88fa-c082d83b3c94'
     $resolvedHeaders['x-ms-mac-hostingapp'] = 'M365AdminPortal'
     $resolvedHeaders['x-ms-mac-target-app'] = 'Graph'
 

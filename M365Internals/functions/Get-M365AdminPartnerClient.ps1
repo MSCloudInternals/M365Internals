@@ -45,7 +45,8 @@
 
     process {
         $path = '/admin/api/partners/AOBOClients?partnerType={0}' -f $PartnerType
-        $result = Get-M365AdminPortalData -Path $path -CacheKey "M365AdminPartnerClient:$PartnerType" -Force:$Force
-        return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
+        $rawResult = Get-M365AdminPortalData -Path $path -CacheKey "M365AdminPartnerClient:$PartnerType" -Force:$Force
+        $result = ConvertTo-M365AdminResult -InputObject $rawResult -TypeName ("M365Admin.PartnerClient.{0}" -f $PartnerType) -Category 'Partner clients' -ItemName $PartnerType -Endpoint $path
+        return Resolve-M365AdminOutput -DefaultValue $result -RawValue $rawResult -Raw:$Raw -RawJson:$RawJson
     }
 }
