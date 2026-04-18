@@ -53,7 +53,8 @@
             $currentCacheValue = Get-M365Cache -CacheKey $cacheKey -ErrorAction SilentlyContinue
             if (-not $Force -and $currentCacheValue -and $currentCacheValue.NotValidAfter -gt (Get-Date)) {
                 Write-Verbose "Using cached $cacheKey data"
-                return Resolve-M365AdminOutput -DefaultValue $currentCacheValue.Value -Raw:$Raw -RawJson:$RawJson
+                $result = ConvertTo-M365AdminResult -InputObject $currentCacheValue.Value -TypeName 'M365Admin.Group.Groups' -Category 'Groups' -ItemName 'Groups' -Endpoint '/admin/api/groups/GetGroups'
+                return Resolve-M365AdminOutput -DefaultValue $result -RawValue $currentCacheValue.Value -Raw:$Raw -RawJson:$RawJson
             }
             elseif ($Force) {
                 Write-Verbose 'Force parameter specified, bypassing cache'
@@ -76,7 +77,8 @@
             }
 
             Set-M365Cache -CacheKey $cacheKey -Value $parsedResult -TTLMinutes 15 | Out-Null
-            return Resolve-M365AdminOutput -DefaultValue $parsedResult -Raw:$Raw -RawJson:$RawJson
+            $result = ConvertTo-M365AdminResult -InputObject $parsedResult -TypeName 'M365Admin.Group.Groups' -Category 'Groups' -ItemName 'Groups' -Endpoint '/admin/api/groups/GetGroups'
+            return Resolve-M365AdminOutput -DefaultValue $result -RawValue $parsedResult -Raw:$Raw -RawJson:$RawJson
         }
 
         $path = switch ($Name) {
@@ -84,7 +86,8 @@
             'Permissions' { '/admin/api/groups/permissions' }
         }
 
-        $result = Get-M365AdminPortalData -Path $path -CacheKey "M365AdminGroup:$Name" -Force:$Force
-        return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
+        $rawResult = Get-M365AdminPortalData -Path $path -CacheKey "M365AdminGroup:$Name" -Force:$Force
+        $result = ConvertTo-M365AdminResult -InputObject $rawResult -TypeName ("M365Admin.Group.{0}" -f $Name) -Category 'Groups' -ItemName $Name -Endpoint $path
+        return Resolve-M365AdminOutput -DefaultValue $result -RawValue $rawResult -Raw:$Raw -RawJson:$RawJson
     }
 }

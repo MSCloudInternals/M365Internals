@@ -197,7 +197,7 @@
 
         if ($PSCmdlet.ParameterSetName -eq 'Dependencies') {
             try {
-                $result = Get-M365AdminPortalData -Path $path -CacheKey $cacheKey -Force:$Force
+                $rawResult = Get-M365AdminPortalData -Path $path -CacheKey $cacheKey -Force:$Force
             }
             catch {
                 if ($_.Exception.Message -match '400' -or $_.Exception.Message -match 'Bad Request') {
@@ -210,10 +210,12 @@
                 throw
             }
 
-            return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
+            $result = ConvertTo-M365AdminResult -InputObject $rawResult -TypeName 'M365Admin.Domain.Dependencies' -Category 'Domains' -ItemName 'Dependencies' -Endpoint $path -AdditionalProperties @{ DomainName = $DomainName; DependencyKind = $DependencyKind }
+            return Resolve-M365AdminOutput -DefaultValue $result -RawValue $rawResult -Raw:$Raw -RawJson:$RawJson
         }
 
-        $result = Get-M365AdminPortalData -Path $path -CacheKey $cacheKey -Force:$Force
-        return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
+        $rawResult = Get-M365AdminPortalData -Path $path -CacheKey $cacheKey -Force:$Force
+        $result = ConvertTo-M365AdminResult -InputObject $rawResult -TypeName ("M365Admin.Domain.{0}" -f $PSCmdlet.ParameterSetName) -Category 'Domains' -ItemName $PSCmdlet.ParameterSetName -Endpoint $path -AdditionalProperties @{ DomainName = $DomainName }
+        return Resolve-M365AdminOutput -DefaultValue $result -RawValue $rawResult -Raw:$Raw -RawJson:$RawJson
     }
 }

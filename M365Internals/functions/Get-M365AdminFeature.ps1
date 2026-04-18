@@ -77,7 +77,8 @@
             default { '/admin/api/features/all' }
         }
 
-        $result = Get-M365AdminPortalData -Path $path -CacheKey $cacheKey -Force:$Force
-        return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
+        $rawResult = Get-M365AdminPortalData -Path $path -CacheKey $cacheKey -Force:$Force
+        $result = ConvertTo-M365AdminResult -InputObject $rawResult -TypeName ("M365Admin.Feature.{0}" -f $PSCmdlet.ParameterSetName) -Category 'Feature metadata' -ItemName $PSCmdlet.ParameterSetName -Endpoint $path
+        return Resolve-M365AdminOutput -DefaultValue $result -RawValue $rawResult -Raw:$Raw -RawJson:$RawJson
     }
 }

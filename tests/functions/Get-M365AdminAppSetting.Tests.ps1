@@ -1,6 +1,25 @@
 ﻿Describe 'Get-M365AdminAppSetting' {
     BeforeEach {
-        Mock -ModuleName M365Internals Get-M365AdminPortalData { [pscustomobject]@{} }
+        $script:lastAppSettingPortalCall = $null
+
+        Mock -ModuleName M365Internals Get-M365AdminPortalData {
+            $script:lastAppSettingPortalCall = [pscustomobject]@{
+                Path = $Path
+                CacheKey = $CacheKey
+                Headers = $Headers
+            }
+
+            [pscustomobject]@{}
+        }
+    }
+
+    It 'returns grouped app settings by default' {
+        $result = Get-M365AdminAppSetting
+
+        $result.PSObject.TypeNames | Should -Contain 'M365Admin.AppSetting'
+        $result.Bookings.PSObject.TypeNames | Should -Contain 'M365Admin.AppSetting.Bookings'
+        $result.OfficeScripts.ItemName | Should -Be 'OfficeScripts'
+        $result.Microsoft365OnTheWeb.Endpoint | Should -Be '/admin/api/settings/apps/officeonline'
     }
 
     It 'maps <Name> to <ExpectedPath>' -TestCases @(
@@ -21,6 +40,23 @@
         Assert-MockCalled Get-M365AdminPortalData -ModuleName M365Internals -Exactly 1 -ParameterFilter {
             $Path -eq $ExpectedPath -and $CacheKey -eq $expectedCacheKey
         }
+    }
+
+    It 'uses the OfficeOnline portal context for Office Online surfaces' -TestCases @(
+        @{ Name = 'OfficeOnline'; ExpectedPath = '/admin/api/settings/apps/officeonline' }
+        @{ Name = 'Microsoft365OnTheWeb'; ExpectedPath = '/admin/api/settings/apps/officeonline' }
+    ) {
+        param (
+            $Name,
+            $ExpectedPath
+        )
+
+        Get-M365AdminAppSetting -Name $Name | Out-Null
+
+        $script:lastAppSettingPortalCall.Path | Should -Be $ExpectedPath
+        $script:lastAppSettingPortalCall.Headers.'x-adminapp-request' | Should -Be '/Settings/Services/:/Settings/L1/OfficeOnline'
+        $script:lastAppSettingPortalCall.Headers.'x-ms-mac-appid' | Should -Be '3fda709f-4f6c-4ba7-8da3-b3d031a4d675'
+        $script:lastAppSettingPortalCall.Headers.'x-ms-mac-target-app' | Should -Be 'MAC'
     }
 
     It 'wraps known unavailable live surfaces in standardized objects' -TestCases @(

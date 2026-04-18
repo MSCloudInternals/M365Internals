@@ -83,13 +83,17 @@
             )
 
             try {
-                $result = Get-M365AdminPortalData -Path $Path -CacheKey "M365AdminService:$ResultName" -Force:$Force
+                $rawResult = Get-M365AdminPortalData -Path $Path -CacheKey "M365AdminService:$ResultName" -Force:$Force
             }
             catch {
-                $result = New-M365AdminUnavailableResult -Name $ResultName -Description 'This service configuration endpoint currently does not return a usable payload in the current tenant.' -Reason 'TenantSpecific' -ErrorMessage $_.Exception.Message
+                $rawResult = New-M365AdminUnavailableResult -Name $ResultName -Description 'This service configuration endpoint currently does not return a usable payload in the current tenant.' -Reason 'TenantSpecific' -ErrorMessage $_.Exception.Message
             }
 
-            return Add-ServiceTypeName -InputObject $result -CanonicalName $ResultName
+            $defaultResult = ConvertTo-M365AdminResult -InputObject $rawResult -TypeName ("M365Admin.Service.{0}" -f $ResultName) -Category 'Services' -ItemName $ResultName -Endpoint $Path
+            return [pscustomobject]@{
+                Raw = $rawResult
+                Default = $defaultResult
+            }
         }
 
         $canonicalName = Resolve-ServiceCanonicalName -RequestedName $Name
@@ -136,7 +140,7 @@
             'SearchIntelligenceAnalytics' { '/admin/api/services/apps/searchintelligenceanalytics' }
         }
 
-        $result = Get-ServiceResult -ResultName $canonicalName -Path $path
-        return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
+        $view = Get-ServiceResult -ResultName $canonicalName -Path $path
+        return Resolve-M365AdminOutput -DefaultValue $view.Default -RawValue $view.Raw -Raw:$Raw -RawJson:$RawJson
     }
 }

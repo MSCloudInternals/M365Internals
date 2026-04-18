@@ -38,7 +38,9 @@
     )
 
     process {
-        $result = Get-M365AdminPortalData -Path '/admin/api/selfServicePurchasePolicy/products' -CacheKey 'M365AdminSelfServicePurchaseSetting:Products' -Force:$Force
-        return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
+        $path = '/admin/api/selfServicePurchasePolicy/products'
+        $rawResult = Get-M365AdminPortalData -Path $path -CacheKey 'M365AdminSelfServicePurchaseSetting:Products' -Force:$Force
+        $result = ConvertTo-M365AdminResult -InputObject $rawResult -TypeName 'M365Admin.SelfServicePurchaseSetting' -Category 'Self-service trials and purchases' -ItemName 'Products' -Endpoint $path
+        return Resolve-M365AdminOutput -DefaultValue $result -RawValue $rawResult -Raw:$Raw -RawJson:$RawJson
     }
 }

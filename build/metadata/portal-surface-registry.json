@@ -14,30 +14,71 @@
       "Pragma": "no-cache",
       "Referer": "https://admin.cloud.microsoft/?",
       "x-adminapp-request": "/MicrosoftSearch",
-      "x-ms-mac-appid": "f00c5fa5-eee4-4f57-88fa-c082d83b3c94",
+      "x-ms-mac-appid": "36051945-c7f8-4505-8a9b-23f8ba62271e",
       "x-ms-mac-hostingapp": "M365AdminPortal",
       "x-ms-mac-target-app": "MAC",
-      "x-ms-mac-version": "host-mac_2026.3.2.6"
+      "x-ms-mac-version": "host-mac_2026.4.2.8"
+    },
+    "EnhancedRestore": {
+      "Accept": "application/json;odata=minimalmetadata, text/plain, */*",
+      "x-edge-shopping-flag": "1",
+      "Cache-Control": "no-cache",
+      "Pragma": "no-cache",
+      "Referer": "https://admin.cloud.microsoft/?",
+      "x-adminapp-request": "/Settings/enhancedRestore",
+      "x-ms-mac-appid": "08a68b73-8058-4c59-8bd5-7b6833e2af21",
+      "x-ms-mac-hostingapp": "M365AdminPortal",
+      "x-ms-mac-target-app": "MAC",
+      "x-ms-mac-version": "host-mac_2026.4.2.8"
+    },
+    "BrandCenter": {
+      "Accept": "application/json;odata=minimalmetadata, text/plain, */*",
+      "x-edge-shopping-flag": "1",
+      "Cache-Control": "no-cache",
+      "Pragma": "no-cache",
+      "Referer": "https://admin.cloud.microsoft/",
+      "x-adminapp-request": "/brandcenter",
+      "x-ms-mac-appid": "9f8918eb-b2b7-4b90-b5bd-86b38f6d4d23",
+      "x-ms-mac-hostingapp": "M365AdminPortal",
+      "x-ms-mac-target-app": "SPO",
+      "x-ms-mac-version": "host-mac_2026.4.2.8"
+    },
+    "OfficeOnline": {
+      "Accept": "application/json;odata=minimalmetadata, text/plain, */*",
+      "x-edge-shopping-flag": "1",
+      "Cache-Control": "no-cache",
+      "Pragma": "no-cache",
+      "Referer": "https://admin.cloud.microsoft/?",
+      "x-adminapp-request": "/Settings/Services/:/Settings/L1/OfficeOnline",
+      "x-ms-mac-appid": "3fda709f-4f6c-4ba7-8da3-b3d031a4d675",
+      "x-ms-mac-hostingapp": "M365AdminPortal",
+      "x-ms-mac-target-app": "MAC",
+      "x-ms-mac-version": "host-mac_2026.4.2.8"
     },
     "Viva": {
       "Accept": "application/json;odata=minimalmetadata, text/plain, */*",
       "x-edge-shopping-flag": "1",
       "Cache-Control": "no-cache",
       "Pragma": "no-cache",
-      "Referer": "https://admin.cloud.microsoft/",
+      "Referer": "https://admin.cloud.microsoft/?",
       "x-adminapp-request": "/viva",
-      "x-ms-mac-appid": "f00c5fa5-eee4-4f57-88fa-c082d83b3c94",
+      "x-ms-mac-appid": "050829af-7f24-4897-8f81-732bf47719ad",
       "x-ms-mac-hostingapp": "M365AdminPortal",
       "x-ms-mac-target-app": "MAC",
-      "x-ms-mac-version": "host-mac_2026.3.2.6"
+      "x-ms-mac-version": "host-mac_2026.4.2.8"
     },
     "GraphEnhancedRestore": {
       "Accept": "application/json;odata=minimalmetadata, text/plain, */*",
+      "x-edge-shopping-flag": "1",
+      "Cache-Control": "no-cache",
+      "Pragma": "no-cache",
+      "Referer": "https://admin.cloud.microsoft/?",
       "client-request-id": "11111111-1111-4111-8111-111111111111",
       "x-adminapp-request": "/Settings/enhancedRestore",
-      "x-ms-mac-appid": "f00c5fa5-eee4-4f57-88fa-c082d83b3c94",
+      "x-ms-mac-appid": "08a68b73-8058-4c59-8bd5-7b6833e2af21",
       "x-ms-mac-hostingapp": "M365AdminPortal",
       "x-ms-mac-target-app": "Graph",
+      "x-ms-mac-version": "host-mac_2026.4.2.8",
       "x-anchormailbox": "{TenantAnchorMailbox}"
     },
     "PurviewCopilot": {
@@ -134,7 +175,7 @@
             { "Name": "O365DataPlan", "PathTemplate": "/admin/api/settings/apps/o365dataplan" },
             { "Name": "OfficeForms", "PathTemplate": "/admin/api/settings/apps/officeforms" },
             { "Name": "OfficeFormsPro", "PathTemplate": "/admin/api/settings/apps/officeformspro", "TimeoutMs": 60000 },
-            { "Name": "OfficeOnline", "PathTemplate": "/admin/api/settings/apps/officeonline" },
+            { "Name": "OfficeOnline", "PathTemplate": "/admin/api/settings/apps/officeonline", "HeaderProfile": "OfficeOnline" },
             { "Name": "OfficeScripts", "PathTemplate": "/admin/api/settings/apps/officescripts" },
             { "Name": "Project", "PathTemplate": "/admin/api/settings/apps/projectonline" },
             { "Name": "SitesSharing", "PathTemplate": "/admin/api/settings/apps/sitessharing" },
@@ -169,8 +210,8 @@
             "Get-M365AdminBrandCenterSetting"
           ],
           "Requests": [
-            { "Name": "Configuration", "PathTemplate": "/_api/spo.tenant/GetBrandCenterConfiguration" },
-            { "Name": "SiteUrl", "PathTemplate": "/_api/GroupSiteManager/GetValidSiteUrlFromAlias?alias='BrandGuide'&managedPath='sites'" }
+            { "Name": "Configuration", "PathTemplate": "/_api/spo.tenant/GetBrandCenterConfiguration", "HeaderProfile": "BrandCenter" },
+            { "Name": "SiteUrl", "PathTemplate": "/_api/GroupSiteManager/GetValidSiteUrlFromAlias?alias='BrandGuide'&managedPath='sites'", "HeaderProfile": "BrandCenter" }
           ]
         },
         {
@@ -219,9 +260,9 @@
             "Get-M365AdminEnhancedRestoreStatus"
           ],
           "Requests": [
-            { "Name": "BillingFeature", "PathTemplate": "/_api/v2.1/billingFeatures('M365Backup')" },
-            { "Name": "AzureSubscriptions", "PathTemplate": "/admin/api/syntexbilling/azureSubscriptions" },
-            { "Name": "EnhancedRestoreFeature", "PathTemplate": "/fd/enhancedRestorev2/v1/featureSetting" },
+            { "Name": "BillingFeature", "PathTemplate": "/_api/v2.1/billingFeatures('M365Backup')", "HeaderProfile": "EnhancedRestore" },
+            { "Name": "AzureSubscriptions", "PathTemplate": "/admin/api/syntexbilling/azureSubscriptions", "HeaderProfile": "EnhancedRestore" },
+            { "Name": "EnhancedRestoreFeature", "PathTemplate": "/fd/enhancedRestorev2/v1/featureSetting", "HeaderProfile": "EnhancedRestore" },
             {
               "Name": "EnhancedRestoreStatus",
               "PathTemplate": "/fd/msgraph/beta/$batch",
@@ -257,6 +298,7 @@
               "Name": "AzureSubscriptionPermissions:{AzureSubscriptionId}",
               "PathTemplate": "/admin/api/syntexbilling/azureSubscriptions/{AzureSubscriptionId}/permissions",
               "ExpansionValuesKey": "AzureSubscriptionIds",
+              "HeaderProfile": "EnhancedRestore",
               "ExpansionPlaceholderName": "AzureSubscriptionId"
             }
           ]

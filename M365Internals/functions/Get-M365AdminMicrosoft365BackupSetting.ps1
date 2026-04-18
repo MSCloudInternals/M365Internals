@@ -47,61 +47,50 @@
     )
 
     process {
+        $backupHeaders = Get-M365PortalContextHeaders -Context EnhancedRestore
+
         if ($Name -eq 'All') {
-            if ($Raw -or $RawJson) {
-                $azureSubscriptions = Get-M365AdminPortalData -Path '/admin/api/syntexbilling/azureSubscriptions' -CacheKey 'M365AdminMicrosoft365BackupSetting:AzureSubscriptions' -Force:$Force
-                $permissions = foreach ($subscription in @($azureSubscriptions.value)) {
-                    [pscustomobject]@{
-                        SubscriptionId = $subscription.subscriptionId
-                        DisplayName    = $subscription.displayName
-                        Permissions    = Get-M365AdminPortalData -Path ("/admin/api/syntexbilling/azureSubscriptions/{0}/permissions" -f $subscription.subscriptionId) -CacheKey ("M365AdminMicrosoft365BackupSetting:AzureSubscriptionPermissions:{0}" -f $subscription.subscriptionId) -Force:$Force
-                    }
-                }
-
-                $result = [pscustomobject]@{
-                    BillingFeature               = Get-M365AdminPortalData -Path "/_api/v2.1/billingFeatures('M365Backup')" -CacheKey 'M365AdminMicrosoft365BackupSetting:BillingFeature' -Force:$Force
-                    AzureSubscriptions           = $azureSubscriptions
-                    AzureSubscriptionPermissions = @($permissions)
-                    EnhancedRestoreFeature       = Get-M365AdminPortalData -Path '/fd/enhancedRestorev2/v1/featureSetting' -CacheKey 'M365AdminMicrosoft365BackupSetting:EnhancedRestoreFeature' -Force:$Force
-                    EnhancedRestoreStatus        = Get-M365AdminEnhancedRestoreStatus -Force:$Force -Raw
-                }
-
-                $result = Add-M365TypeName -InputObject $result -TypeName 'M365Admin.Microsoft365BackupSetting.Raw'
-                return Resolve-M365AdminOutput -RawValue $result -Raw:$Raw -RawJson:$RawJson
-            }
-
-            $azureSubscriptions = Get-M365AdminPortalData -Path '/admin/api/syntexbilling/azureSubscriptions' -CacheKey 'M365AdminMicrosoft365BackupSetting:AzureSubscriptions' -Force:$Force
+            $azureSubscriptions = Get-M365AdminPortalData -Path '/admin/api/syntexbilling/azureSubscriptions' -CacheKey 'M365AdminMicrosoft365BackupSetting:AzureSubscriptions' -Headers $backupHeaders -Force:$Force
             $permissions = foreach ($subscription in @($azureSubscriptions.value)) {
                 [pscustomobject]@{
                     SubscriptionId = $subscription.subscriptionId
                     DisplayName    = $subscription.displayName
-                    Permissions    = Get-M365AdminPortalData -Path ("/admin/api/syntexbilling/azureSubscriptions/{0}/permissions" -f $subscription.subscriptionId) -CacheKey ("M365AdminMicrosoft365BackupSetting:AzureSubscriptionPermissions:{0}" -f $subscription.subscriptionId) -Force:$Force
+                    Permissions    = Get-M365AdminPortalData -Path ("/admin/api/syntexbilling/azureSubscriptions/{0}/permissions" -f $subscription.subscriptionId) -CacheKey ("M365AdminMicrosoft365BackupSetting:AzureSubscriptionPermissions:{0}" -f $subscription.subscriptionId) -Headers $backupHeaders -Force:$Force
                 }
             }
 
-            $result = [pscustomobject]@{
-                BillingFeature               = Get-M365AdminPortalData -Path "/_api/v2.1/billingFeatures('M365Backup')" -CacheKey 'M365AdminMicrosoft365BackupSetting:BillingFeature' -Force:$Force
+            $rawResult = [ordered]@{
+                BillingFeature               = Get-M365AdminPortalData -Path "/_api/v2.1/billingFeatures('M365Backup')" -CacheKey 'M365AdminMicrosoft365BackupSetting:BillingFeature' -Headers $backupHeaders -Force:$Force
                 AzureSubscriptions           = $azureSubscriptions
                 AzureSubscriptionPermissions = @($permissions)
-                EnhancedRestoreFeature       = Get-M365AdminPortalData -Path '/fd/enhancedRestorev2/v1/featureSetting' -CacheKey 'M365AdminMicrosoft365BackupSetting:EnhancedRestoreFeature' -Force:$Force
-                EnhancedRestoreStatus        = Get-M365AdminEnhancedRestoreStatus -Force:$Force
+                EnhancedRestoreFeature       = Get-M365AdminPortalData -Path '/fd/enhancedRestorev2/v1/featureSetting' -CacheKey 'M365AdminMicrosoft365BackupSetting:EnhancedRestoreFeature' -Headers $backupHeaders -Force:$Force
+                EnhancedRestoreStatus        = Get-M365AdminEnhancedRestoreStatus -Force:$Force -Raw
             }
 
-            $result = Add-M365TypeName -InputObject $result -TypeName 'M365Admin.Microsoft365BackupSetting'
-            return $result
+            $items = [ordered]@{
+                BillingFeature = ConvertTo-M365AdminResult -InputObject $rawResult.BillingFeature -TypeName 'M365Admin.Microsoft365BackupSetting.BillingFeature' -Category 'Microsoft 365 Backup' -ItemName 'BillingFeature' -Endpoint "/_api/v2.1/billingFeatures('M365Backup')"
+                AzureSubscriptions = ConvertTo-M365AdminResult -InputObject $rawResult.AzureSubscriptions -TypeName 'M365Admin.Microsoft365BackupSetting.AzureSubscriptions' -Category 'Microsoft 365 Backup' -ItemName 'AzureSubscriptions' -Endpoint '/admin/api/syntexbilling/azureSubscriptions'
+                AzureSubscriptionPermissions = ConvertTo-M365AdminResult -InputObject $rawResult.AzureSubscriptionPermissions -TypeName 'M365Admin.Microsoft365BackupSetting.AzureSubscriptionPermissions' -Category 'Microsoft 365 Backup' -ItemName 'AzureSubscriptionPermissions' -Endpoint '/admin/api/syntexbilling/azureSubscriptions/{subscriptionId}/permissions'
+                EnhancedRestoreFeature = ConvertTo-M365AdminResult -InputObject $rawResult.EnhancedRestoreFeature -TypeName 'M365Admin.Microsoft365BackupSetting.EnhancedRestoreFeature' -Category 'Microsoft 365 Backup' -ItemName 'EnhancedRestoreFeature' -Endpoint '/fd/enhancedRestorev2/v1/featureSetting'
+                EnhancedRestoreStatus = Get-M365AdminEnhancedRestoreStatus -Force:$Force
+            }
+
+            $result = New-M365AdminResultBundle -TypeName 'M365Admin.Microsoft365BackupSetting' -Category 'Microsoft 365 Backup' -Items $items -RawData ([pscustomobject]$rawResult)
+            return Resolve-M365AdminOutput -DefaultValue $result -RawValue ([pscustomobject]$rawResult) -Raw:$Raw -RawJson:$RawJson
         }
 
         if ($Name -eq 'AzureSubscriptionPermissions') {
-            $azureSubscriptions = Get-M365AdminPortalData -Path '/admin/api/syntexbilling/azureSubscriptions' -CacheKey 'M365AdminMicrosoft365BackupSetting:AzureSubscriptions' -Force:$Force
+            $azureSubscriptions = Get-M365AdminPortalData -Path '/admin/api/syntexbilling/azureSubscriptions' -CacheKey 'M365AdminMicrosoft365BackupSetting:AzureSubscriptions' -Headers $backupHeaders -Force:$Force
             $permissions = foreach ($subscription in @($azureSubscriptions.value)) {
                 [pscustomobject]@{
                     SubscriptionId = $subscription.subscriptionId
                     DisplayName    = $subscription.displayName
-                    Permissions    = Get-M365AdminPortalData -Path ("/admin/api/syntexbilling/azureSubscriptions/{0}/permissions" -f $subscription.subscriptionId) -CacheKey ("M365AdminMicrosoft365BackupSetting:AzureSubscriptionPermissions:{0}" -f $subscription.subscriptionId) -Force:$Force
+                    Permissions    = Get-M365AdminPortalData -Path ("/admin/api/syntexbilling/azureSubscriptions/{0}/permissions" -f $subscription.subscriptionId) -CacheKey ("M365AdminMicrosoft365BackupSetting:AzureSubscriptionPermissions:{0}" -f $subscription.subscriptionId) -Headers $backupHeaders -Force:$Force
                 }
             }
 
-            return Resolve-M365AdminOutput -DefaultValue @($permissions) -Raw:$Raw -RawJson:$RawJson
+            $result = ConvertTo-M365AdminResult -InputObject @($permissions) -TypeName 'M365Admin.Microsoft365BackupSetting.AzureSubscriptionPermissions' -Category 'Microsoft 365 Backup' -ItemName 'AzureSubscriptionPermissions' -Endpoint '/admin/api/syntexbilling/azureSubscriptions/{subscriptionId}/permissions'
+            return Resolve-M365AdminOutput -DefaultValue $result -RawValue @($permissions) -Raw:$Raw -RawJson:$RawJson
         }
 
         if ($Name -eq 'EnhancedRestoreStatus') {
@@ -114,7 +103,8 @@
             'EnhancedRestoreFeature' { '/fd/enhancedRestorev2/v1/featureSetting' }
         }
 
-        $result = Get-M365AdminPortalData -Path $path -CacheKey "M365AdminMicrosoft365BackupSetting:$Name" -Force:$Force
-        return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
+        $rawResult = Get-M365AdminPortalData -Path $path -CacheKey "M365AdminMicrosoft365BackupSetting:$Name" -Headers $backupHeaders -Force:$Force
+        $result = ConvertTo-M365AdminResult -InputObject $rawResult -TypeName ("M365Admin.Microsoft365BackupSetting.{0}" -f $Name) -Category 'Microsoft 365 Backup' -ItemName $Name -Endpoint $path
+        return Resolve-M365AdminOutput -DefaultValue $result -RawValue $rawResult -Raw:$Raw -RawJson:$RawJson
     }
 }

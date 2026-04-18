@@ -45,6 +45,8 @@
     )
 
     process {
+        $forceRequested = $Force
+
         function Get-TelemetryUnavailableResult {
             $result = New-M365AdminUnavailableResult -Name 'Telemetry' -Description 'The telemetry surface is known to use POST /admin/api/km/setting/telemetry in the live portal, but the request body and surrounding workflow have not been captured well enough to issue a safe direct read from the module yet.' -Reason 'UndiscoveredEndpoint' -SuggestedAction 'Inspect the live portal telemetry interaction with browser DevTools to capture the exact POST body and any required headers before adding direct module support.'
             Add-Member -InputObject $result -NotePropertyName RequestMethod -NotePropertyValue 'Post' -Force
@@ -55,20 +57,37 @@
             return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.PayAsYouGoService.Telemetry'
         }
 
+        function Get-PayAsYouGoPortalData {
+            param (
+                [Parameter(Mandatory)]
+                [string]$Path,
+
+                [Parameter(Mandatory)]
+                [string]$CacheKey
+            )
+
+            if ($Path -eq '/admin/api/tenant/datalocationandcommitments') {
+                $dataLocationHeaders = Get-M365PortalContextHeaders -Context DataLocation
+                return Get-M365AdminPortalData -Path $Path -CacheKey $CacheKey -Headers $dataLocationHeaders -Force:$forceRequested
+            }
+
+            return Get-M365AdminPortalData -Path $Path -CacheKey $CacheKey -Force:$forceRequested
+        }
+
         switch ($Name) {
             'All' {
                 $result = [pscustomobject]@{
-                    BillingFeature                = Get-M365AdminPortalData -Path "/_api/v2.1/billingFeatures('M365Backup')" -CacheKey 'M365AdminPayAsYouGoService:BillingFeature' -Force:$Force
-                    AzureSubscriptions            = Get-M365AdminPortalData -Path '/admin/api/syntexbilling/azureSubscriptions' -CacheKey 'M365AdminPayAsYouGoService:AzureSubscriptions' -Force:$Force
-                    EnhancedRestoreFeature        = Get-M365AdminPortalData -Path '/fd/enhancedRestorev2/v1/featureSetting' -CacheKey 'M365AdminPayAsYouGoService:EnhancedRestoreFeature' -Force:$Force
-                    DataLocationAndCommitments    = Get-M365AdminPortalData -Path '/admin/api/tenant/datalocationandcommitments' -CacheKey 'M365AdminPayAsYouGoService:DataLocationAndCommitments' -Force:$Force
-                    PrimarySetting                = Get-M365AdminPortalData -Path '/admin/api/contentunderstanding/setting' -CacheKey 'M365AdminPayAsYouGoService:PrimarySetting' -Force:$Force
-                    AutoFill                      = Get-M365AdminPortalData -Path '/admin/api/contentunderstanding/autofillsetting' -CacheKey 'M365AdminPayAsYouGoService:AutoFill' -Force:$Force
-                    Licensing                     = Get-M365AdminPortalData -Path '/admin/api/contentunderstanding/licensing' -CacheKey 'M365AdminPayAsYouGoService:Licensing' -Force:$Force
-                    ImageTagging                  = Get-M365AdminPortalData -Path '/admin/api/contentunderstanding/imagetaggingsetting' -CacheKey 'M365AdminPayAsYouGoService:ImageTagging' -Force:$Force
-                    ESignature                    = Get-M365AdminPortalData -Path '/admin/api/contentunderstanding/esignaturesettings' -CacheKey 'M365AdminPayAsYouGoService:ESignature' -Force:$Force
-                    TaxonomyTagging               = Get-M365AdminPortalData -Path '/admin/api/contentunderstanding/taxonomytaggingsetting' -CacheKey 'M365AdminPayAsYouGoService:TaxonomyTagging' -Force:$Force
-                    PlaybackTranscriptTranslation = Get-M365AdminPortalData -Path '/admin/api/contentunderstanding/playbacktranscripttranslationsettings' -CacheKey 'M365AdminPayAsYouGoService:PlaybackTranscriptTranslation' -Force:$Force
+                    BillingFeature                = Get-PayAsYouGoPortalData -Path "/_api/v2.1/billingFeatures('M365Backup')" -CacheKey 'M365AdminPayAsYouGoService:BillingFeature'
+                    AzureSubscriptions            = Get-PayAsYouGoPortalData -Path '/admin/api/syntexbilling/azureSubscriptions' -CacheKey 'M365AdminPayAsYouGoService:AzureSubscriptions'
+                    EnhancedRestoreFeature        = Get-PayAsYouGoPortalData -Path '/fd/enhancedRestorev2/v1/featureSetting' -CacheKey 'M365AdminPayAsYouGoService:EnhancedRestoreFeature'
+                    DataLocationAndCommitments    = Get-PayAsYouGoPortalData -Path '/admin/api/tenant/datalocationandcommitments' -CacheKey 'M365AdminPayAsYouGoService:DataLocationAndCommitments'
+                    PrimarySetting                = Get-PayAsYouGoPortalData -Path '/admin/api/contentunderstanding/setting' -CacheKey 'M365AdminPayAsYouGoService:PrimarySetting'
+                    AutoFill                      = Get-PayAsYouGoPortalData -Path '/admin/api/contentunderstanding/autofillsetting' -CacheKey 'M365AdminPayAsYouGoService:AutoFill'
+                    Licensing                     = Get-PayAsYouGoPortalData -Path '/admin/api/contentunderstanding/licensing' -CacheKey 'M365AdminPayAsYouGoService:Licensing'
+                    ImageTagging                  = Get-PayAsYouGoPortalData -Path '/admin/api/contentunderstanding/imagetaggingsetting' -CacheKey 'M365AdminPayAsYouGoService:ImageTagging'
+                    ESignature                    = Get-PayAsYouGoPortalData -Path '/admin/api/contentunderstanding/esignaturesettings' -CacheKey 'M365AdminPayAsYouGoService:ESignature'
+                    TaxonomyTagging               = Get-PayAsYouGoPortalData -Path '/admin/api/contentunderstanding/taxonomytaggingsetting' -CacheKey 'M365AdminPayAsYouGoService:TaxonomyTagging'
+                    PlaybackTranscriptTranslation = Get-PayAsYouGoPortalData -Path '/admin/api/contentunderstanding/playbacktranscripttranslationsettings' -CacheKey 'M365AdminPayAsYouGoService:PlaybackTranscriptTranslation'
                     Telemetry                     = Get-TelemetryUnavailableResult
                 }
 
@@ -114,7 +133,7 @@
             }
         }
 
-        $result = Get-M365AdminPortalData -Path $path -CacheKey "M365AdminPayAsYouGoService:$Name" -Force:$Force
+        $result = Get-PayAsYouGoPortalData -Path $path -CacheKey "M365AdminPayAsYouGoService:$Name"
         $result = Add-M365TypeName -InputObject $result -TypeName ("M365Admin.PayAsYouGoService.{0}" -f $Name)
         return Resolve-M365AdminOutput -DefaultValue $result -Raw:$Raw -RawJson:$RawJson
     }
