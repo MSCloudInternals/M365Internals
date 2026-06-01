@@ -30,7 +30,7 @@
     [CmdletBinding()]
     param (
         [Parameter(Mandatory)]
-        [ValidateSet('AccountLinking', 'AdoptionScore', 'AzureSpeechServices', 'BrandCenter', 'Cortana', 'DeveloperPortal', 'DeveloperPortalForTeams', 'M365Lighthouse', 'Microsoft365Groups', 'Microsoft365InstallationOptions', 'Microsoft365Lighthouse', 'MicrosoftAzureInformationProtection', 'MicrosoftEdgeSiteLists', 'MicrosoftPlanner', 'MicrosoftToDo', 'MicrosoftVivaInsights', 'ModernAuth', 'ModernAuthentication', 'News', 'PayAsYouGoServices', 'PeopleSettings', 'Planner', 'Reports', 'Sales', 'SearchAndIntelligenceUsageAnalytics', 'SearchIntelligenceAnalytics', 'SelfServiceTrialsAndPurchases', 'Todo', 'VivaInsights', 'WhatsNewInMicrosoft365')]
+        [ValidateSet('AccountLinking', 'AdoptionScore', 'AzureSpeechServices', 'BrandCenter', 'Cortana', 'DeveloperPortal', 'DeveloperPortalForTeams', 'M365Lighthouse', 'Microsoft365Groups', 'Microsoft365InstallationOptions', 'Microsoft365Lighthouse', 'MicrosoftAzureInformationProtection', 'MicrosoftEdgeSiteLists', 'MicrosoftPlanner', 'MicrosoftToDo', 'MicrosoftVivaInsights', 'ModernAuth', 'ModernAuthentication', 'MyAnalytics', 'News', 'PayAsYouGoServices', 'PeopleSettings', 'Planner', 'Reports', 'Sales', 'SearchAndIntelligenceUsageAnalytics', 'SearchIntelligenceAnalytics', 'SelfServiceTrialsAndPurchases', 'Todo', 'VivaInsights', 'WhatsNewInMicrosoft365')]
         [string]$Name,
 
         [Parameter()]
@@ -133,6 +133,7 @@
             'DeveloperPortal' { '/admin/api/services/apps/developerportal' }
             'DeveloperPortalForTeams' { '/admin/api/services/apps/developerportal' }
             'M365Lighthouse' { '/admin/api/services/apps/m365lighthouse' }
+            'MyAnalytics' { '/admin/api/services/apps/myanalytics' }
             'Planner' { '/admin/api/services/apps/planner' }
             'Todo' { '/admin/api/services/apps/todo' }
             'VivaInsights' { '/admin/api/services/apps/vivainsights' }

@@ -191,8 +191,9 @@ async function executeDiscoveryInteraction(page, action) {
 
 async function executeDiscoveryInteractions(page, route) {
   const interactionResults = [];
+  const interactions = (route.Interactions || []).flat(Infinity).filter(action => action && typeof action === 'object' && !Array.isArray(action));
 
-  for (const action of route.Interactions || []) {
+  for (const action of interactions) {
     const label = getInteractionLabel(action);
 
     try {

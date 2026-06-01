@@ -121,6 +121,7 @@ The repo now keeps the browser-capture and discovery inventory in `build/metadat
 - `build/export-settings-surface-captures.ps1` now generates its Playwright browser plan from the registry.
 - `build/run-edge-agent-copilot-browser-capture.ps1` generates the Agent/Copilot browser plan from the same registry.
 - `build/run-edge-portal-surface-discovery.ps1` now applies route-specific interaction recipes, records normalized snapshots, and writes a diff against the previous discovery run so maintainers can spot newly introduced portal features or changed request shapes.
+- `build/Compare-M365AdminSpecCoverage.ps1` compares a nodoc M365 Admin spec bundle against the current registry and module coverage, including canonical-path aliases such as `officeontheweb` -> `officeonline`, so maintainers can separate real gaps from naming drift before doing live portal review.
 - `build/live-discover-settings-write-routes.ps1` and `build/live-discover-remaining-agent-copilot-routes.ps1` now consume registry-backed write probe plans instead of carrying their own hardcoded candidate lists.
 
 Recommended maintainer setup:
@@ -132,8 +133,9 @@ Recommended maintainer setup:
    - `./build/run-edge-settings-browser-capture.ps1`
    - `./build/run-edge-agent-copilot-browser-capture.ps1`
    - `./build/run-edge-portal-surface-discovery.ps1`
-5. Review `TestResults/Artifacts/portal-surface-discovery-diff.json` and the timestamped files under `TestResults/Artifacts/portal-surface-discovery-history/` before deciding whether a registry update is needed.
-6. When you want an agent to do the enrichment loop for you, use this prompt:
+5. When you have an updated nodoc spec bundle, run `./build/Compare-M365AdminSpecCoverage.ps1 -SpecRoot <path-to-specification>` to generate a coverage report before deciding which routes need live validation or repo changes.
+6. Review `TestResults/Artifacts/portal-surface-discovery-diff.json` and the timestamped files under `TestResults/Artifacts/portal-surface-discovery-history/` before deciding whether a registry update is needed.
+7. When you want an agent to do the enrichment loop for you, use this prompt:
    - `Run build/run-edge-portal-surface-discovery.ps1, inspect the diff/history artifacts, update build/metadata/portal-surface-registry.json to cover any newly observed surfaces or interactions, regenerate derived artifacts with build/Sync-CmdletDocumentation.ps1, and rerun tests/pester.ps1.`
 
 Moving this workflow into CI is still possible later, but it should be treated as a self-hosted-runner path rather than a GitHub-hosted workflow target. The main operational gaps are still:
@@ -271,6 +273,7 @@ State-changing cmdlets that post, put, or patch admin-center settings.
 | Set-M365AdminAgentFrontierAccess | Update the Agents Frontier access policy by merging provided values into the current payload |
 | Set-M365AdminAppSetting | Update an app settings payload by merging provided values into the current admin-center payload |
 | Set-M365AdminCompanySetting | Update supported company settings payloads such as Help Desk, Profile, Release Track, Theme, and Tile |
+| Set-M365AdminCopilotConnector | Updates the Copilot connector visibility state for users. |
 | Set-M365AdminCopilotPinPolicy | Update the Copilot pin policy by merging provided values into the current payload |
 | Set-M365AdminMicrosoft365GroupSetting | Update Microsoft 365 Groups guest access and guest user policy payloads |
 | Set-M365AdminPeopleSetting | Update the People name-pronunciation and pronouns payloads |

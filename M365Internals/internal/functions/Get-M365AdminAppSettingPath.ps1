@@ -19,7 +19,7 @@
     [CmdletBinding()]
     param (
         [Parameter(Mandatory)]
-        [ValidateSet('Bookings', 'Calendar', 'CalendarSharing', 'DirectorySynchronization', 'Dynamics365ConnectionGraph', 'Dynamics365CustomerVoice', 'Dynamics365SalesInsights', 'DynamicsCrm', 'EndUserCommunications', 'Learning', 'LoopPolicy', 'Mail', 'Microsoft365OnTheWeb', 'MicrosoftCommunicationToUsers', 'MicrosoftForms', 'MicrosoftGraphDataConnect', 'MicrosoftLoop', 'MicrosoftTeams', 'O365DataPlan', 'OfficeForms', 'OfficeFormsPro', 'OfficeOnline', 'OfficeScripts', 'Project', 'SharePoint', 'SitesSharing', 'SkypeTeams', 'Store', 'Sway', 'UserOwnedAppsAndServices', 'UserSoftware', 'VivaLearning', 'Whiteboard')]
+        [ValidateSet('Bookings', 'Calendar', 'CalendarSharing', 'Cortana', 'DirectorySynchronization', 'Dynamics365ConnectionGraph', 'Dynamics365CustomerVoice', 'Dynamics365SalesInsights', 'DynamicsCrm', 'EndUserCommunications', 'Learning', 'LoopPolicy', 'Mail', 'Microsoft365OnTheWeb', 'MicrosoftCommunicationToUsers', 'MicrosoftForms', 'MicrosoftGraphDataConnect', 'MicrosoftLoop', 'MicrosoftTeams', 'O365DataPlan', 'OfficeForms', 'OfficeFormsPro', 'OfficeOnline', 'OfficeOnTheWebPolicies', 'OfficeScripts', 'Planner', 'Project', 'SharePoint', 'SitesSharing', 'SkypeTeams', 'Store', 'Sway', 'TeamsProvisioningCustomization', 'ToDo', 'UserOwnedAppsAndServices', 'UserSoftware', 'VivaLearning', 'Whiteboard')]
         [string]$Name
     )
 
@@ -28,6 +28,7 @@
             'Bookings' { '/admin/api/settings/apps/bookings' }
             'Calendar' { '/admin/api/settings/apps/calendarsharing' }
             'CalendarSharing' { '/admin/api/settings/apps/calendarsharing' }
+            'Cortana' { '/admin/api/settings/apps/cortana' }
             'DirectorySynchronization' { '/admin/api/settings/apps/dirsync' }
             'Dynamics365ConnectionGraph' { '/admin/api/settings/apps/dcg' }
             'Dynamics365CustomerVoice' { '/admin/api/settings/apps/officeformspro' }
@@ -46,13 +47,17 @@
             'OfficeForms' { '/admin/api/settings/apps/officeforms' }
             'OfficeFormsPro' { '/admin/api/settings/apps/officeformspro' }
             'OfficeOnline' { '/admin/api/settings/apps/officeonline' }
+            'OfficeOnTheWebPolicies' { '/fd/ocps/user/v1.0/web/policies' }
             'OfficeScripts' { '/admin/api/settings/apps/officescripts' }
+            'Planner' { '/admin/api/settings/apps/planner' }
             'Project' { '/admin/api/settings/apps/projectonline' }
             'SharePoint' { '/admin/api/settings/apps/sitessharing' }
             'SitesSharing' { '/admin/api/settings/apps/sitessharing' }
             'MicrosoftTeams' { '/admin/api/settings/apps/skypeteams' }
             'SkypeTeams' { '/admin/api/settings/apps/skypeteams' }
-            'UserOwnedAppsAndServices' { '/admin/api/settings/apps/store' }
+            'TeamsProvisioningCustomization' { '/admin/api/TeamsProvisioning/Customization' }
+            'ToDo' { '/admin/api/settings/apps/todo' }
+            'UserOwnedAppsAndServices' { '/admin/api/settings/apps/userownedapps' }
             'Store' { '/admin/api/settings/apps/store' }
             'Sway' { '/admin/api/settings/apps/Sway' }
             'UserSoftware' { '/admin/api/settings/apps/usersoftware' }

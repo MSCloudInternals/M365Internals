@@ -18,15 +18,25 @@
 
         $result.PSObject.TypeNames | Should -Contain 'M365Admin.AppSetting'
         $result.Bookings.PSObject.TypeNames | Should -Contain 'M365Admin.AppSetting.Bookings'
+        $result.Cortana.Endpoint | Should -Be '/admin/api/settings/apps/cortana'
         $result.OfficeScripts.ItemName | Should -Be 'OfficeScripts'
         $result.Microsoft365OnTheWeb.Endpoint | Should -Be '/admin/api/settings/apps/officeonline'
+        $result.Planner.Endpoint | Should -Be '/admin/api/settings/apps/planner'
+        $result.ToDo.Endpoint | Should -Be '/admin/api/settings/apps/todo'
+        $result.UserOwnedAppsAndServices.Endpoint | Should -Be '/admin/api/settings/apps/userownedapps'
     }
 
     It 'maps <Name> to <ExpectedPath>' -TestCases @(
+        @{ Name = 'Cortana'; ExpectedPath = '/admin/api/settings/apps/cortana' }
         @{ Name = 'Dynamics365ConnectionGraph'; ExpectedPath = '/admin/api/settings/apps/dcg' }
         @{ Name = 'Dynamics365SalesInsights'; ExpectedPath = '/admin/api/settings/apps/dci' }
+        @{ Name = 'OfficeOnTheWebPolicies'; ExpectedPath = '/fd/ocps/user/v1.0/web/policies' }
         @{ Name = 'OfficeScripts'; ExpectedPath = '/admin/api/settings/apps/officescripts' }
+        @{ Name = 'Planner'; ExpectedPath = '/admin/api/settings/apps/planner' }
         @{ Name = 'Project'; ExpectedPath = '/admin/api/settings/apps/projectonline' }
+        @{ Name = 'TeamsProvisioningCustomization'; ExpectedPath = '/admin/api/TeamsProvisioning/Customization' }
+        @{ Name = 'ToDo'; ExpectedPath = '/admin/api/settings/apps/todo' }
+        @{ Name = 'UserOwnedAppsAndServices'; ExpectedPath = '/admin/api/settings/apps/userownedapps' }
     ) {
         param (
             $Name,
@@ -63,6 +73,7 @@
         @{ Name = 'OfficeScripts'; ErrorMessage = 'Response status code does not indicate success: 400 (Bad Request).' }
         @{ Name = 'Dynamics365ConnectionGraph'; ErrorMessage = 'Response status code does not indicate success: 404 (Not Found).' }
         @{ Name = 'Dynamics365SalesInsights'; ErrorMessage = 'Response status code does not indicate success: 400 (Bad Request).' }
+        @{ Name = 'UserOwnedAppsAndServices'; ErrorMessage = 'Response status code does not indicate success: 404 (Not Found).' }
     ) {
         param (
             $Name,
@@ -81,6 +92,21 @@
         $result.HttpStatusCode | Should -Be ([int]($ErrorMessage -replace '.*?(400|404).*', '$1'))
         $result.Description | Should -Match 'licensed|provisioned'
         $result.SuggestedAction | Should -Match 'license|provision'
+    }
+
+    It 'keeps grouped app settings readable when user-owned apps are unavailable' {
+        Mock -ModuleName M365Internals Get-M365AdminPortalData {
+            if ($CacheKey -eq 'M365AdminAppSetting:UserOwnedAppsAndServices') {
+                throw 'Response status code does not indicate success: 404 (Not Found).'
+            }
+
+            [pscustomobject]@{}
+        }
+
+        $result = Get-M365AdminAppSetting
+
+        $result.UserOwnedAppsAndServices.PSObject.TypeNames | Should -Contain 'M365Admin.UnavailableResult'
+        $result.UserOwnedAppsAndServices.Name | Should -Be 'UserOwnedAppsAndServices'
     }
 
     It 'continues to throw for non-fallback app-setting errors' {

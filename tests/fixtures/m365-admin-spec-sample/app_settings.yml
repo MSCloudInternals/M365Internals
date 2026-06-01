@@ -1,0 +1,34 @@
+paths:
+  /admin/api/settings/apps/officeontheweb:
+    get:
+      summary: Get Office on the Web settings
+      operationId: AppSettings.GetOfficeOnTheWeb
+      tags: [AppSettings]
+      x-nodoc-operation-context:
+        canonicalPath: /admin/api/settings/apps/officeonline
+      responses:
+        '200':
+          description: OK
+    post:
+      summary: Set Office on the Web settings
+      operationId: AppSettings.SetOfficeOnTheWeb
+      tags: [AppSettings]
+      x-nodoc-operation-context:
+        canonicalPath: /admin/api/settings/apps/officeonline
+      responses:
+        '200':
+          description: OK
+
+  /admin/api/settings/apps/MicrosoftLoop:
+    get:
+      summary: Get Microsoft Loop settings
+      operationId: AppSettings.GetMicrosoftLoop
+      tags: [AppSettings]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                description: Microsoft Loop settings. Exact schema pending.

@@ -932,7 +932,26 @@ function New-PortalSurfaceDiscoveryPlan {
         }
 
         if ((Test-PortalSurfaceProperty -InputObject $route -Name 'Interactions') -and $null -ne (Get-PortalSurfacePropertyValue -InputObject $route -Name 'Interactions')) {
-            $routeRecord.Interactions = @(ConvertTo-PortalSurfaceOrderedData -InputObject (Get-PortalSurfacePropertyValue -InputObject $route -Name 'Interactions'))
+            $interactionData = ConvertTo-PortalSurfaceOrderedData -InputObject (Get-PortalSurfacePropertyValue -InputObject $route -Name 'Interactions')
+            $flattenedInteractions = [System.Collections.Generic.List[object]]::new()
+
+            foreach ($interactionEntry in @($interactionData)) {
+                if (
+                    ($interactionEntry -is [System.Collections.IEnumerable]) -and
+                    ($interactionEntry -isnot [string]) -and
+                    ($interactionEntry -isnot [System.Collections.IDictionary])
+                ) {
+                    foreach ($nestedInteractionEntry in @($interactionEntry)) {
+                        $flattenedInteractions.Add($nestedInteractionEntry) | Out-Null
+                    }
+
+                    continue
+                }
+
+                $flattenedInteractions.Add($interactionEntry) | Out-Null
+            }
+
+            $routeRecord.Interactions = @($flattenedInteractions.ToArray())
         }
         else {
             $routeRecord.Interactions = @()

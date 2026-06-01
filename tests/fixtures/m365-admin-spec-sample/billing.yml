@@ -1,0 +1,9 @@
+paths:
+  /admin/api/billing/BillingModel:
+    get:
+      summary: Get billing model
+      operationId: Billing.GetBillingModel
+      tags: [Billing]
+      responses:
+        '200':
+          description: OK
