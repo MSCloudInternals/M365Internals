@@ -161,7 +161,7 @@ function Get-M365AdminSpecCoverageCmdletInventory {
         [string]$RepositoryRoot
     )
 
-    $modulePath = Join-Path $RepositoryRoot 'M365Internals\M365Internals.psd1'
+    $modulePath = Join-Path (Join-Path $RepositoryRoot 'M365Internals') 'M365Internals.psd1'
     Import-Module $modulePath -Force -ErrorAction Stop
     $module = Get-Module M365Internals -ErrorAction Stop
 
@@ -198,7 +198,7 @@ function Get-M365AdminSpecCoverageRegistryOperations {
         [string]$RepositoryRoot
     )
 
-    . (Join-Path $RepositoryRoot 'build\PortalSurfaceRegistry.ps1')
+    . (Join-Path (Join-Path $RepositoryRoot 'build') 'PortalSurfaceRegistry.ps1')
     $registry = Import-PortalSurfaceRegistry -RepositoryRoot $RepositoryRoot
 
     $operations = [System.Collections.Generic.List[object]]::new()
@@ -321,7 +321,7 @@ function Find-M365AdminSpecCoverageCodeMatches {
         )) {
             $relativePath = $result
             if ($relativePath.StartsWith($RepositoryRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
-                $relativePath = $relativePath.Substring($RepositoryRoot.Length).TrimStart('\')
+                $relativePath = $relativePath.Substring($RepositoryRoot.Length).TrimStart([char[]]@([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar))
             }
 
             $matches.Add($relativePath) | Out-Null
@@ -359,7 +359,7 @@ function Compare-M365AdminSpecCoverage {
     $repositoryFiles = @(Get-M365AdminSpecCoverageRepositoryFiles -RepositoryRoot $resolvedRepositoryRoot -ExcludedRoots @(
             $resolvedSpecRoot
             $resolvedOutputDirectory
-            (Join-Path $resolvedRepositoryRoot 'TestResults\Artifacts')
+            (Join-Path (Join-Path $resolvedRepositoryRoot 'TestResults') 'Artifacts')
         ))
 
     $registryExactLookup = @{}
@@ -491,3 +491,4 @@ if ($MyInvocation.InvocationName -ne '.') {
 
     $comparison.Summary
 }
+

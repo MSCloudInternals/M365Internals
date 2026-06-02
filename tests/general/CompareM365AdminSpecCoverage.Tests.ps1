@@ -4,10 +4,10 @@
             $repoRoot = (Resolve-Path (Join-Path $global:testroot '..')).Path
         }
         else {
-            $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
+            $repoRoot = (Resolve-Path (Join-Path (Join-Path $PSScriptRoot '..') '..')).Path
         }
-        . (Join-Path $repoRoot 'build\Compare-M365AdminSpecCoverage.ps1')
-        $specRoot = Join-Path $repoRoot 'tests\fixtures\m365-admin-spec-sample'
+        . (Join-Path (Join-Path $repoRoot 'build') 'Compare-M365AdminSpecCoverage.ps1')
+        $specRoot = Join-Path (Join-Path (Join-Path $repoRoot 'tests') 'fixtures') 'm365-admin-spec-sample'
         $artifactRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("M365Internals-SpecCoverage-" + [Guid]::NewGuid().Guid)
         $comparison = Compare-M365AdminSpecCoverage -RepositoryRoot $repoRoot -SpecRoot $specRoot -OutputDirectory $artifactRoot
     }
@@ -53,3 +53,4 @@
         Test-Path -LiteralPath (Join-Path $artifactRoot 'm365-admin-spec-coverage-high-confidence.json') | Should -BeTrue
     }
 }
+
