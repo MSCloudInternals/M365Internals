@@ -182,6 +182,7 @@ State-changing cmdlets that post, put, or patch admin-center settings.
 | Set-M365AdminAgentFrontierAccess | Update the Agents Frontier access policy by merging provided values into the current payload |
 | Set-M365AdminAppSetting | Update an app settings payload by merging provided values into the current admin-center payload |
 | Set-M365AdminCompanySetting | Update supported company settings payloads such as Help Desk, Profile, Release Track, Theme, and Tile |
+| Set-M365AdminCopilotConnector | Updates the Copilot connector visibility state for users. |
 | Set-M365AdminCopilotPinPolicy | Update the Copilot pin policy by merging provided values into the current payload |
 | Set-M365AdminMicrosoft365GroupSetting | Update Microsoft 365 Groups guest access and guest user policy payloads |
 | Set-M365AdminPeopleSetting | Update the People name-pronunciation and pronouns payloads |

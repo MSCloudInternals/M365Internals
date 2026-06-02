@@ -66,6 +66,8 @@ Describe 'Portal surface registry' {
         $knownBackupPermission.PathTemplate | Should -Be '/admin/api/syntexbilling/azureSubscriptions/{AzureSubscriptionId}/permissions'
         $searchRoute.Metadata.DisplayName | Should -Be 'Search & intelligence'
         $searchRoute.Metadata.Workload | Should -Be 'Search'
+        @($searchRoute.Interactions).Count | Should -Be 3
+        $searchRoute.Interactions[0].Action | Should -Be 'WaitForText'
         @($searchRoute.Interactions.Action) | Should -Contain 'ClickText'
     }
 

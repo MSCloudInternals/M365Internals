@@ -31,7 +31,7 @@
     [CmdletBinding()]
     param (
         [Parameter()]
-        [ValidateSet('All', 'Bookings', 'Calendar', 'CalendarSharing', 'DirectorySynchronization', 'Dynamics365ConnectionGraph', 'Dynamics365CustomerVoice', 'Dynamics365SalesInsights', 'DynamicsCrm', 'EndUserCommunications', 'Learning', 'LoopPolicy', 'Mail', 'Microsoft365OnTheWeb', 'MicrosoftCommunicationToUsers', 'MicrosoftForms', 'MicrosoftGraphDataConnect', 'MicrosoftLoop', 'MicrosoftTeams', 'O365DataPlan', 'OfficeForms', 'OfficeFormsPro', 'OfficeOnline', 'OfficeScripts', 'Project', 'SharePoint', 'SitesSharing', 'SkypeTeams', 'Store', 'Sway', 'UserOwnedAppsAndServices', 'UserSoftware', 'VivaLearning', 'Whiteboard')]
+        [ValidateSet('All', 'Bookings', 'Calendar', 'CalendarSharing', 'Cortana', 'DirectorySynchronization', 'Dynamics365ConnectionGraph', 'Dynamics365CustomerVoice', 'Dynamics365SalesInsights', 'DynamicsCrm', 'EndUserCommunications', 'Learning', 'LoopPolicy', 'Mail', 'Microsoft365OnTheWeb', 'MicrosoftCommunicationToUsers', 'MicrosoftForms', 'MicrosoftGraphDataConnect', 'MicrosoftLoop', 'MicrosoftTeams', 'O365DataPlan', 'OfficeForms', 'OfficeFormsPro', 'OfficeOnline', 'OfficeOnTheWebPolicies', 'OfficeScripts', 'Planner', 'Project', 'SharePoint', 'SitesSharing', 'SkypeTeams', 'Store', 'Sway', 'TeamsProvisioningCustomization', 'ToDo', 'UserOwnedAppsAndServices', 'UserSoftware', 'VivaLearning', 'Whiteboard')]
         [string]$Name = 'All',
 
         [Parameter()]
@@ -49,6 +49,7 @@
         $allNames = @(
             'Bookings',
             'CalendarSharing',
+            'Cortana',
             'DirectorySynchronization',
             'Dynamics365ConnectionGraph',
             'Dynamics365CustomerVoice',
@@ -63,9 +64,11 @@
             'MicrosoftGraphDataConnect',
             'MicrosoftTeams',
             'OfficeScripts',
+            'Planner',
             'Project',
             'SharePoint',
             'Sway',
+            'ToDo',
             'UserOwnedAppsAndServices',
             'UserSoftware',
             'Whiteboard'
@@ -87,7 +90,7 @@
                 return Get-M365AdminPortalData -Path $Path -CacheKey "M365AdminAppSetting:$ResultName" -Headers $ResultHeaders -Force:$bypassCache
             }
             catch {
-                $fallbackNames = @('Dynamics365ConnectionGraph', 'Dynamics365SalesInsights', 'OfficeScripts')
+                $fallbackNames = @('Dynamics365ConnectionGraph', 'Dynamics365SalesInsights', 'OfficeScripts', 'UserOwnedAppsAndServices')
                 $isKnownUnavailableSurface = $fallbackNames -contains $ResultName
                 $isUnavailableStatus = $_.Exception.Message -match '400 \(Bad Request\)|404 \(Not Found\)'
 

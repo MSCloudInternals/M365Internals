@@ -53,4 +53,20 @@
             $Path -eq '/admin/api/services/apps/todo' -and $CacheKey -eq 'M365AdminService:Todo'
         }
     }
+
+    It 'supports the MyAnalytics service endpoint' {
+        Mock -ModuleName M365Internals Get-M365AdminPortalData {
+            [pscustomobject]@{
+                Enabled = $true
+            }
+        }
+
+        $result = Get-M365AdminService -Name MyAnalytics
+
+        $result.PSObject.TypeNames[0] | Should -Be 'M365Admin.Service.MyAnalytics'
+
+        Assert-MockCalled Get-M365AdminPortalData -ModuleName M365Internals -Exactly 1 -ParameterFilter {
+            $Path -eq '/admin/api/services/apps/myanalytics' -and $CacheKey -eq 'M365AdminService:MyAnalytics'
+        }
+    }
 }

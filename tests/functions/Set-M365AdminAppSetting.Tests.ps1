@@ -38,6 +38,21 @@
         }
     }
 
+    It 'posts user-owned app settings to the updated userownedapps endpoint' {
+        Set-M365AdminAppSetting -Name UserOwnedAppsAndServices -Settings @{
+            Enabled = $true
+            Added   = 'NewValue'
+        } -Confirm:$false | Out-Null
+
+        Assert-MockCalled Invoke-M365AdminRestMethod -ModuleName M365Internals -Exactly 1 -ParameterFilter {
+            $Path -eq '/admin/api/settings/apps/userownedapps' -and
+            $Method -eq 'Post' -and
+            $Body.Enabled -eq $true -and
+            $Body.Existing -eq 'KeepMe' -and
+            $Body.Added -eq 'NewValue'
+        }
+    }
+
     It 'returns refreshed settings when PassThru is used' {
         $script:getCallCount = 0
         Mock -ModuleName M365Internals Get-M365AdminAppSetting {
@@ -67,6 +82,15 @@
             $Path -eq '/admin/api/settings/apps/store' -and
             $Method -eq 'Post' -and
             $Body.Enabled -eq $false
+        }
+    }
+
+    It 'supports the new app-settings Planner surface' {
+        Set-M365AdminAppSetting -Name Planner -Settings @{ Enabled = $true } -Confirm:$false | Out-Null
+
+        Assert-MockCalled Invoke-M365AdminRestMethod -ModuleName M365Internals -Exactly 1 -ParameterFilter {
+            $Path -eq '/admin/api/settings/apps/planner' -and
+            $Method -eq 'Post'
         }
     }
 

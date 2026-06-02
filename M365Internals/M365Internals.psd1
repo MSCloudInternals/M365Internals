@@ -74,6 +74,7 @@
         'Set-M365AdminAgentFrontierAccess',
         'Set-M365AdminAppSetting',
         'Set-M365AdminCompanySetting',
+        'Set-M365AdminCopilotConnector',
         'Set-M365AdminCopilotPinPolicy',
         'Set-M365AdminMicrosoft365GroupSetting',
         'Set-M365AdminPeopleSetting',
@@ -98,3 +99,4 @@
     }
 
 }
+
