@@ -172,6 +172,7 @@ Navigation, shell, feature, bootstrap, and supporting platform metadata.
 | Get-M365AdminHomeData | Retrieve the home page ClassicModernAdminDataStream payload |
 | Get-M365AdminNavigation | Retrieve primary or asynchronous navigation payloads from the admin center |
 | Get-M365AdminShellInfo | Retrieve coordinated bootstrap shell information from the admin center |
+| Get-M365PortalConnectionStatus | Reports local Microsoft 365 portal connection availability. |
 
 ### Write Operations
 

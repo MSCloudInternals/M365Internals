@@ -1248,6 +1248,8 @@ function Invoke-M365BrowserAuthentication {
         return [pscustomobject]@{
             EstsAuthCookieValue = if ($selectedEstsCookie) { $selectedEstsCookie.value } else { $null }
             PortalWebSession    = $selectedPortalWebSession
+            RetainedBrowserProfile = -not $profileConfiguration.CleanupProfileOnExit
+            ProfilePath = $profileDirectory
         }
     } finally {
         if ($browserProcess) {

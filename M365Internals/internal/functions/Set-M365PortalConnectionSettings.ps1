@@ -415,6 +415,11 @@
         $connection | Add-Member -NotePropertyName RouteKeyPresent -NotePropertyValue (-not [string]::IsNullOrWhiteSpace($cookieValues['x-portal-routekey']))
         $connection | Add-Member -NotePropertyName Source -NotePropertyValue $AuthSource
         $connection | Add-Member -NotePropertyName AuthFlow -NotePropertyValue $resolvedAuthFlow
+        $retainedBrowserProfile = $isCurrentSessionRefresh -and $previousConnection -and
+            $previousConnection.PSObject.Properties['RetainedBrowserProfile'] -and
+            $previousConnection.AuthFlow -eq $resolvedAuthFlow -and
+            [bool]$previousConnection.RetainedBrowserProfile
+        $connection | Add-Member -NotePropertyName RetainedBrowserProfile -NotePropertyValue ([bool]$retainedBrowserProfile)
         $connection | Add-Member -NotePropertyName ConnectedAt -NotePropertyValue $connectedAt
         $connection | Add-Member -NotePropertyName RefreshedAt -NotePropertyValue (Get-Date)
         $connection | Add-Member -NotePropertyName Validated -NotePropertyValue (-not $SkipValidation)

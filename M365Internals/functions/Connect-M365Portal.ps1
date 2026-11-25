@@ -559,7 +559,12 @@
                 }
 
                 $browserAuth = Invoke-M365BrowserAuthentication @browserParams
-                return Connect-M365AuthArtifactSet -EstsAuthCookieValue $browserAuth.EstsAuthCookieValue -PortalWebSession $browserAuth.PortalWebSession -TenantId $TenantId -UserAgent $UserAgent -SkipValidation:$SkipValidation -AuthFlow 'BrowserSignIn' -ConnectionPreference PreferPortal -FailureLabel 'Browser sign-in'
+                $connection = Connect-M365AuthArtifactSet -EstsAuthCookieValue $browserAuth.EstsAuthCookieValue -PortalWebSession $browserAuth.PortalWebSession -TenantId $TenantId -UserAgent $UserAgent -SkipValidation:$SkipValidation -AuthFlow 'BrowserSignIn' -ConnectionPreference PreferPortal -FailureLabel 'Browser sign-in' -ErrorAction Stop
+                $connection | Add-Member -NotePropertyName RetainedBrowserProfile -NotePropertyValue ([bool]$browserAuth.RetainedBrowserProfile) -Force
+                if ($script:m365PortalSession) {
+                    $script:m365PortalSession | Add-Member -NotePropertyName M365BrowserProfilePath -NotePropertyValue $(if ($browserAuth.RetainedBrowserProfile) { $browserAuth.ProfilePath } else { $null }) -Force
+                }
+                return $connection
             }
             'SSO' {
                 $ssoParams = @{
@@ -586,7 +591,12 @@
                 }
 
                 $ssoAuth = Invoke-M365SsoAuthentication @ssoParams
-                return Connect-M365AuthArtifactSet -EstsAuthCookieValue $ssoAuth.EstsAuthCookieValue -PortalWebSession $ssoAuth.PortalWebSession -TenantId $TenantId -UserAgent $UserAgent -SkipValidation:$SkipValidation -AuthFlow 'SSO' -ConnectionPreference PreferPortal -FailureLabel 'SSO authentication'
+                $connection = Connect-M365AuthArtifactSet -EstsAuthCookieValue $ssoAuth.EstsAuthCookieValue -PortalWebSession $ssoAuth.PortalWebSession -TenantId $TenantId -UserAgent $UserAgent -SkipValidation:$SkipValidation -AuthFlow 'SSO' -ConnectionPreference PreferPortal -FailureLabel 'SSO authentication' -ErrorAction Stop
+                $connection | Add-Member -NotePropertyName RetainedBrowserProfile -NotePropertyValue ([bool]$ssoAuth.RetainedBrowserProfile) -Force
+                if ($script:m365PortalSession) {
+                    $script:m365PortalSession | Add-Member -NotePropertyName M365BrowserProfilePath -NotePropertyValue $(if ($ssoAuth.RetainedBrowserProfile) { $ssoAuth.ProfilePath } else { $null }) -Force
+                }
+                return $connection
             }
             'SoftwarePasskey' {
                 $passkeyParams = @{

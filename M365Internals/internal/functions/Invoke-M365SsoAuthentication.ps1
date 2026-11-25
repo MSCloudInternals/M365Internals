@@ -313,6 +313,7 @@ function Invoke-M365SsoAuthentication {
             PortalWebSession    = $portalWebSession
             TenantId            = $TenantId
             ProfilePath         = $resolvedProfilePath
+            RetainedBrowserProfile = -not $profileConfiguration.CleanupProfileOnExit
         }
     } finally {
         if ($browserProcess) {

@@ -70,6 +70,7 @@
         'Get-M365AdminUserOwnedAppSetting',
         'Get-M365AdminUserSetting',
         'Get-M365AdminVivaSetting',
+        'Get-M365PortalConnectionStatus',
         'Invoke-M365AdminRestMethod',
         'Set-M365AdminAgentFrontierAccess',
         'Set-M365AdminAppSetting',
@@ -99,4 +100,3 @@
     }
 
 }
-
