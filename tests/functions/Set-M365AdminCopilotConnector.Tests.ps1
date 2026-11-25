@@ -1,5 +1,7 @@
 ﻿Describe 'Set-M365AdminCopilotConnector' {
     BeforeEach {
+        Mock -ModuleName M365Internals Get-M365PortalConnectionGeneration { [guid]::Empty }
+        Mock -ModuleName M365Internals Assert-M365PortalConnectionGeneration {}
         $script:connectionsRawPayload = [pscustomobject]@{
             connections = @(
                 [pscustomobject]@{
@@ -148,4 +150,3 @@
         Assert-MockCalled Get-M365AdminCopilotConnector -ModuleName M365Internals -Exactly 1 -ParameterFilter { $Name -eq 'Connections' }
     }
 }
-

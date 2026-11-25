@@ -249,10 +249,13 @@
             return @($connectionsResult.connections | Where-Object { [string]$_.connectionId -ieq $TargetConnectionId }) | Select-Object -First 1
         }
 
+        $connectionGeneration = Get-M365PortalConnectionGeneration
         $connectionsPayload = Get-M365AdminCopilotConnector -Name Connections -Force:$Force -Raw
+        Assert-M365PortalConnectionGeneration -Generation $connectionGeneration
         $lookupValue = if ($PSCmdlet.ParameterSetName -eq 'ById') { $ConnectionId } else { $ConnectionName }
         $targetConnector = Resolve-TargetConnector -ConnectionsPayload $connectionsPayload -LookupValue $lookupValue -LookupMode $PSCmdlet.ParameterSetName
         $gallerySettings = Get-ParsedGallerySettingsRecord
+        Assert-M365PortalConnectionGeneration -Generation $connectionGeneration
         $updatedPayload = Get-UpdatedConnectorGallerySettingsPayload -GalleryPayload $gallerySettings.Payload -TargetConnectionId ([string]$targetConnector.connectionId) -DesiredEnabledState $Enabled
 
         $currentPayloadJson = $gallerySettings.Payload | ConvertTo-Json -Depth 50 -Compress
@@ -275,6 +278,7 @@
         $action = if ($Enabled) { 'Enable' } else { 'Disable' }
         $targetLabel = '{0} ({1})' -f ([string]$targetConnector.connectionName), ([string]$targetConnector.connectionId)
         if ($PSCmdlet.ShouldProcess($targetLabel, "$action Copilot connector visibility")) {
+            Assert-M365PortalConnectionGeneration -Generation $connectionGeneration
             $result = Invoke-M365AdminRestMethod -Path $path -Method Post -Body $writeBody -ErrorAction Stop
             Clear-M365Cache -TenantId (Get-M365PortalTenantId)
 
@@ -286,4 +290,3 @@
         }
     }
 }
-

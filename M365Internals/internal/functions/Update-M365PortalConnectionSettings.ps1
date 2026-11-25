@@ -36,5 +36,5 @@
         $null
     }
 
-    $null = Set-M365PortalConnectionSettings -WebSession $script:m365PortalSession -AuthSource $authSource -AuthFlow $authFlow -UserAgent $script:m365PortalSession.UserAgent -SkipValidation
+    $null = Set-M365PortalConnectionSettings -WebSession $script:m365PortalSession -AuthSource $authSource -AuthFlow $authFlow -UserAgent $script:m365PortalSession.UserAgent -SkipValidation -Refresh
 }

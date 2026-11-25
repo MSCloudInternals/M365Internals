@@ -4,6 +4,8 @@ InModuleScope M365Internals {
             $script:m365PortalSession = [Microsoft.PowerShell.Commands.WebRequestSession]::new()
             $script:m365PortalHeaders = @{}
             Mock Update-M365PortalConnectionSettings {}
+            Mock Get-M365PortalConnectionGeneration { [guid]::Empty }
+            Mock Assert-M365PortalConnectionGeneration {}
             Mock Invoke-RestMethod { throw 'Synthetic transport failure' }
             Mock Get-M365AdminCopilotPinPolicy { [pscustomobject]@{ CopilotPinningPolicy = 1 } }
             Mock Get-M365AdminUserOwnedAppSetting { [pscustomobject]@{ StoreAccess = $true } }

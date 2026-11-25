@@ -41,7 +41,9 @@
 
         [string]$UserAgent,
 
-        [switch]$SkipValidation
+        [switch]$SkipValidation,
+
+        [switch]$Refresh
     )
 
     function Get-PortalCookieValue {
@@ -217,8 +219,11 @@
     $previousHeaders = $script:m365PortalHeaders
     $previousConnection = $script:m365PortalConnection
     $previousBootstrapState = $script:m365PortalLastBootstrapState
-    $script:m365PortalLastBootstrapState = $null
     $isCurrentSessionRefresh = ($null -ne $previousSession -and $WebSession -eq $previousSession)
+    if ($Refresh -and -not $isCurrentSessionRefresh) {
+        throw 'Cannot refresh a portal session that is not the active session.'
+    }
+    $script:m365PortalLastBootstrapState = $null
     $tokenRefreshSatisfiedUntilUtc = if ($WebSession.PSObject.Properties['M365TokenRefreshSatisfiedUntilUtc']) {
         $WebSession.M365TokenRefreshSatisfiedUntilUtc
     }
@@ -415,7 +420,14 @@
         $connection | Add-Member -NotePropertyName RouteKeyPresent -NotePropertyValue (-not [string]::IsNullOrWhiteSpace($cookieValues['x-portal-routekey']))
         $connection | Add-Member -NotePropertyName Source -NotePropertyValue $AuthSource
         $connection | Add-Member -NotePropertyName AuthFlow -NotePropertyValue $resolvedAuthFlow
-        $retainedBrowserProfile = $isCurrentSessionRefresh -and $previousConnection -and
+        $generation = if ($Refresh -and $previousConnection -and $previousConnection.PSObject.Properties['ConnectionGeneration']) {
+            $previousConnection.ConnectionGeneration
+        }
+        else {
+            [guid]::NewGuid()
+        }
+        $connection | Add-Member -NotePropertyName ConnectionGeneration -NotePropertyValue $generation
+        $retainedBrowserProfile = $Refresh -and $isCurrentSessionRefresh -and $previousConnection -and
             $previousConnection.PSObject.Properties['RetainedBrowserProfile'] -and
             $previousConnection.AuthFlow -eq $resolvedAuthFlow -and
             [bool]$previousConnection.RetainedBrowserProfile

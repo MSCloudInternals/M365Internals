@@ -45,10 +45,13 @@
 
     process {
         $path = '/admin/api/settings/company/copilotpolicy/pin'
+        $connectionGeneration = Get-M365PortalConnectionGeneration
         $currentSettings = Get-M365AdminCopilotPinPolicy -Force:$Force
+        Assert-M365PortalConnectionGeneration -Generation $connectionGeneration
         $body = Merge-M365AdminSettingsPayload -CurrentSettings $currentSettings -Settings $Settings
 
         if ($PSCmdlet.ShouldProcess('Copilot pin policy', "POST $path")) {
+            Assert-M365PortalConnectionGeneration -Generation $connectionGeneration
             $result = Invoke-M365AdminRestMethod -Path $path -Method Post -Body $body -ErrorAction Stop
             Clear-M365Cache -TenantId (Get-M365PortalTenantId)
 
