@@ -219,8 +219,7 @@
     $previousHeaders = $script:m365PortalHeaders
     $previousConnection = $script:m365PortalConnection
     $previousBootstrapState = $script:m365PortalLastBootstrapState
-    $cacheVariable = Get-Variable -Name m365CacheStore -Scope Script -ErrorAction SilentlyContinue
-    $previousCacheStore = if ($cacheVariable) { $cacheVariable.Value } else { $null }
+    $previousCacheStore = if (Test-Path variable:script:m365CacheStore) { $script:m365CacheStore } else { $null }
     $isCurrentSessionRefresh = ($null -ne $previousSession -and $WebSession -eq $previousSession)
     if ($Refresh -and -not $isCurrentSessionRefresh) {
         throw 'Cannot refresh a portal session that is not the active session.'

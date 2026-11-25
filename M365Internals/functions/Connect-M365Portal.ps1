@@ -48,6 +48,8 @@
 
     .PARAMETER WebSession
         An authenticated WebRequestSession that already contains the required admin portal cookies.
+        When this is the current active session, reconnecting uses an independent copy so that a
+        failed replacement leaves the active session unchanged.
 
     .PARAMETER EstsAuthCookieValue
         The ESTSAUTHPERSISTENT cookie value from login.microsoftonline.com as plain text.
@@ -618,6 +620,9 @@
                 break
             }
             'WebSession' {
+                if ($null -ne $script:m365PortalSession -and [object]::ReferenceEquals($WebSession, $script:m365PortalSession)) {
+                    $WebSession = Copy-M365PortalWebSession -WebSession $WebSession
+                }
                 if ($UserAgent) {
                     $WebSession.UserAgent = $UserAgent
                 }

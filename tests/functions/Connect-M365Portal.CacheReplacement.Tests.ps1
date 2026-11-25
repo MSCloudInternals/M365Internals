@@ -63,5 +63,67 @@ InModuleScope M365Internals {
             [object]::ReferenceEquals($script:m365CacheStore, $currentCache) | Should -BeTrue
             $script:m365CacheStore.current | Should -Be 'cached value'
         }
+
+        It 'leaves an active web session unchanged when same-session reconnect validation fails' {
+            $null = Connect-M365Portal -WebSession $replacement -SkipValidation
+            $originalSession = $script:m365PortalSession
+            $originalConnection = $script:m365PortalConnection
+            $originalCache = $script:m365CacheStore
+            $originalSession.UserAgent = 'original-agent'
+            $originalSession.Headers['X-Test'] = 'original-header'
+            Mock Invoke-M365PortalRequest {
+                $script:m365PortalSession.Cookies.Add([System.Net.Cookie]::new('RootAuthToken', 'changed', '/', 'admin.cloud.microsoft'))
+                $script:m365PortalSession.Headers['X-Test'] = 'changed'
+                throw 'Synthetic validation failure'
+            }
+
+            { Connect-M365Portal -WebSession $originalSession -UserAgent 'replacement-agent' } |
+                Should -Throw '*Synthetic validation failure*'
+
+            [object]::ReferenceEquals($script:m365PortalSession, $originalSession) | Should -BeTrue
+            [object]::ReferenceEquals($script:m365PortalConnection, $originalConnection) | Should -BeTrue
+            [object]::ReferenceEquals($script:m365CacheStore, $originalCache) | Should -BeTrue
+            $originalSession.UserAgent | Should -Be 'original-agent'
+            $originalSession.Headers['X-Test'] | Should -Be 'original-header'
+            $originalSession.Cookies.GetCookies([uri]'https://admin.cloud.microsoft/')['RootAuthToken'].Value | Should -Be 'root'
+        }
+
+        It 'uses the staged session after a successful same-session reconnect' {
+            $null = Connect-M365Portal -WebSession $replacement -SkipValidation
+            $originalSession = $script:m365PortalSession
+            $generation = Get-M365PortalConnectionGeneration
+            $null = Connect-M365Portal -WebSession $originalSession -UserAgent 'replacement-agent' -SkipValidation
+            [object]::ReferenceEquals($script:m365PortalSession, $originalSession) | Should -BeFalse
+            $script:m365PortalSession.UserAgent | Should -Be 'replacement-agent'
+            $originalSession.UserAgent | Should -Not -Be 'replacement-agent'
+            $script:m365PortalSession.Cookies.GetCookies([uri]'https://admin.cloud.microsoft/')['RootAuthToken'].Value | Should -Be 'root'
+            Get-M365PortalConnectionGeneration | Should -Not -Be $generation
+        }
+    }
+
+    Describe 'Copy-M365PortalWebSession' {
+        It 'copies cookies from multiple domains and paths without sharing mutable state' {
+            $session = [Microsoft.PowerShell.Commands.WebRequestSession]::new()
+            $session.Cookies.SetCookies([uri]'https://admin.cloud.microsoft/adminportal/', 'hostonly=one; Path=/adminportal; Secure; HttpOnly')
+            $session.Cookies.Add([System.Net.Cookie]::new('login', 'two', '/', 'login.microsoftonline.com'))
+            $legacyCookies = @(Get-M365LegacyCookieCollection -CookieContainer $session.Cookies)
+            $legacyCookies.Count | Should -Be 2
+            @($legacyCookies.Name) | Should -Contain 'hostonly'
+            @($legacyCookies.Name) | Should -Contain 'login'
+            $session.Headers['X-Test'] = 'original'
+            $session.UserAgent = 'original-agent'
+            $session.MaximumRedirection = 3
+            $session | Add-Member -NotePropertyName M365TokenRefreshSatisfiedUntilUtc -NotePropertyValue ([datetime]'2030-01-01')
+            $copy = Copy-M365PortalWebSession -WebSession $session
+            $copy.Cookies.GetCookies([uri]'https://admin.cloud.microsoft/adminportal/')['hostonly'].Value | Should -Be 'one'
+            $copy.Cookies.GetCookies([uri]'https://sub.admin.cloud.microsoft/adminportal/')['hostonly'] | Should -BeNullOrEmpty
+            $copy.Cookies.GetCookies([uri]'https://login.microsoftonline.com/')['login'].Value | Should -Be 'two'
+            $copy.MaximumRedirection | Should -Be 3
+            $copy.M365TokenRefreshSatisfiedUntilUtc | Should -Be ([datetime]'2030-01-01')
+            $copy.Headers['X-Test'] = 'changed'
+            $copy.Cookies.Add([System.Net.Cookie]::new('login', 'changed', '/', 'login.microsoftonline.com'))
+            $session.Headers['X-Test'] | Should -Be 'original'
+            $session.Cookies.GetCookies([uri]'https://login.microsoftonline.com/')['login'].Value | Should -Be 'two'
+        }
     }
 }
