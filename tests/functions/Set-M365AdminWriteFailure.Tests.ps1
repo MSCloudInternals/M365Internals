@@ -69,5 +69,17 @@ InModuleScope M365Internals {
             Assert-MockCalled Clear-M365Cache -Exactly 1
             Assert-MockCalled Get-M365AdminUserOwnedAppSetting -Exactly 0
         }
+
+        It 'does not clear cache or read back after a redirected pin-policy write' {
+            Mock Invoke-RestMethod {
+                $response = [System.Net.Http.HttpResponseMessage]::new([System.Net.HttpStatusCode]::Found)
+                throw [Microsoft.PowerShell.Commands.HttpResponseException]::new('Redirect refused', $response)
+            }
+            { Set-M365AdminCopilotPinPolicy -Settings @{ CopilotPinningPolicy = 0 } -PassThru -Confirm:$false } |
+                Should -Throw '*write outcome is unconfirmed*'
+            Assert-MockCalled Invoke-RestMethod -Exactly 1
+            Assert-MockCalled Clear-M365Cache -Exactly 0
+            Assert-MockCalled Get-M365AdminCopilotPinPolicy -Exactly 1
+        }
     }
 }

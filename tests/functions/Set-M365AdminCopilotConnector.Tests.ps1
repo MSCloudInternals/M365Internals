@@ -132,6 +132,20 @@
         $result.connectionId | Should -Be 'LSEGMCP01'
         $result.EnabledForUsers | Should -BeFalse
     }
-}
 
+    It 'does not clear cache or return a refreshed connector after a write failure' {
+        Mock -ModuleName M365Internals Invoke-M365AdminRestMethod { throw 'The write outcome is unconfirmed.' }
+        $result = $null
+        $failure = $null
+        try {
+            $result = Set-M365AdminCopilotConnector -ConnectionId 'LSEGMCP01' -Enabled $false -PassThru -Confirm:$false -ErrorAction SilentlyContinue
+        }
+        catch { $failure = $_ }
+        $result | Should -BeNullOrEmpty
+        $failure.Exception.Message | Should -Match 'write outcome is unconfirmed'
+        Assert-MockCalled Invoke-M365AdminRestMethod -ModuleName M365Internals -Exactly 1
+        Assert-MockCalled Clear-M365Cache -ModuleName M365Internals -Exactly 0
+        Assert-MockCalled Get-M365AdminCopilotConnector -ModuleName M365Internals -Exactly 1 -ParameterFilter { $Name -eq 'Connections' }
+    }
+}
 

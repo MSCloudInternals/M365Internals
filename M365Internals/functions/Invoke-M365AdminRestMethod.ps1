@@ -149,6 +149,11 @@
             Invoke-RestMethod @invokeParams
         }
         catch {
+            $responseProperty = $_.Exception.PSObject.Properties['Response']
+            if ($Method -ne 'Get' -and $responseProperty -and $responseProperty.Value -and
+                [int]$responseProperty.Value.StatusCode -ge 300 -and [int]$responseProperty.Value.StatusCode -lt 400) {
+                throw "The admin write received a redirect and was not followed. The write outcome is unconfirmed."
+            }
             throw "Failed to invoke M365 REST method for $Method $requestUri. $($_.Exception.Message)"
         }
         finally {

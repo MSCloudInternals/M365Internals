@@ -66,5 +66,14 @@ InModuleScope M365Internals {
             Invoke-M365AdminRestMethod -Path '/admin/api/test' | Out-Null
             $script:m365PortalSession.MaximumRedirection | Should -Be $originalMaximumRedirection
         }
+
+        It 'reports an unconfirmed outcome when an admin write receives a redirect' {
+            Mock Invoke-RestMethod {
+                $response = [System.Net.Http.HttpResponseMessage]::new([System.Net.HttpStatusCode]::Found)
+                throw [Microsoft.PowerShell.Commands.HttpResponseException]::new('Redirect refused', $response)
+            }
+            { Invoke-M365AdminRestMethod -Path '/admin/api/test' -Method Post } | Should -Throw '*write outcome is unconfirmed*'
+            Assert-MockCalled Invoke-RestMethod -Exactly 1 -ParameterFilter { $MaximumRedirection -eq 0 }
+        }
     }
 }
