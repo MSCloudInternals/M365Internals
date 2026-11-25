@@ -8,7 +8,8 @@
         session and headers established by Connect-M365Portal. Before each request, the cmdlet
         refreshes the stored portal connection settings from the current cookie jar so headers
         such as AjaxSessionKey and x-portal-routekey stay in sync with the session. Requests
-        are restricted to the HTTPS admin.cloud.microsoft origin and are not redirected.
+        are restricted to the HTTPS admin.cloud.microsoft origin. Reads may follow redirects
+        within that origin; writes never follow redirects.
 
     .PARAMETER Uri
         The fully qualified HTTPS request URI on admin.cloud.microsoft.
@@ -146,15 +147,41 @@
 
         $previousMaximumRedirection = $WebSession.MaximumRedirection
         try {
-            Invoke-RestMethod @invokeParams
-        }
-        catch {
-            $responseProperty = $_.Exception.PSObject.Properties['Response']
-            if ($Method -ne 'Get' -and $responseProperty -and $responseProperty.Value -and
-                [int]$responseProperty.Value.StatusCode -ge 300 -and [int]$responseProperty.Value.StatusCode -lt 400) {
-                throw "The admin write received a redirect and was not followed. The write outcome is unconfirmed."
+            $redirectCount = 0
+            while ($true) {
+                try {
+                    return Invoke-RestMethod @invokeParams
+                }
+                catch {
+                    $responseProperty = $_.Exception.PSObject.Properties['Response']
+                    $response = if ($responseProperty) { $responseProperty.Value } else { $null }
+                    $statusCode = if ($response) { [int]$response.StatusCode } else { 0 }
+                    if ($Method -ne 'Get' -and $statusCode -ge 300 -and $statusCode -lt 400) {
+                        throw 'The admin write received a redirect and was not followed. The write outcome is unconfirmed.'
+                    }
+                    if ($Method -eq 'Get' -and $statusCode -in @(301, 302, 303, 307, 308)) {
+                        if ($redirectCount -ge 5) {
+                            throw 'The admin read exceeded the maximum of five redirects.'
+                        }
+                        $locationProperty = $response.Headers.PSObject.Properties['Location']
+                        $location = if ($locationProperty) {
+                            $locationProperty.Value
+                        }
+                        else {
+                            $response.Headers['Location']
+                        }
+                        if (-not $location) {
+                            throw 'The admin read received a redirect without a Location header.'
+                        }
+                        $nextUri = [uri]::new([uri]$invokeParams.Uri, [string]$location)
+                        Assert-M365AdminPortalUri -Uri $nextUri.AbsoluteUri
+                        $invokeParams.Uri = $nextUri.AbsoluteUri
+                        $redirectCount++
+                        continue
+                    }
+                    throw "Failed to invoke M365 REST method for $Method $($invokeParams.Uri). $($_.Exception.Message)"
+                }
             }
-            throw "Failed to invoke M365 REST method for $Method $requestUri. $($_.Exception.Message)"
         }
         finally {
             $WebSession.MaximumRedirection = $previousMaximumRedirection

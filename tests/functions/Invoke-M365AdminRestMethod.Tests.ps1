@@ -75,5 +75,71 @@ InModuleScope M365Internals {
             { Invoke-M365AdminRestMethod -Path '/admin/api/test' -Method Post } | Should -Throw '*write outcome is unconfirmed*'
             Assert-MockCalled Invoke-RestMethod -Exactly 1 -ParameterFilter { $MaximumRedirection -eq 0 }
         }
+
+        It 'follows a same-origin read redirect while retaining portal headers' {
+            $script:redirectCalls = 0
+            Mock Invoke-RestMethod {
+                $script:redirectCalls++
+                if ($script:redirectCalls -eq 1) {
+                    $response = [System.Net.Http.HttpResponseMessage]::new([System.Net.HttpStatusCode]::Found)
+                    $response.Headers.Location = [uri]'/admin/api/next'
+                    throw [Microsoft.PowerShell.Commands.HttpResponseException]::new('Redirect refused', $response)
+                }
+                return [pscustomobject]@{ ok = $true }
+            }
+            $previous = $script:m365PortalSession.MaximumRedirection
+            (Invoke-M365AdminRestMethod -Path '/admin/api/test').ok | Should -BeTrue
+            Assert-MockCalled Invoke-RestMethod -Exactly 2 -ParameterFilter { $MaximumRedirection -eq 0 }
+            Assert-MockCalled Invoke-RestMethod -Exactly 1 -ParameterFilter {
+                $Uri -eq 'https://admin.cloud.microsoft/admin/api/next' -and $Headers['AjaxSessionKey'] -eq 'test-session'
+            }
+            $script:m365PortalSession.MaximumRedirection | Should -Be $previous
+        }
+
+        It 'rejects a read redirect to an unapproved origin before sending headers' {
+            Mock Invoke-RestMethod {
+                $response = [System.Net.Http.HttpResponseMessage]::new([System.Net.HttpStatusCode]::Found)
+                $response.Headers.Location = [uri]'https://example.com/collect'
+                throw [Microsoft.PowerShell.Commands.HttpResponseException]::new('Redirect refused', $response)
+            }
+            { Invoke-M365AdminRestMethod -Path '/admin/api/test' } | Should -Throw '*admin.cloud.microsoft origin*'
+            Assert-MockCalled Invoke-RestMethod -Exactly 1
+        }
+
+        It 'handles redirects represented by legacy web response headers' {
+            $script:redirectCalls = 0
+            Mock Invoke-RestMethod {
+                $script:redirectCalls++
+                if ($script:redirectCalls -eq 1) {
+                    $headers = [System.Net.WebHeaderCollection]::new()
+                    $headers['Location'] = '/admin/api/next'
+                    $error = [System.Exception]::new('Redirect refused')
+                    $error | Add-Member -NotePropertyName Response -NotePropertyValue ([pscustomobject]@{ StatusCode = 302; Headers = $headers })
+                    throw $error
+                }
+                return [pscustomobject]@{ ok = $true }
+            }
+            (Invoke-M365AdminRestMethod -Path '/admin/api/test').ok | Should -BeTrue
+            Assert-MockCalled Invoke-RestMethod -Exactly 1 -ParameterFilter { $Uri -eq 'https://admin.cloud.microsoft/admin/api/next' }
+        }
+
+        It 'limits read redirect loops to five redirects' {
+            Mock Invoke-RestMethod {
+                $response = [System.Net.Http.HttpResponseMessage]::new([System.Net.HttpStatusCode]::Found)
+                $response.Headers.Location = [uri]'/admin/api/test'
+                throw [Microsoft.PowerShell.Commands.HttpResponseException]::new('Redirect refused', $response)
+            }
+            { Invoke-M365AdminRestMethod -Path '/admin/api/test' } | Should -Throw '*maximum of five redirects*'
+            Assert-MockCalled Invoke-RestMethod -Exactly 6
+        }
+
+        It 'fails safely when a read redirect has no Location header' {
+            Mock Invoke-RestMethod {
+                $response = [System.Net.Http.HttpResponseMessage]::new([System.Net.HttpStatusCode]::Found)
+                throw [Microsoft.PowerShell.Commands.HttpResponseException]::new('Redirect refused', $response)
+            }
+            { Invoke-M365AdminRestMethod -Path '/admin/api/test' } | Should -Throw '*without a Location*'
+            Assert-MockCalled Invoke-RestMethod -Exactly 1
+        }
     }
 }
