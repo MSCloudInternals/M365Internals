@@ -219,96 +219,101 @@
     $previousHeaders = $script:m365PortalHeaders
     $previousConnection = $script:m365PortalConnection
     $previousBootstrapState = $script:m365PortalLastBootstrapState
+    $cacheVariable = Get-Variable -Name m365CacheStore -Scope Script -ErrorAction SilentlyContinue
+    $previousCacheStore = if ($cacheVariable) { $cacheVariable.Value } else { $null }
     $isCurrentSessionRefresh = ($null -ne $previousSession -and $WebSession -eq $previousSession)
     if ($Refresh -and -not $isCurrentSessionRefresh) {
         throw 'Cannot refresh a portal session that is not the active session.'
     }
-    $script:m365PortalLastBootstrapState = $null
-    $tokenRefreshSatisfiedUntilUtc = if ($WebSession.PSObject.Properties['M365TokenRefreshSatisfiedUntilUtc']) {
-        $WebSession.M365TokenRefreshSatisfiedUntilUtc
-    }
-    elseif ($isCurrentSessionRefresh -and $previousConnection -and $previousConnection.PSObject.Properties['TokenRefreshSatisfiedUntilUtc']) {
-        $previousConnection.TokenRefreshSatisfiedUntilUtc
-    }
-    else {
-        $null
-    }
-    $tokenMetadata = if ($WebSession.PSObject.Properties['M365TokenMetadata']) {
-        $WebSession.M365TokenMetadata
-    }
-    elseif ($isCurrentSessionRefresh -and $previousConnection -and $previousConnection.PSObject.Properties['TokenMetadata']) {
-        $previousConnection.TokenMetadata
-    }
-    else {
-        $null
-    }
-
-    $script:m365PortalSession = $WebSession
-    $script:m365PortalHeaders = @{
-        Accept         = 'application/json, text/plain, */*'
-    }
-    Update-PortalHeaderState
-
-    if ([string]::IsNullOrWhiteSpace($cookieValues['s.AjaxSessionKey']) -or
-        $cookieValues['UserLoginRef'] -ne '%2Fhomepage' -or
-        [string]::IsNullOrWhiteSpace($cookieValues['s.UserTenantId']) -or
-        [string]::IsNullOrWhiteSpace($cookieValues['x-portal-routekey'])) {
-        try {
-            $null = Invoke-M365PortalPostLandingBootstrap -WebSession $WebSession -UserAgent $UserAgent
+    try {
+        if (-not $Refresh) {
+            $script:m365CacheStore = @{}
         }
-        catch {
-            Write-Verbose "The first optional post-landing bootstrap attempt did not complete successfully: $($_.Exception.Message)"
+        $script:m365PortalLastBootstrapState = $null
+        $tokenRefreshSatisfiedUntilUtc = if ($WebSession.PSObject.Properties['M365TokenRefreshSatisfiedUntilUtc']) {
+            $WebSession.M365TokenRefreshSatisfiedUntilUtc
+        }
+        elseif ($isCurrentSessionRefresh -and $previousConnection -and $previousConnection.PSObject.Properties['TokenRefreshSatisfiedUntilUtc']) {
+            $previousConnection.TokenRefreshSatisfiedUntilUtc
+        }
+        else {
+            $null
+        }
+        $tokenMetadata = if ($WebSession.PSObject.Properties['M365TokenMetadata']) {
+            $WebSession.M365TokenMetadata
+        }
+        elseif ($isCurrentSessionRefresh -and $previousConnection -and $previousConnection.PSObject.Properties['TokenMetadata']) {
+            $previousConnection.TokenMetadata
+        }
+        else {
+            $null
         }
 
-        Sync-PortalCookieValues
-        Update-PortalHeaderState
-    }
-
-    if ([string]::IsNullOrWhiteSpace($cookieValues['s.AjaxSessionKey']) -or
-        [string]::IsNullOrWhiteSpace($cookieValues['s.UserTenantId'])) {
-        try {
-            $null = Invoke-M365PortalPostLandingBootstrap -WebSession $WebSession -UserAgent $UserAgent
+        $script:m365PortalSession = $WebSession
+        $script:m365PortalHeaders = @{
+            Accept         = 'application/json, text/plain, */*'
         }
-        catch {
-            Write-Verbose "The second optional post-landing bootstrap attempt did not complete successfully: $($_.Exception.Message)"
-        }
-
-        Sync-PortalCookieValues
         Update-PortalHeaderState
 
-        try {
-            if ([string]::IsNullOrWhiteSpace($cookieValues['s.UserTenantId'])) {
-                $null = Invoke-WebRequest -MaximumRedirection 20 -ErrorAction Stop -WebSession $WebSession -Method Get -Uri 'https://admin.cloud.microsoft/admin/api/tenant/datalocationandcommitments' -Headers (Get-M365PortalContextHeaders -Context DataLocation -AjaxSessionKey $script:m365PortalHeaders['AjaxSessionKey']) -UserAgent $UserAgent
-            }
-        }
-        catch {
-            Write-Verbose "The optional data-location bootstrap validation request did not complete successfully: $($_.Exception.Message)"
-        }
-
-        if ([string]::IsNullOrWhiteSpace((Get-PortalCookieValue -Name 's.UserTenantId'))) {
+        if ([string]::IsNullOrWhiteSpace($cookieValues['s.AjaxSessionKey']) -or
+            $cookieValues['UserLoginRef'] -ne '%2Fhomepage' -or
+            [string]::IsNullOrWhiteSpace($cookieValues['s.UserTenantId']) -or
+            [string]::IsNullOrWhiteSpace($cookieValues['x-portal-routekey'])) {
             try {
-                $null = Invoke-WebRequest -MaximumRedirection 20 -ErrorAction Stop -WebSession $WebSession -Method Get -Uri 'https://admin.cloud.microsoft/adminportal/home/ClassicModernAdminDataStream?ref=/homepage' -Headers (Get-M365PortalContextHeaders -Context Homepage -AjaxSessionKey $script:m365PortalHeaders['AjaxSessionKey']) -UserAgent $UserAgent
+                $null = Invoke-M365PortalPostLandingBootstrap -WebSession $WebSession -UserAgent $UserAgent
             }
             catch {
-                Write-Verbose "The optional ClassicModernAdminDataStream validation request did not complete successfully: $($_.Exception.Message)"
+                Write-Verbose "The first optional post-landing bootstrap attempt did not complete successfully: $($_.Exception.Message)"
             }
+
+            Sync-PortalCookieValues
+            Update-PortalHeaderState
         }
 
-        Sync-PortalCookieValues
-        Update-PortalHeaderState
-    }
+        if ([string]::IsNullOrWhiteSpace($cookieValues['s.AjaxSessionKey']) -or
+            [string]::IsNullOrWhiteSpace($cookieValues['s.UserTenantId'])) {
+            try {
+                $null = Invoke-M365PortalPostLandingBootstrap -WebSession $WebSession -UserAgent $UserAgent
+            }
+            catch {
+                Write-Verbose "The second optional post-landing bootstrap attempt did not complete successfully: $($_.Exception.Message)"
+            }
 
-    $validationResults = New-Object System.Collections.Generic.List[object]
-    $resolvedTenantId = if (Test-IsGuidValue -Value $cookieValues['s.UserTenantId']) {
-        $cookieValues['s.UserTenantId']
-    }
-    elseif ($isCurrentSessionRefresh -and $previousConnection -and (Test-IsGuidValue -Value $previousConnection.TenantId)) {
-        $previousConnection.TenantId
-    }
-    else {
-        $null
-    }
-    try {
+            Sync-PortalCookieValues
+            Update-PortalHeaderState
+
+            try {
+                if ([string]::IsNullOrWhiteSpace($cookieValues['s.UserTenantId'])) {
+                    $null = Invoke-WebRequest -MaximumRedirection 20 -ErrorAction Stop -WebSession $WebSession -Method Get -Uri 'https://admin.cloud.microsoft/admin/api/tenant/datalocationandcommitments' -Headers (Get-M365PortalContextHeaders -Context DataLocation -AjaxSessionKey $script:m365PortalHeaders['AjaxSessionKey']) -UserAgent $UserAgent
+                }
+            }
+            catch {
+                Write-Verbose "The optional data-location bootstrap validation request did not complete successfully: $($_.Exception.Message)"
+            }
+
+            if ([string]::IsNullOrWhiteSpace((Get-PortalCookieValue -Name 's.UserTenantId'))) {
+                try {
+                    $null = Invoke-WebRequest -MaximumRedirection 20 -ErrorAction Stop -WebSession $WebSession -Method Get -Uri 'https://admin.cloud.microsoft/adminportal/home/ClassicModernAdminDataStream?ref=/homepage' -Headers (Get-M365PortalContextHeaders -Context Homepage -AjaxSessionKey $script:m365PortalHeaders['AjaxSessionKey']) -UserAgent $UserAgent
+                }
+                catch {
+                    Write-Verbose "The optional ClassicModernAdminDataStream validation request did not complete successfully: $($_.Exception.Message)"
+                }
+            }
+
+            Sync-PortalCookieValues
+            Update-PortalHeaderState
+        }
+
+        $validationResults = New-Object System.Collections.Generic.List[object]
+        $resolvedTenantId = if (Test-IsGuidValue -Value $cookieValues['s.UserTenantId']) {
+            $cookieValues['s.UserTenantId']
+        }
+        elseif ($isCurrentSessionRefresh -and $previousConnection -and (Test-IsGuidValue -Value $previousConnection.TenantId)) {
+            $previousConnection.TenantId
+        }
+        else {
+            $null
+        }
         if (-not $SkipValidation) {
             $classicModernResponse = Invoke-ValidatedBootstrapProbe -ProbeName 'ClassicModernAdminDataStream' -Path '/adminportal/home/ClassicModernAdminDataStream?ref=/homepage' -Headers (Get-M365PortalContextHeaders -Context Homepage) -RetryOnHtmlShell
             if ([string]::IsNullOrWhiteSpace($resolvedTenantId)) {
@@ -448,6 +453,7 @@
         $script:m365PortalHeaders = $previousHeaders
         $script:m365PortalConnection = $previousConnection
         $script:m365PortalLastBootstrapState = $previousBootstrapState
+        $script:m365CacheStore = $previousCacheStore
         throw
     }
 }

@@ -334,10 +334,6 @@
         [switch]$Visible
     )
 
-    begin {
-        Clear-M365Cache -All
-    }
-
     process {
         function ConvertTo-PlainText {
             param (
