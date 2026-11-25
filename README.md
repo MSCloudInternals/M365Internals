@@ -514,6 +514,9 @@ Get-M365AdminShellInfo -Force
 Invoke-M365AdminRestMethod -Path '/admin/api/coordinatedbootstrap/shellinfo'
 ```
 
+`Invoke-M365AdminRestMethod` only sends portal session headers to the HTTPS
+`admin.cloud.microsoft` origin. Redirects are rejected rather than followed.
+
 ## License
 
 See LICENSE file for details.

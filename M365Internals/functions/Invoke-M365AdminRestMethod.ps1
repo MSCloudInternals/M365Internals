@@ -7,10 +7,11 @@
         Executes REST API requests against admin.cloud.microsoft by using the active portal
         session and headers established by Connect-M365Portal. Before each request, the cmdlet
         refreshes the stored portal connection settings from the current cookie jar so headers
-        such as AjaxSessionKey and x-portal-routekey stay in sync with the session.
+        such as AjaxSessionKey and x-portal-routekey stay in sync with the session. Requests
+        are restricted to the HTTPS admin.cloud.microsoft origin and are not redirected.
 
     .PARAMETER Uri
-        The fully qualified request URI to call.
+        The fully qualified HTTPS request URI on admin.cloud.microsoft.
 
     .PARAMETER Path
         The portal-relative path to call, such as '/admin/api/coordinatedbootstrap/shellinfo'.
@@ -70,6 +71,9 @@
     )
 
     begin {
+        if ($PSCmdlet.ParameterSetName -eq 'Uri') {
+            Assert-M365AdminPortalUri -Uri $Uri
+        }
         if (-not $WebSession) {
             throw 'No Microsoft 365 admin portal session is available. Run Connect-M365Portal first or provide -WebSession.'
         }
@@ -99,6 +103,7 @@
         else {
             'https://admin.cloud.microsoft/{0}' -f $Path
         }
+        Assert-M365AdminPortalUri -Uri $requestUri
 
         $resolvedHeaders = @{}
         foreach ($headerEntry in @($script:m365PortalHeaders.GetEnumerator())) {
@@ -122,6 +127,7 @@
             Method      = $Method
             WebSession  = $WebSession
             Headers     = $resolvedHeaders
+            MaximumRedirection = 0
             ErrorAction = 'Stop'
         }
 
@@ -138,11 +144,15 @@
             }
         }
 
+        $previousMaximumRedirection = $WebSession.MaximumRedirection
         try {
             Invoke-RestMethod @invokeParams
         }
         catch {
             throw "Failed to invoke M365 REST method for $Method $requestUri. $($_.Exception.Message)"
+        }
+        finally {
+            $WebSession.MaximumRedirection = $previousMaximumRedirection
         }
     }
 }
