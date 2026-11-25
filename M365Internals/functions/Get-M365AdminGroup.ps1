@@ -12,6 +12,10 @@
     .PARAMETER Force
         Bypasses the cache and forces a fresh retrieval.
 
+    .PARAMETER PageToken
+        An opaque continuation token for the Groups view. Obtain the token from the
+        service response; this command does not infer a continuation response field.
+
     .PARAMETER Raw
         Returns the raw group payload for the selected view.
 
@@ -22,6 +26,11 @@
         Get-M365AdminGroup -Name Labels
 
         Retrieves the group labels payload.
+
+    .EXAMPLE
+        Get-M365AdminGroup -Name Groups -PageToken $token -Raw
+
+        Requests a subsequent Groups page using a token obtained from the service.
 
     .OUTPUTS
         Object
@@ -34,6 +43,10 @@
         [string]$Name = 'Groups',
 
         [Parameter()]
+        [ValidateNotNullOrEmpty()]
+        [string]$PageToken,
+
+        [Parameter()]
         [switch]$Force,
 
         [Parameter()]
@@ -44,12 +57,25 @@
     )
 
     begin {
+        if ($PSBoundParameters.ContainsKey('PageToken') -and $Name -ne 'Groups') {
+            throw 'PageToken is supported only for the Groups view.'
+        }
         Update-M365PortalConnectionSettings
     }
 
     process {
         if ($Name -eq 'Groups') {
             $cacheKey = 'M365AdminGroup:Groups'
+            if ($PSBoundParameters.ContainsKey('PageToken')) {
+                $hasher = [System.Security.Cryptography.SHA256]::Create()
+                try {
+                    $tokenHash = [BitConverter]::ToString($hasher.ComputeHash([Text.Encoding]::UTF8.GetBytes($PageToken))).Replace('-', '')
+                    $cacheKey = '{0}:Page:{1}' -f $cacheKey, $tokenHash
+                }
+                finally {
+                    $hasher.Dispose()
+                }
+            }
             $currentCacheValue = Get-M365Cache -CacheKey $cacheKey -ErrorAction SilentlyContinue
             if (-not $Force -and $currentCacheValue -and $currentCacheValue.NotValidAfter -gt (Get-Date)) {
                 Write-Verbose "Using cached $cacheKey data"
@@ -62,7 +88,7 @@
             }
 
             $result = Invoke-M365PortalRequest -Path '/admin/api/groups/GetGroups' -Method Post -Headers @{ 'x-adminapp-request' = '/orgsettings/payasyougo' } -Body @{
-                PageToken = $null
+                PageToken = if ($PSBoundParameters.ContainsKey('PageToken')) { $PageToken } else { $null }
                 GroupTypes = $null
                 SearchString = ''
                 SortDirection = 0
