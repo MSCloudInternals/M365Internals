@@ -201,26 +201,28 @@ function Invoke-M365SsoAuthentication {
     }
 
     $browser = Resolve-M365BrowserPath -BrowserPath $BrowserPath
-    $profileConfiguration = Resolve-M365BrowserProfileConfiguration -ProfilePath $(if ($ProfilePath) { $ProfilePath } else { Get-M365SsoDefaultProfilePath }) -ResetProfile:$ResetProfile -PrivateSession:$PrivateSession
+    $selectedProfilePath = if ($ProfilePath) { $ProfilePath } elseif (-not $PrivateSession) { Get-M365SsoDefaultProfilePath }
+    $profileConfiguration = Resolve-M365BrowserProfileConfiguration -ProfilePath $selectedProfilePath -ResetProfile:$ResetProfile -PrivateSession:$PrivateSession
     $resolvedProfilePath = $profileConfiguration.ProfilePath
-    Initialize-M365SsoProfile -ProfilePath $resolvedProfilePath
-
-    $debugPort = Get-M365BrowserFreeTcpPort
-    $startUrl = if ($TenantId) {
-        $session = [Microsoft.PowerShell.Commands.WebRequestSession]::new()
-        if ($UserAgent) {
-            $session.UserAgent = $UserAgent
-        }
-        (Get-M365AdminLoginState -WebSession $session -TenantId $TenantId -UserAgent $UserAgent).LoginUrl
-    } else {
-        'https://admin.cloud.microsoft/'
-    }
-    $privateModeArgument = if ($profileConfiguration.UsePrivateSession) { Get-M365BrowserPrivateModeArgument -Browser $browser } else { $null }
-    $arguments = Get-M365SsoLaunchArgumentList -ProfilePath $resolvedProfilePath -DebugPort $debugPort -StartUrl $startUrl -PrivateModeArgument $privateModeArgument -Visible:$Visible -UserAgent $UserAgent
     $browserProcess = $null
     $browserWebSocketUrl = $null
 
     try {
+        Initialize-M365SsoProfile -ProfilePath $resolvedProfilePath
+
+        $debugPort = Get-M365BrowserFreeTcpPort
+        $startUrl = if ($TenantId) {
+            $session = [Microsoft.PowerShell.Commands.WebRequestSession]::new()
+            if ($UserAgent) {
+                $session.UserAgent = $UserAgent
+            }
+            (Get-M365AdminLoginState -WebSession $session -TenantId $TenantId -UserAgent $UserAgent).LoginUrl
+        } else {
+            'https://admin.cloud.microsoft/'
+        }
+        $privateModeArgument = if ($profileConfiguration.UsePrivateSession) { Get-M365BrowserPrivateModeArgument -Browser $browser } else { $null }
+        $arguments = Get-M365SsoLaunchArgumentList -ProfilePath $resolvedProfilePath -DebugPort $debugPort -StartUrl $startUrl -PrivateModeArgument $privateModeArgument -Visible:$Visible -UserAgent $UserAgent
+
         Write-Host "Launching $($browser.Name) for SSO sign-in..."
         if ($Visible) {
             Write-Host 'A browser window will open. Silent sign-in should occur automatically if the browser profile and device state allow it.'
