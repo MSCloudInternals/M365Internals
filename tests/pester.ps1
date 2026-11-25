@@ -31,13 +31,15 @@ Import-Module (Join-Path $moduleRoot 'M365Internals.psd1')
 Import-Module (Join-Path $moduleRoot 'M365Internals.psm1') -Force
 
 # Need to import explicitly so we can use the configuration class
-Import-Module Pester
+Import-Module Pester -MinimumVersion 5.0 -MaximumVersion 5.999 -ErrorAction Stop
 
 Write-Host  "Creating test result folder"
 $null = New-Item -Path $testResultsPath -ItemType Directory -Force
 
 $totalFailed = 0
 $totalRun = 0
+$totalPassed = 0
+$totalSkipped = 0
 $suiteResults = New-Object System.Collections.Generic.List[object]
 
 $testresults = @()
@@ -61,15 +63,19 @@ if ($TestGeneral)
     	$results = Invoke-Pester -Configuration $config
 		foreach ($result in $results)
 		{
-			$totalRun += $result.TotalCount
-			$totalFailed += $result.FailedCount
+			$infrastructureFailures = $result.FailedContainersCount
+			if ($result.FailedCount -eq 0) { $infrastructureFailures += $result.FailedBlocksCount }
+			$totalRun += $result.TotalCount + $infrastructureFailures
+			$totalFailed += $result.FailedCount + $infrastructureFailures
+			$totalPassed += $result.PassedCount
+			$totalSkipped += $result.SkippedCount
 			$suiteResults.Add([pscustomobject]@{
 				Category = 'General'
 				FileName = $file.Name
 				Path = $file.FullName
 				TotalCount = $result.TotalCount
 				PassedCount = $result.PassedCount
-				FailedCount = $result.FailedCount
+				FailedCount = $result.FailedCount + $infrastructureFailures
 				SkippedCount = $result.SkippedCount
 			})
 			$result.Tests | Where-Object Result -eq 'Failed' | ForEach-Object {
@@ -104,15 +110,19 @@ if ($TestFunctions)
     	$results = Invoke-Pester -Configuration $config
 		foreach ($result in $results)
 		{
-			$totalRun += $result.TotalCount
-			$totalFailed += $result.FailedCount
+			$infrastructureFailures = $result.FailedContainersCount
+			if ($result.FailedCount -eq 0) { $infrastructureFailures += $result.FailedBlocksCount }
+			$totalRun += $result.TotalCount + $infrastructureFailures
+			$totalFailed += $result.FailedCount + $infrastructureFailures
+			$totalPassed += $result.PassedCount
+			$totalSkipped += $result.SkippedCount
 			$suiteResults.Add([pscustomobject]@{
 				Category = 'Function'
 				FileName = $file.Name
 				Path = $file.FullName
 				TotalCount = $result.TotalCount
 				PassedCount = $result.PassedCount
-				FailedCount = $result.FailedCount
+				FailedCount = $result.FailedCount + $infrastructureFailures
 				SkippedCount = $result.SkippedCount
 			})
 			$result.Tests | Where-Object Result -eq 'Failed' | ForEach-Object {
@@ -128,7 +138,7 @@ if ($TestFunctions)
 }
 #endregion Test Commands
 
-if ($testresults.Count -gt 0)
+if ($totalFailed -gt 0)
 {
 	$failedSuites = $suiteResults | Where-Object FailedCount -gt 0
 	if ($failedSuites.Count -gt 0)
@@ -146,7 +156,8 @@ $summary = [pscustomobject]@{
 	TestResultsPath = $testResultsPath
 	TotalCount = $totalRun
 	FailedCount = $totalFailed
-	PassedCount = ($totalRun - $totalFailed)
+	PassedCount = $totalPassed
+	SkippedCount = $totalSkipped
 	Suites = [object[]]$suiteResults.ToArray()
 	ScriptAnalyzer = $global:__pester_data.ScriptAnalyzer
 }

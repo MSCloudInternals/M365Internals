@@ -94,6 +94,19 @@
   },
   "CmdletMappingOverrides": [
     {
+      "Cmdlet": "Get-M365AdminDevice",
+      "ApiUri": "https://admin.cloud.microsoft/admin/api/Intune/devices",
+      "Method": "GET"
+    },
+    {
+      "Cmdlet": "Get-M365AdminUserSetting",
+      "ApiUri": "https://admin.cloud.microsoft/admin/api/Users/getunlicenseduserscount",
+      "Method": "GET",
+      "Parameters": {
+        "Name": "fixed:UnlicensedUsersCount"
+      }
+    },
+    {
       "Cmdlet": "Get-M365AdminEnhancedRestoreStatus",
       "ApiUri": "https://admin.cloud.microsoft/fd/msgraph/beta/$batch",
       "Method": "POST",

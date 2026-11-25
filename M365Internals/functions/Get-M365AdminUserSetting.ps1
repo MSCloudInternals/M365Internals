@@ -5,7 +5,9 @@
 
     .DESCRIPTION
         Reads user-oriented payloads from the admin center users endpoints, including current user
-        context, roles, product data, and dashboard layout.
+        context, roles, product data, unlicensed user count, and dashboard layout.
+        UnlicensedUsersCount preserves the reported integer under Value and exposes
+        CountAvailable to distinguish usable counts from negative portal values.
 
     .PARAMETER Name
         The user payload to retrieve.
@@ -39,6 +41,11 @@
         Retrieves the dashboard layout payload.
 
     .EXAMPLE
+        Get-M365AdminUserSetting -Name UnlicensedUsersCount
+
+        Retrieves the tenant's unlicensed user count under Value without listing all users.
+
+    .EXAMPLE
         Get-M365AdminUserSetting -Name TokenWithExpiry -TokenAudience 'https://management.azure.com/'
 
         Retrieves an Azure Resource Manager token and expiry payload from the admin center token broker.
@@ -50,7 +57,7 @@
     [CmdletBinding()]
     param (
         [Parameter()]
-        [ValidateSet('All', 'AdministrativeUnits', 'CommonDvPreferences', 'ContextualAlerts', 'CurrentUser', 'DashboardLayout', 'GccTenant', 'ListUsers', 'Products', 'Roles', 'SvInfo', 'TeamsSettingsInfo', 'TokenWithExpiry')]
+        [ValidateSet('All', 'AdministrativeUnits', 'CommonDvPreferences', 'ContextualAlerts', 'CurrentUser', 'DashboardLayout', 'GccTenant', 'ListUsers', 'Products', 'Roles', 'SvInfo', 'TeamsSettingsInfo', 'TokenWithExpiry', 'UnlicensedUsersCount')]
         [string]$Name = 'All',
 
         [Parameter()]
@@ -89,7 +96,8 @@
             'Roles',
             'SvInfo',
             'TeamsSettingsInfo',
-            'TokenWithExpiry'
+            'TokenWithExpiry',
+            'UnlicensedUsersCount'
         )
 
         function Get-UserSettingView {
@@ -173,6 +181,7 @@
                         'Products' { '/admin/api/users/products' }
                         'SvInfo' { '/admin/api/users/svinfo' }
                         'TeamsSettingsInfo' { '/admin/api/users/teamssettingsinfo' }
+                        'UnlicensedUsersCount' { '/admin/api/Users/getunlicenseduserscount' }
                     }
 
                     if ($RequestedName -eq 'DashboardLayout') {
@@ -181,6 +190,9 @@
                     }
 
                     $rawResult = Get-M365AdminPortalData -Path $path -CacheKey $cacheKey -Force:$forceRequested
+                    if ($RequestedName -eq 'UnlicensedUsersCount') {
+                        $additionalProperties.CountAvailable = (($rawResult -is [int] -or $rawResult -is [long]) -and $rawResult -ge 0)
+                    }
                 }
             }
 

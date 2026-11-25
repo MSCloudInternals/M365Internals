@@ -2,7 +2,7 @@
 
 This file tracks the currently known limitations, tenant-specific quirks, and follow-up items discovered while building and validating the Microsoft 365 admin-center cmdlets.
 
-Last updated: 2026-03-30
+Last updated: 2026-10-31
 
 ## Connection And Bootstrap
 
@@ -25,6 +25,42 @@ Last updated: 2026-03-30
 - Cookie-based validation should continue to be treated as best-effort unless a more durable cookie import/bootstrap flow is implemented later.
 
 ## Live Validation Status
+
+### 2026-10-31 spec-backed improvement validation
+
+- Reviewed 320 operations from the [nodoc M365 Admin spec bundle](https://github.com/nathanmcnulty/nodoc/tree/e05acb32c439f70f41973f32e3b5886eca8569d1/specifications/nodoc-m365-admin/specification). The comparison found 137 registry/code inventory gaps; this is not a count of validated, implementable APIs.
+- Added device inventory and unlicensed-user count reads, plus supported `Name` values and `WhatIf` support in the command catalog. Incomplete write schemas and resource-specific proxy routes were not implemented speculatively.
+- Silent Windows SSO succeeded without an authentication prompt after fixing saved-profile timestamp conversion. Reused validation profiles can still hit Entra error `160011` with missing ESTS exchange fields; a fresh task-only profile completed the final checks. No interactive authentication, policy bypass, live tenant settings changes, or device actions were attempted.
+- The full repository suite passed: 12,121 passed, zero failed, one platform-specific test skipped. Both browser-extension mappings were regenerated and documentation synchronization remained idempotent.
+- Device default/raw/JSON views, documented identifiers, cached device identities, and default/raw/JSON unlicensed counts passed strict live checks. JSON-deserialized scalar values now correctly appear under `Value` in friendly output.
+- The portal returned a negative unlicensed-user integer. The spec does not declare a minimum, so the original value is preserved and friendly output exposes `CountAvailable = $false`; it must not be treated as a usable count.
+- Fixed HTTP 204 handling for PowerShell 7.6's empty byte-array responses. Empty bodies no longer reach the string-only HTML detector, raw HTTP responses remain available, and type stamping accepts null as its existing guard intended. Offer recommendations, support integration, and Copilot licensing-date reads no longer fail with string-conversion errors.
+- The corrected read-only sweep covered all 47 public getters, every supported `Name` section, and primary raw/JSON modes: **426 invocations, 375 returned, 21 explicitly unavailable, 30 failed**. Mandatory `Name` values were bound instead of invoking those commands incorrectly. Returned counts describe completed invocations, not a guarantee that every nested optional section contains data.
+
+Five primary getter invocations still failed: `Get-M365AdminCopilotConnector`,
+`Get-M365AdminDirectorySyncError`, `Get-M365AdminEnhancedRestoreStatus`,
+`Get-M365AdminMicrosoft365BackupSetting`, and `Get-M365AdminUserSetting`.
+The remaining failures comprise 23 HTTP failures and seven empty-token failures
+across grouped, leaf, and output-mode invocations. **The existing public surface
+is not uniformly green in live validation.**
+
+Confirmed remaining failures:
+
+| Surface | HTTP status | Follow-up |
+| --- | --- | --- |
+| User contextual alerts | 400 | Recapture the current POST body before changing the existing request contract. The new `UnlicensedUsersCount` leaf works independently. |
+| Directory sync error list | 415 | An additional JSON-content-type POST without a body also returned 415. Recapture the current request before changing the body contract. |
+| Copilot connector statistics and gallery settings | 400 / 500 | Statistics failures also stop grouped Gallery and YourConnections reads. Confirm current connector API context and request shape. |
+| Enhanced restore and grouped Backup status | N/A | The admin-center broker returned an empty GraphAT token before the Graph proxy request. The error remains explicit; no separate Graph authentication was initiated. |
+| Search news options and industry | 404 | Verify route availability against the current portal before adding aliases or fallbacks. |
+| Search news MSB enabled | 405 | Verify the current HTTP method. |
+| Search modern result types | 500 | Compare portal behavior before attributing the failure to the module. |
+
+These failures were not suppressed or relabeled as successful tenant-specific
+results. Their existing request contracts were left unchanged where the updated
+specs and live responses did not establish a working replacement.
+
+### Earlier validation
 
 - The public cmdlet surface was exercised successfully in five authenticated live validation batches on 2026-03-24.
 - The most significant live issues uncovered during that sweep were fixed in the module rather than suppressed in the harness.

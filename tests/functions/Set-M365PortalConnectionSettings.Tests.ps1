@@ -379,6 +379,57 @@
         }
     }
 
+    Describe 'empty and binary portal responses' {
+        BeforeEach {
+            $script:m365PortalSession = [Microsoft.PowerShell.Commands.WebRequestSession]::new()
+            $script:m365PortalHeaders = @{}
+            Mock Update-M365PortalConnectionSettings {}
+            Mock Test-M365PortalConnectionNeedsRefresh { $false }
+            Mock Invoke-M365PortalPostLandingBootstrap {}
+            Mock Invoke-WebRequest {
+                [pscustomobject]@{ StatusCode = 204; Content = [byte[]]@(); Headers = @{} }
+            }
+        }
+
+        AfterEach {
+            $script:m365PortalSession = $null
+            $script:m365PortalHeaders = $null
+        }
+
+        It 'returns no payload for HTTP 204 without trying to rebuild the session' {
+            Invoke-M365PortalRequest -Path '/admin/api/offerrec/offer/48' | Should -BeNullOrEmpty
+
+            Should -Invoke Invoke-WebRequest -Times 1 -Exactly
+            Should -Invoke Invoke-M365PortalPostLandingBootstrap -Times 0
+        }
+
+        It 'preserves the full HTTP 204 response when requested' {
+            $result = Invoke-M365PortalRequest -Path '/admin/api/offerrec/offer/48' -RawResponse
+
+            $result.StatusCode | Should -Be 204
+            $result.Content.GetType().FullName | Should -Be 'System.Byte[]'
+        }
+
+        It 'does not cache or type-stamp a nonexistent payload' {
+            Mock Set-M365Cache {}
+
+            $result = Get-M365AdminPortalData -Path '/admin/api/offerrec/offer/48' -CacheKey 'NoContentRegression' -Force
+
+            $result | Should -BeNullOrEmpty
+            Add-M365TypeName -InputObject $result -TypeName 'M365Admin.Empty' | Should -BeNullOrEmpty
+            Should -Invoke Set-M365Cache -Times 0
+        }
+
+        It 'preserves binary responses without passing bytes to the HTML detector' {
+            Mock Invoke-WebRequest {
+                [pscustomobject]@{ StatusCode = 200; Content = [byte[]]@(1, 2); Headers = @{ 'Content-Type' = 'application/octet-stream' } }
+            }
+
+            @(Invoke-M365PortalRequest -Path '/admin/api/example') | Should -Be @(1, 2)
+            Should -Invoke Invoke-M365PortalPostLandingBootstrap -Times 0
+        }
+    }
+
     Describe 'Test-M365PortalConnectionNeedsRefresh' {
         It 'treats a missing header map as needing refresh' {
             $connection = [pscustomobject]@{

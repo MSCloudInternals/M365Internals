@@ -931,5 +931,18 @@
 			"solutions/backupRestore/protectionUnits/microsoft.graph.driveProtectionUnit/$count",
 			"solutions/backupRestore/protectionUnits/microsoft.graph.mailboxProtectionUnit/$count"
 		]
+	},
+	{
+		"Cmdlet": "Get-M365AdminDevice",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/Intune/devices",
+		"Method": "GET"
+	},
+	{
+		"Cmdlet": "Get-M365AdminUserSetting",
+		"ApiUri": "https://admin.cloud.microsoft/admin/api/Users/getunlicenseduserscount",
+		"Method": "GET",
+		"Parameters": {
+			"Name": "fixed:UnlicensedUsersCount"
+		}
 	}
 ]

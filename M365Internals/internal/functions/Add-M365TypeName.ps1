@@ -22,6 +22,7 @@
     [CmdletBinding()]
     param (
         [Parameter(Mandatory, ValueFromPipeline)]
+        [AllowNull()]
         $InputObject,
 
         [Parameter(Mandatory)]

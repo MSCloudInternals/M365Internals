@@ -6,7 +6,8 @@
     .DESCRIPTION
         Enumerates the public commands exported by M365Internals, groups them by functional
         area, and returns a flattened catalog that helps admins discover the right cmdlet family
-        before release. The raw view returns grouped catalog sections.
+        before release. Each entry includes supported Name values and whether the command
+        supports WhatIf. The raw view returns grouped catalog sections.
 
     .PARAMETER Group
         Filters the catalog to a single functional group.
@@ -24,6 +25,11 @@
         Get-M365AdminCommandCatalog
 
         Returns the flattened command catalog grouped by functional area.
+
+    .EXAMPLE
+        Get-M365AdminCommandCatalog -CmdletName '*UserSetting' | Select-Object Cmdlet, NameValues
+
+        Discovers the supported user-setting sections without opening individual help pages.
 
     .EXAMPLE
         Get-M365AdminCommandCatalog -Group OrgSettingsAndWorkloads -Raw
@@ -67,6 +73,17 @@
             $groupDefinition = $groupLookup[$groupName]
             $help = Get-Help -Name $command.Name -ErrorAction SilentlyContinue
 
+            $nameValues = @()
+            if ($command.Parameters.ContainsKey('Name')) {
+                $nameValues = @(
+                    foreach ($attribute in $command.Parameters['Name'].Attributes) {
+                        if ($attribute -is [System.Management.Automation.ValidateSetAttribute]) {
+                            $attribute.ValidValues
+                        }
+                    }
+                )
+            }
+
             $entry = [pscustomobject]@{
                 Group = $groupDefinition.Title
                 GroupKey = $groupName
@@ -76,6 +93,8 @@
                 DefaultParameterSet = $command.DefaultParameterSet
                 SupportsForce = $command.Parameters.ContainsKey('Force')
                 SupportsRawOutput = ($command.Parameters.ContainsKey('Raw') -and $command.Parameters.ContainsKey('RawJson'))
+                SupportsWhatIf = $command.Parameters.ContainsKey('WhatIf')
+                NameValues = @($nameValues | Select-Object -Unique)
             }
 
             $entry = Add-M365TypeName -InputObject $entry -TypeName 'M365Admin.CommandCatalog.Entry'

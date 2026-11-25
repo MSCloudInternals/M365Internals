@@ -40,6 +40,7 @@
         'Get-M365AdminCopilotOverview',
         'Get-M365AdminCopilotPinPolicy',
         'Get-M365AdminCopilotSetting',
+        'Get-M365AdminDevice',
         'Get-M365AdminDirectorySyncError',
         'Get-M365AdminDomain',
         'Get-M365AdminEdgeSiteList',
@@ -99,4 +100,3 @@
     }
 
 }
-

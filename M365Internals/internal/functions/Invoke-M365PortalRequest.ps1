@@ -239,7 +239,7 @@
             throw "Portal request failed for $Method $requestUri. $($_.Exception.Message)"
         }
 
-        if ($attempt -lt $maxAttempts -and (Test-M365PortalUnexpectedHtmlShell -Content $response.Content) -and (Invoke-PortalRequestSelfHeal)) {
+        if ($attempt -lt $maxAttempts -and $response.Content -is [string] -and (Test-M365PortalUnexpectedHtmlShell -Content $response.Content) -and (Invoke-PortalRequestSelfHeal)) {
             Write-Verbose 'The portal request returned the admin HTML shell instead of the expected payload. Retrying once after refreshing the portal session state.'
             continue
         }
@@ -249,6 +249,10 @@
 
     if ($RawResponse) {
         return $response
+    }
+
+    if ([int]$response.StatusCode -eq 204) {
+        return $null
     }
 
     $responseContentType = $response.Headers['Content-Type']

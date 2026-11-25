@@ -53,6 +53,7 @@ if (-not $SkipPester) {
             TotalCount = $pesterSummary.TotalCount
             PassedCount = $pesterSummary.PassedCount
             FailedCount = $pesterSummary.FailedCount
+            SkippedCount = $pesterSummary.SkippedCount
             ResultPath = $pesterSummary.TestResultsPath
         })
     }
@@ -145,6 +146,9 @@ foreach ($step in $summary.Steps) {
     }
     if ($step.PSObject.Properties.Name -contains 'FailedCount' -and $null -ne $step.FailedCount) {
         $detailParts += "Failed=$($step.FailedCount)"
+    }
+    if ($step.PSObject.Properties.Name -contains 'SkippedCount' -and $null -ne $step.SkippedCount) {
+        $detailParts += "Skipped=$($step.SkippedCount)"
     }
     if ($step.PSObject.Properties.Name -contains 'ScriptPath' -and -not [string]::IsNullOrWhiteSpace([string]$step.ScriptPath)) {
         $detailParts += $step.ScriptPath

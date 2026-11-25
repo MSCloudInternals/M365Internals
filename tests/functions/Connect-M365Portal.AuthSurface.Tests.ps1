@@ -324,6 +324,38 @@ $Config = {"pgid":"ConvergedSignIn","arrSessions":[{"id":"session-123"}],"urlLog
     }
 
     Describe 'browser profile preparation' {
+        It 'preserves parsed date values instead of recursively traversing DateTime properties' {
+            $parsed = '{"last_used":"2026-08-31T12:00:00Z","enabled":false,"count":0,"nested":{"names":["one","two"]}}' | ConvertFrom-Json
+            $converted = ConvertTo-M365BrowserJsonConfigurationObject -InputObject $parsed
+
+            $converted | Should -BeOfType [hashtable]
+            $converted.last_used | Should -Be $parsed.last_used
+            $converted.enabled | Should -BeFalse
+            $converted.count | Should -Be 0
+            $converted.nested | Should -BeOfType [hashtable]
+            $converted.nested.names | Should -HaveCount 2
+        }
+
+        It 'preserves explicit DateTime scalars in browser configuration' {
+            $date = [datetime]'2026-08-31T12:00:00Z'
+
+            ConvertTo-M365BrowserJsonConfigurationObject -InputObject $date | Should -Be $date
+        }
+
+        It 'preserves wrapped JSON scalars in browser configuration' -TestCases @(
+            @{ Json = '0'; Expected = 0 }
+            @{ Json = 'false'; Expected = $false }
+            @{ Json = '"2026-08-31T12:00:00Z"'; Expected = [datetime]'2026-08-31T12:00:00Z' }
+        ) {
+            param($Json, $Expected)
+
+            $parsed = $Json | ConvertFrom-Json
+            if ($Expected -is [datetime]) {
+                $Expected = $parsed
+            }
+            ConvertTo-M365BrowserJsonConfigurationObject -InputObject $parsed | Should -Be $Expected
+        }
+
         It 'initializes the dedicated Chromium profile as M365Internals without restoring previous tabs' {
             $profileRoot = Join-Path ([System.IO.Path]::GetTempPath()) ('m365internals-browser-profile-' + [guid]::NewGuid().ToString('N'))
 

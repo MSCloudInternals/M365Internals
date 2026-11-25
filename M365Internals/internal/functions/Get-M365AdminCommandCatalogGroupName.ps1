@@ -34,7 +34,7 @@
             'SearchAndIntelligenceSetting|SearchSetting|ReportSetting|Recommendation|EnhancedRestoreStatus' {
                 return 'SearchReportsAndInsights'
             }
-            'Domain|Group|PartnerClient|PartnerRelationship|TenantRelationship|TenantSetting|UserSetting' {
+            'Device|Domain|Group|PartnerClient|PartnerRelationship|TenantRelationship|TenantSetting|UserSetting' {
                 return 'TenantUsersAndRelationships'
             }
             'CommandCatalog|DirectorySyncError|Feature|HomeData|Navigation|ShellInfo' {

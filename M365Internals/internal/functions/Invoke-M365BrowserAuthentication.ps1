@@ -259,7 +259,8 @@ function ConvertTo-M365BrowserJsonConfigurationObject {
         )
     }
 
-    if ($InputObject.PSObject -and $InputObject.PSObject.Properties.Count -gt 0 -and $InputObject -isnot [string]) {
+    # Traverse JSON objects, not wrapped scalars or self-referencing DateTime properties.
+    if ($InputObject -is [System.Management.Automation.PSCustomObject]) {
         $result = @{}
         foreach ($property in $InputObject.PSObject.Properties) {
             $result[$property.Name] = ConvertTo-M365BrowserJsonConfigurationObject -InputObject $property.Value

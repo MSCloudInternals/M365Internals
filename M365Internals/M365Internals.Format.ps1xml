@@ -2,6 +2,32 @@
 <Configuration>
   <ViewDefinitions>
     <View>
+      <Name>M365AdminDevice</Name>
+      <ViewSelectedBy>
+        <TypeName>M365Admin.Device</TypeName>
+      </ViewSelectedBy>
+      <TableControl>
+        <TableHeaders>
+          <TableColumnHeader><Label>Device</Label></TableColumnHeader>
+          <TableColumnHeader><Label>User</Label></TableColumnHeader>
+          <TableColumnHeader><Label>OS</Label></TableColumnHeader>
+          <TableColumnHeader><Label>Compliance</Label></TableColumnHeader>
+          <TableColumnHeader><Label>Last sync</Label></TableColumnHeader>
+        </TableHeaders>
+        <TableRowEntries>
+          <TableRowEntry>
+            <TableColumnItems>
+              <TableColumnItem><PropertyName>DisplayName</PropertyName></TableColumnItem>
+              <TableColumnItem><PropertyName>UserPrincipalName</PropertyName></TableColumnItem>
+              <TableColumnItem><PropertyName>OperatingSystem</PropertyName></TableColumnItem>
+              <TableColumnItem><PropertyName>ComplianceState</PropertyName></TableColumnItem>
+              <TableColumnItem><PropertyName>LastSyncDateTime</PropertyName></TableColumnItem>
+            </TableColumnItems>
+          </TableRowEntry>
+        </TableRowEntries>
+      </TableControl>
+    </View>
+    <View>
       <Name>M365PortalConnection</Name>
       <ViewSelectedBy>
         <TypeName>M365Portal.Connection</TypeName>

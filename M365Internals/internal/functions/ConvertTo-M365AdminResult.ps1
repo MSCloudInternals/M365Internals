@@ -98,7 +98,8 @@
         }
         else {
             $noteProperties = @($InputObject.PSObject.Properties | Where-Object MemberType -eq 'NoteProperty')
-            if (($InputObject -is [pscustomobject]) -or ($noteProperties.Count -gt 0)) {
+            # The [pscustomobject] accelerator also matches PSObject-wrapped JSON scalars.
+            if (($InputObject -is [System.Management.Automation.PSCustomObject]) -or ($noteProperties.Count -gt 0)) {
                 foreach ($property in @($InputObject.PSObject.Properties | Where-Object MemberType -in @('NoteProperty', 'Property'))) {
                     $propertyName = if ($properties.Contains($property.Name)) { '{0}Data' -f $property.Name } else { $property.Name }
                     $properties[$propertyName] = $property.Value

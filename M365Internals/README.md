@@ -56,13 +56,44 @@ The module favors interactive, page-oriented outputs where that better matches t
 
 This keeps broad exploratory commands useful even when one part of a page is unavailable in the current tenant while still preserving easy access to the original admin-center response shape.
 
+### Device inventory and command discovery
+
+`Get-M365AdminDevice` returns one typed record per Intune-managed device visible in
+the admin center. It reuses the portal connection and five-minute tenant-aware cache;
+`-Force` refreshes inventory, `-Raw` preserves original records, and `-RawJson`
+preserves a JSON array for zero, one, or many devices. No device actions are performed.
+Authentication and permission failures are surfaced, not hidden as empty inventory.
+
+```powershell
+Get-M365AdminDevice -Force |
+    Select-Object DisplayName, UserPrincipalName, OperatingSystem, ComplianceState, LastSyncDateTime
+
+# Also included in the user-settings All bundle
+Get-M365AdminUserSetting -Name UnlicensedUsersCount |
+    Select-Object CountAvailable, Value
+
+Get-M365AdminCommandCatalog -CmdletName '*UserSetting' |
+    Select-Object Cmdlet, NameValues, SupportsWhatIf
+```
+
+The inventory is the admin center projection, not the complete Graph managed-device
+resource. Neither read requires a separate Microsoft Graph sign-in.
+For `UnlicensedUsersCount`, check `CountAvailable` before using `Value` as a count.
+Negative portal values are preserved verbatim and marked unavailable.
+
 ### Validation Notes
 
-Current validation work has confirmed the public cmdlet surface live by using software passkey-backed sessions against `admin.cloud.microsoft`.
+The latest spec-backed validation used silent Windows SSO and exercised all 47
+public getters and their named sections in 426 read-only invocations. New device
+and count contracts passed; the full suite passed with 12,121 tests passed, zero
+failed, and one platform skip. Existing HTTP and token-broker failures remain
+explicit and are documented in the repository's `KNOWN_ISSUES.md`.
+HTTP 204 responses no longer cause PowerShell 7.6 byte-array binding failures.
 
 - Passkey-backed sessions are the most reliable validation path so far.
 - Cookie-based reuse remains best-effort and can still fail during admin portal bootstrap or handoff.
-- Mixed GET and POST surfaces, including `Get-M365AdminUserSetting`, were validated against live request shapes.
+- Grouped user-settings reads can still fail on ContextualAlerts; the new count leaf works independently.
+- The repository test runner selects Pester 5; Pester 6 is not compatible with the existing mock assertions.
 
 ### Authentication Notes
 
@@ -151,6 +182,7 @@ Tenant, user, group, domain, partner, and relationship management surfaces.
 
 | Cmdlet | Description |
 | --- | --- |
+| Get-M365AdminDevice | Retrieves Intune-managed devices visible in the Microsoft 365 admin center. |
 | Get-M365AdminDomain | Retrieve domain inventory, records, DNS health, and dependency data |
 | Get-M365AdminGroup | Retrieve group lists, labels, and group permission payloads |
 | Get-M365AdminPartnerClient | Retrieve delegated partner client data for DAP and GDAP scenarios |

@@ -101,14 +101,49 @@ Get-M365AdminCompanySetting -Name Profile -RawJson
 
 This same `friendly by default, raw on demand` pattern now applies broadly across the Settings-family getters, including app, company, security, people, search, report, tenant, user, Viva, Microsoft Edge, Microsoft 365 Backup, and related Org settings cmdlets.
 
+### Device inventory and command discovery
+
+The [nodoc M365 Admin specs](https://github.com/nathanmcnulty/nodoc/blob/e05acb32c439f70f41973f32e3b5886eca8569d1/specifications/nodoc-m365-admin/specification/users_groups.yml) document the read-only Intune device projection and
+unlicensed-user count. These commands reuse the existing portal connection; no
+separate Microsoft Graph sign-in is needed:
+
+```powershell
+# Pipeline-friendly device inventory (five-minute tenant-aware cache)
+Get-M365AdminDevice -Force |
+    Select-Object DisplayName, UserPrincipalName, OperatingSystem, ComplianceState, LastSyncDateTime
+
+# Original inventory as a JSON array, even for zero or one device
+Get-M365AdminDevice -RawJson
+
+# Count users without assigned licenses without downloading the user list
+Get-M365AdminUserSetting -Name UnlicensedUsersCount |
+    Select-Object CountAvailable, Value
+
+# Discover valid -Name choices and which commands support -WhatIf
+Get-M365AdminCommandCatalog -CmdletName '*UserSetting' |
+    Select-Object Cmdlet, NameValues, SupportsWhatIf
+```
+
+`UnlicensedUsersCount` is also included in the user-settings `All` bundle.
+Its friendly output includes `CountAvailable`: negative portal values are preserved
+under `Value` and in raw output, but are not considered usable user counts.
+Device inventory reflects only devices visible to the current administrator in
+the admin center, not the complete Graph managed-device resource. Device actions
+such as factory reset are not performed. Authentication and permission failures
+are surfaced rather than reported as an empty inventory.
+
 ### Validation Status
 
-The current publish-readiness pass included authenticated live validation against `admin.cloud.microsoft` by using a software passkey-backed session.
+The latest spec-backed pass used silent Windows SSO without authentication prompts.
+All 47 public getters and their named sections were exercised in 426 read-only
+invocations. The new device/count contracts passed; existing HTTP and token-broker
+failures are recorded in [KNOWN_ISSUES.md](KNOWN_ISSUES.md), not hidden as successes.
+The full suite passed with 12,121 tests passed, zero failed, and one platform skip.
+HTTP 204 responses are handled without PowerShell 7.6 byte-array binding failures.
 
-- The public cmdlet surface was exercised in five live validation batches.
-- Validation confirmed the current request shapes for mixed GET and POST cmdlets such as `Get-M365AdminUserSetting`.
-- Software passkey-backed validation is currently more reliable than saved-cookie reuse for broad live testing.
-- Maintainers can now run `./build/run-maintainer-validation.ps1` for the standard Pester pass and optionally append one or more live scripts with `-LiveScript`.
+- Earlier publish-readiness work used five software-passkey-backed live batches.
+- Saved-profile and cookie reuse remain best-effort; a fresh dedicated profile resolved SSO reuse failures during this pass.
+- Maintainers can now run `./build/run-maintainer-validation.ps1` for the standard Pester 5 pass and optionally append one or more live scripts with `-LiveScript`. The test runner selects Pester 5 even when Pester 6 is also installed.
 
 Known tenant-specific or optional sections should still be expected to return structured informational results instead of hard failures when the live portal behaves the same way.
 
@@ -242,6 +277,7 @@ Tenant, user, group, domain, partner, and relationship management surfaces.
 
 | Cmdlet | Description |
 | --- | --- |
+| Get-M365AdminDevice | Retrieves Intune-managed devices visible in the Microsoft 365 admin center. |
 | Get-M365AdminDomain | Retrieve domain inventory, records, DNS health, and dependency data |
 | Get-M365AdminGroup | Retrieve group lists, labels, and group permission payloads |
 | Get-M365AdminPartnerClient | Retrieve delegated partner client data for DAP and GDAP scenarios |

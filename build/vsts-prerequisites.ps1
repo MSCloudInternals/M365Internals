@@ -22,14 +22,21 @@ foreach ($dependency in $data.RequiredModules) {
 }
 
 foreach ($module in $modules) {
-    $availableModule = Get-Module -ListAvailable -Name $module | Sort-Object Version -Descending | Select-Object -First 1
+    $versionParameters = if ($module -eq 'Pester') {
+        @{ MinimumVersion = '5.0'; MaximumVersion = '5.999' }
+    } else {
+        @{}
+    }
+    $availableModule = Get-Module -ListAvailable -Name $module |
+        Where-Object { $module -ne 'Pester' -or $_.Version.Major -eq 5 } |
+        Sort-Object Version -Descending | Select-Object -First 1
 
     if (-not $availableModule) {
         Write-Host "Installing missing module $module" -ForegroundColor Cyan
-        Install-Module $module -Force -AllowClobber -Scope CurrentUser -SkipPublisherCheck -Repository $Repository
+        Install-Module $module @versionParameters -Force -AllowClobber -Scope CurrentUser -SkipPublisherCheck -Repository $Repository
     } else {
         Write-Host "Using available module $($availableModule.Name) $($availableModule.Version)" -ForegroundColor Cyan
     }
 
-    Import-Module $module -Force -PassThru | Out-Null
+    Import-Module $module @versionParameters -Force -PassThru | Out-Null
 }
