@@ -743,13 +743,21 @@ function Get-M365BrowserCdpVersion {
         [Parameter(Mandatory)]
         [int]$Port,
 
-        [int]$TimeoutSeconds = 20
+        [int]$TimeoutSeconds = 20,
+
+        $Process
     )
 
     $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
     $versionUri = "http://127.0.0.1:$Port/json/version"
 
     do {
+        if ($Process) {
+            $Process.Refresh()
+            if ($Process.HasExited) {
+                throw 'Browser sign-in launch failed: the browser exited before it became ready. Check the browser installation and retry.'
+            }
+        }
         try {
             return Invoke-RestMethod -Uri $versionUri -Method Get -ErrorAction Stop
         } catch {
@@ -757,7 +765,7 @@ function Get-M365BrowserCdpVersion {
         }
     } while ((Get-Date) -lt $deadline)
 
-    throw "Timed out waiting for the browser DevTools endpoint on port $Port."
+    throw 'Browser sign-in startup failed: the browser did not become ready. Check the browser profile and retry.'
 }
 
 function Get-M365BrowserTargetList {
@@ -1158,15 +1166,24 @@ function Invoke-M365BrowserAuthentication {
             Write-Host 'Complete the sign-in in the browser with the target account.'
         }
 
-        $browserProcess = Start-M365BrowserProcess -BrowserPath $browser.Path -ArgumentList $arguments -SuppressBrowserOutput:(Test-M365BrowserProcessOutputSuppression)
-        $versionInfo = Get-M365BrowserCdpVersion -Port $debugPort -TimeoutSeconds 20
+        try {
+            $browserProcess = Start-M365BrowserProcess -BrowserPath $browser.Path -ArgumentList $arguments -SuppressBrowserOutput:(Test-M365BrowserProcessOutputSuppression)
+        }
+        catch {
+            throw 'Browser sign-in launch failed: the browser could not be started. Check the browser installation and retry.'
+        }
+        $versionInfo = Get-M365BrowserCdpVersion -Port $debugPort -TimeoutSeconds 20 -Process $browserProcess
         $browserWebSocketUrl = $versionInfo.webSocketDebuggerUrl
+        if ([string]::IsNullOrWhiteSpace($browserWebSocketUrl)) {
+            throw 'Browser sign-in startup failed: the browser did not become ready. Check the browser profile and retry.'
+        }
 
         $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
         $selectedEstsCookie = $null
         $selectedPortalWebSession = $null
         $firstEstsCookieObservedAt = $null
         $lastObservedTargetDescription = $null
+        $lastPollFailed = $false
 
         do {
             Start-Sleep -Seconds 2
@@ -1178,12 +1195,7 @@ function Invoke-M365BrowserAuthentication {
                         break
                     }
 
-                    $message = 'The browser window was closed before the browser sign-in completed.'
-                    if ($lastObservedTargetDescription) {
-                        $message += " Last observed browser page: $lastObservedTargetDescription"
-                    }
-
-                    throw $message
+                    throw 'Browser sign-in stopped because the browser closed before authentication completed. Retry sign-in.'
                 }
             }
 
@@ -1197,8 +1209,10 @@ function Invoke-M365BrowserAuthentication {
                 }
 
                 $cookies = @(Get-M365BrowserCookieJar -WebSocketUrl $browserWebSocketUrl)
+                $lastPollFailed = $false
             } catch {
-                Write-Verbose "Cookie polling failed: $($_.Exception.Message)"
+                $lastPollFailed = $true
+                Write-Verbose 'Browser sign-in polling did not complete.'
                 continue
             }
 
@@ -1219,12 +1233,10 @@ function Invoke-M365BrowserAuthentication {
         } while ((Get-Date) -lt $deadline)
 
         if (-not $selectedPortalWebSession -and -not $selectedEstsCookie) {
-            $message = 'Browser sign-in did not produce admin portal or ESTS authentication cookies before the timeout expired.'
-            if ($lastObservedTargetDescription) {
-                $message += " Last observed browser page: $lastObservedTargetDescription"
+            if ($lastPollFailed) {
+                throw 'Browser sign-in lost its browser connection before completion. Check that the browser is running and retry.'
             }
-
-            throw $message
+            throw 'Browser sign-in timed out before authentication completed. Retry and complete sign-in in the browser.'
         }
 
         if ($selectedPortalWebSession) {
