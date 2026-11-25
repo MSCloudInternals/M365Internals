@@ -18,6 +18,17 @@ USE AT YOUR OWN RISK. The authors and contributors are not responsible for any i
 
 ## Key Features
 
+### Read-only MCP server
+
+An optional local MCP server exposes nine bounded tools for tenant, company, security,
+reporting, service, domain, and Agents/Copilot configuration reads. It uses a dedicated
+PowerShell session with operator-configured software-passkey authentication and exposes
+no setters, arbitrary commands, REST endpoints, or credential tools.
+
+See [MCP setup, tool contracts, and trust boundaries](mcp/README.md) for client-local
+configuration, offline tests, and opt-in live validation. This is an initial read-only
+implementation; authenticated MCP behavior has not yet been live-verified.
+
 ### Caching Functionality
 
 Many cmdlets in this module implement intelligent caching to improve performance and reduce repeated portal calls:

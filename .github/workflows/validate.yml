@@ -12,3 +12,25 @@ jobs:
       - name: Validate
         run: ./build/vsts-validate.ps1
         shell: pwsh
+
+  validate-mcp:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mcp/package-lock.json
+      - name: Install MCP dependencies
+        run: npm ci --prefix mcp --ignore-scripts
+      - name: Validate read-only MCP
+        run: npm test --prefix mcp
+        env:
+          M365_MCP_AUTH: ""
+          M365_MCP_PASSKEY_FILE: ""
+      - name: Audit MCP runtime dependencies
+        run: npm audit --prefix mcp --omit=dev --audit-level=high
