@@ -313,6 +313,10 @@ git clone https://github.com/MSCloudInternals/M365Internals.git
 Import-Module .\M365Internals\M365Internals.psd1
 ```
 
+## MCP server
+
+The [local MCP server](mcp/README.md) exposes verified, read-only M365 and Purview tools over stdio.
+
 ## Usage
 
 ### Authentication notes
@@ -325,7 +329,7 @@ Import-Module .\M365Internals\M365Internals.psd1
 - `Connect-M365PortalByBrowser` and `Connect-M365PortalBySSO` use a dedicated Chromium profile directory to reduce session-restore friction during repeated sign-ins.
 - Browser sign-in resolves an explicit `-ProfilePath` to an absolute filesystem directory before launch. Repeat the same browser and profile to reuse its sign-in state.
 - Reconnect validation uses a separate candidate web session and routing headers. The stored connection stays active until the candidate succeeds.
-- `Test-M365PortalIdentity` corroborates the signed-in principal and tenant through Microsoft Graph using a token issued by the active admin portal session. It returns only verdicts. Unsupported or unavailable evidence returns `Unknown`. This port has offline coverage. Live admin portal identity and dedicated-profile sign-in still need lab qualification.
+- `Test-M365PortalIdentity` corroborates the current-user principal and active tenant against the authenticated admin shell on the same session. It returns only verdicts. Missing evidence returns `Unknown`. The software-passkey flow was qualified on the Linux lab; Windows SSO and cold browser sign-in still need qualification.
 - `Connect-M365PortalBySSO` currently supports Windows only.
 - Cookie reuse and `Connect-M365PortalByEstsCookie` remain best-effort because the admin portal can still reject stale bootstrap state.
 
