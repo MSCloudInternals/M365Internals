@@ -79,7 +79,8 @@
         'Set-M365AdminMicrosoft365GroupSetting',
         'Set-M365AdminPeopleSetting',
         'Set-M365AdminSecuritySetting',
-        'Set-M365AdminUserOwnedAppSetting'
+        'Set-M365AdminUserOwnedAppSetting',
+        'Test-M365PortalIdentity'
     )
 
     PrivateData       = @{

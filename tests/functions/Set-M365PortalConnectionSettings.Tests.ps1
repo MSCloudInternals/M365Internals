@@ -4,7 +4,7 @@
             Set-Variable -Scope Script -Name m365PortalSession -Value $null
             Set-Variable -Scope Script -Name m365PortalHeaders -Value $null
             Set-Variable -Scope Script -Name m365PortalConnection -Value $null
-            Set-Variable -Scope Script -Name m365PortalLastBootstrapState -Value $null
+            $script:m365CacheStore = @{}
 
             $script:classicModernProbeCount = 0
             $script:newTestPortalWebSession = {
@@ -45,19 +45,20 @@
             Set-Variable -Scope Script -Name m365PortalSession -Value $null
             Set-Variable -Scope Script -Name m365PortalHeaders -Value $null
             Set-Variable -Scope Script -Name m365PortalConnection -Value $null
-            Set-Variable -Scope Script -Name m365PortalLastBootstrapState -Value $null
+            $script:m365CacheStore = @{}
         }
 
         It 'retries the bootstrap flow when ClassicModernAdminDataStream returns the admin HTML shell' {
             $session = & $script:newTestPortalWebSession
 
             Mock Invoke-M365PortalPostLandingBootstrap {
-                $script:m365PortalLastBootstrapState = [pscustomobject]@{
+                $state = [pscustomobject]@{
                     AjaxSessionKeyPresent = $true
                     LogClientAttempted = $true
                     LogClientSucceeded = $true
                     LogClientError = $null
                 }
+                $WebSession | Add-Member -NotePropertyName M365PortalBootstrapState -NotePropertyValue $state -Force
 
                 return $WebSession
             }
@@ -124,12 +125,13 @@
             $session = & $script:newTestPortalWebSession
 
             Mock Invoke-M365PortalPostLandingBootstrap {
-                $script:m365PortalLastBootstrapState = [pscustomobject]@{
+                $state = [pscustomobject]@{
                     AjaxSessionKeyPresent = $true
                     LogClientAttempted = $true
                     LogClientSucceeded = $false
                     LogClientError = 'logclient failed with 500'
                 }
+                $WebSession | Add-Member -NotePropertyName M365PortalBootstrapState -NotePropertyValue $state -Force
 
                 return $WebSession
             }
@@ -151,17 +153,86 @@
             Assert-MockCalled Invoke-M365PortalPostLandingBootstrap -Times 1
         }
 
+        It 'keeps the active session and routing visible while rejecting a candidate' {
+            $active = & $script:newTestPortalWebSession
+            $original = Set-M365PortalConnectionSettings -WebSession $active -SkipValidation
+            $script:fixtureActiveSession = $active
+            $script:fixtureActiveConnection = $original
+            $script:fixtureActiveHeaders = $script:m365PortalHeaders
+            $script:m365CacheStore['sentinel'] = 'active-cache'
+            $candidate = & $script:newTestPortalWebSession
+            $candidate.Cookies.Add([Net.Cookie]::new('s.AjaxSessionKey', 'candidate-ajax', '/', 'admin.cloud.microsoft'))
+            $script:fixtureCandidate = $candidate
+            $script:fixtureProbeSawActive = $false
+            $script:fixtureProbeUsedCandidate = $false
+            Mock Invoke-M365PortalRequest {
+                $script:fixtureProbeSawActive = [object]::ReferenceEquals($script:m365PortalSession, $script:fixtureActiveSession) -and
+                    [object]::ReferenceEquals($script:m365PortalConnection, $script:fixtureActiveConnection) -and
+                    [object]::ReferenceEquals($script:m365PortalHeaders, $script:fixtureActiveHeaders)
+                $script:fixtureProbeUsedCandidate = [object]::ReferenceEquals($WebSession, $script:fixtureCandidate) -and
+                    $ValidationHeaders['AjaxSessionKey'] -eq 'candidate-ajax'
+                throw 'Synthetic candidate validation failure.'
+            }
+
+            { Set-M365PortalConnectionSettings -WebSession $candidate } | Should -Throw '*candidate validation failure*'
+            $script:fixtureProbeSawActive | Should -BeTrue
+            $script:fixtureProbeUsedCandidate | Should -BeTrue
+            [object]::ReferenceEquals($script:m365PortalSession, $active) | Should -BeTrue
+            [object]::ReferenceEquals($script:m365PortalConnection, $original) | Should -BeTrue
+            [object]::ReferenceEquals($script:m365PortalHeaders, $script:fixtureActiveHeaders) | Should -BeTrue
+            $script:m365PortalHeaders['AjaxSessionKey'] | Should -BeExactly 'ajax-session'
+            $script:m365CacheStore['sentinel'] | Should -BeExactly 'active-cache'
+        }
+
+        It 'clears tenant data and access tokens only after an independent session succeeds' {
+            $active = & $script:newTestPortalWebSession
+            $old = Set-M365PortalConnectionSettings -WebSession $active -SkipValidation
+            $userKey = 'M365AdminUserSetting:CurrentUser'
+            $tokenKey = 'M365AdminAccessToken:GraphAT:main'
+            foreach ($key in @($userKey, $tokenKey)) {
+                $script:m365CacheStore["$($old.TenantId)::$key"] = [pscustomobject]@{
+                    Value = 'old-account-data'
+                    NotValidAfter = (Get-Date).AddMinutes(5)
+                }
+            }
+
+            $null = Set-M365PortalConnectionSettings -WebSession $active -SkipValidation
+            (Get-M365Cache -CacheKey $userKey).Value | Should -BeExactly 'old-account-data'
+            (Get-M365Cache -CacheKey $tokenKey).Value | Should -BeExactly 'old-account-data'
+
+            $candidate = & $script:newTestPortalWebSession
+            $candidate.Cookies.Add([Net.Cookie]::new('s.userid', 'other%40contoso.com', '/', 'admin.cloud.microsoft'))
+            $new = Set-M365PortalConnectionSettings -WebSession $candidate -SkipValidation
+            $new.TenantId | Should -BeExactly $old.TenantId
+            $new.Username | Should -BeExactly 'other@contoso.com'
+            Get-M365Cache -CacheKey $userKey | Should -BeNullOrEmpty
+            Get-M365Cache -CacheKey $tokenKey | Should -BeNullOrEmpty
+        }
+
+        It 'rejects a session sharing the active cookie container before validation' {
+            $active = & $script:newTestPortalWebSession
+            $original = Set-M365PortalConnectionSettings -WebSession $active -SkipValidation
+            $candidate = [Microsoft.PowerShell.Commands.WebRequestSession]::new()
+            $candidate.Cookies = $active.Cookies
+            Mock Invoke-M365PortalRequest { throw 'Unexpected candidate request.' }
+
+            { Set-M365PortalConnectionSettings -WebSession $candidate } | Should -Throw '*shares state with the active*'
+            [object]::ReferenceEquals($script:m365PortalConnection, $original) | Should -BeTrue
+            Should -Invoke Invoke-M365PortalRequest -Times 0 -Exactly
+        }
+
         It 'accepts cookie sessions that bootstrap the AjaxSessionKey later' {
             $session = & $script:newTestPortalWebSession -WithoutAjaxSessionKey
 
             Mock Invoke-M365PortalPostLandingBootstrap {
                 $WebSession.Cookies.Add([System.Net.Cookie]::new('s.AjaxSessionKey', 'ajax-session', '/', 'admin.cloud.microsoft'))
-                $script:m365PortalLastBootstrapState = [pscustomobject]@{
+                $state = [pscustomobject]@{
                     AjaxSessionKeyPresent = $true
                     LogClientAttempted = $true
                     LogClientSucceeded = $true
                     LogClientError = $null
                 }
+                $WebSession | Add-Member -NotePropertyName M365PortalBootstrapState -NotePropertyValue $state -Force
 
                 return $WebSession
             }
@@ -326,7 +397,6 @@
 
     Describe 'Invoke-M365PortalRequest' {
         BeforeEach {
-            Set-Variable -Scope Script -Name m365PortalLastBootstrapState -Value $null
             $script:staleTokenFreshUntilUtc = [datetime]::UtcNow.AddMinutes(-6)
             $script:m365PortalSession = [Microsoft.PowerShell.Commands.WebRequestSession]::new()
             $script:m365PortalHeaders = @{
@@ -361,7 +431,23 @@
             Set-Variable -Scope Script -Name m365PortalSession -Value $null
             Set-Variable -Scope Script -Name m365PortalHeaders -Value $null
             Set-Variable -Scope Script -Name m365PortalConnection -Value $null
-            Set-Variable -Scope Script -Name m365PortalLastBootstrapState -Value $null
+        }
+
+        It 'uses only candidate routing headers for a validation request' {
+            $candidate = [Microsoft.PowerShell.Commands.WebRequestSession]::new()
+            $script:fixtureWireCandidate = $candidate
+            $validationHeaders = @{ Accept = 'application/json'; AjaxSessionKey = 'candidate-ajax' }
+
+            $null = Invoke-M365PortalRequest -Path '/admin/api/navigation' -WebSession $candidate -ValidationHeaders $validationHeaders -SkipConnectionRefresh -SkipAutoHeal
+
+            Should -Invoke Invoke-WebRequest -Times 1 -Exactly -ParameterFilter {
+                [object]::ReferenceEquals($WebSession, $script:fixtureWireCandidate) -and
+                    $Headers['AjaxSessionKey'] -eq 'candidate-ajax' -and
+                    -not $Headers.ContainsKey('x-portal-routekey')
+            }
+            Should -Invoke Update-M365PortalConnectionSettings -Times 0 -Exactly
+            $script:m365PortalHeaders['AjaxSessionKey'] | Should -BeExactly 'ajax-session'
+            $script:m365PortalHeaders['x-portal-routekey'] | Should -BeExactly 'route-key'
         }
 
         It 'marks a stale token freshness window as satisfied after a successful proactive self-heal' {

@@ -630,6 +630,30 @@ $Config = {"pgid":"ConvergedSignIn","arrSessions":[{"id":"session-123"}],"urlLog
         }
     }
 
+    Describe 'Resolve-M365BrowserProfileConfiguration' {
+        It 'passes an absolute native path to browser setup for a provider-qualified relative profile' {
+            Mock Initialize-M365BrowserProfile { }
+            Push-Location -LiteralPath $TestDrive
+            try {
+                $expected = Join-Path (Get-Location).ProviderPath 'dedicated profile'
+                $result = Resolve-M365BrowserProfileConfiguration -ProfilePath 'FileSystem::./dedicated profile'
+                $result.ProfilePath | Should -BeExactly $expected
+                $result.CleanupProfileOnExit | Should -BeFalse
+                Should -Invoke Initialize-M365BrowserProfile -Times 1 -Exactly -ParameterFilter {
+                    $ProfilePath -eq (Join-Path (Get-Location).ProviderPath 'dedicated profile')
+                }
+            }
+            finally { Pop-Location }
+        }
+
+        It 'rejects non-filesystem profile providers before touching a profile' {
+            Mock Initialize-M365BrowserProfile { }
+            { Resolve-M365BrowserProfileConfiguration -ProfilePath 'Variable::Profile' } |
+                Should -Throw -ErrorId 'M365BrowserProfilePathInvalid*'
+            Should -Invoke Initialize-M365BrowserProfile -Times 0 -Exactly
+        }
+    }
+
     Describe 'Invoke-M365BrowserAuthentication' {
         BeforeEach {
             $script:browserCookiePollCount = 0

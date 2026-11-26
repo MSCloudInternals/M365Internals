@@ -403,7 +403,36 @@ function Resolve-M365BrowserProfileConfiguration {
         }
     }
 
-    $resolvedProfilePath = if ($ProfilePath) { $ProfilePath } else { Get-M365BrowserDefaultProfilePath }
+    $resolvedProfilePath = if ($ProfilePath) {
+        try {
+            $profileProvider = $null
+            $profileDrive = $null
+            $profileDirectory = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(
+                $ProfilePath, [ref]$profileProvider, [ref]$profileDrive
+            )
+            if ($profileProvider.Name -ne 'FileSystem' -or [string]::IsNullOrEmpty($profileDirectory)) {
+                throw [ArgumentException]::new()
+            }
+            # FileSystem accepts either separator. The native browser expects a platform path.
+            $separator = [System.IO.Path]::DirectorySeparatorChar
+            $profileDirectory = $profileDirectory.Replace([char]'\', $separator).Replace([char]'/', $separator)
+            if (-not [System.IO.Path]::IsPathFullyQualified($profileDirectory)) {
+                $fileSystemLocation = $ExecutionContext.SessionState.Path.CurrentFileSystemLocation.ProviderPath
+                $profileDirectory = [System.IO.Path]::GetFullPath($profileDirectory, $fileSystemLocation)
+            }
+            $profileDirectory
+        }
+        catch {
+            $ErrorActionPreference = 'Stop'
+            throw [System.Management.Automation.ErrorRecord]::new(
+                [ArgumentException]::new('Use -ProfilePath with a dedicated filesystem directory.'),
+                'M365BrowserProfilePathInvalid', 'InvalidArgument', $null
+            )
+        }
+    }
+    else {
+        Get-M365BrowserDefaultProfilePath
+    }
     if ($ResetProfile -and (Test-Path -LiteralPath $resolvedProfilePath)) {
         Remove-Item -Path $resolvedProfilePath -Recurse -Force -ErrorAction Stop
     }

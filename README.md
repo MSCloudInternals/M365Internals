@@ -263,6 +263,7 @@ Navigation, shell, feature, bootstrap, and supporting platform metadata.
 | Get-M365AdminHomeData | Retrieve the home page ClassicModernAdminDataStream payload |
 | Get-M365AdminNavigation | Retrieve primary or asynchronous navigation payloads from the admin center |
 | Get-M365AdminShellInfo | Retrieve coordinated bootstrap shell information from the admin center |
+| Test-M365PortalIdentity | Checks the identity of the active Microsoft 365 admin portal session. |
 
 ### Write Operations
 
@@ -312,6 +313,10 @@ git clone https://github.com/MSCloudInternals/M365Internals.git
 Import-Module .\M365Internals\M365Internals.psd1
 ```
 
+## MCP server
+
+The [local MCP server](mcp/README.md) exposes verified, read-only M365 and Purview tools over stdio.
+
 ## Usage
 
 ### Authentication notes
@@ -322,6 +327,9 @@ Import-Module .\M365Internals\M365Internals.psd1
 - `Connect-M365PortalByTemporaryAccessPass` uses a Temporary Access Pass for bootstrap, recovery, or other short-lived sign-in scenarios.
 - `Connect-M365PortalBySoftwarePasskey` requires PowerShell 7.0 or later and supports local or Azure Key Vault-backed passkeys.
 - `Connect-M365PortalByBrowser` and `Connect-M365PortalBySSO` use a dedicated Chromium profile directory to reduce session-restore friction during repeated sign-ins.
+- Browser sign-in resolves an explicit `-ProfilePath` to an absolute filesystem directory before launch. Repeat the same browser and profile to reuse its sign-in state.
+- Reconnect validation uses a separate candidate web session and routing headers. The stored connection stays active until the candidate succeeds.
+- `Test-M365PortalIdentity` corroborates the current-user principal and active tenant against the authenticated admin shell on the same session. It returns only verdicts. Missing evidence returns `Unknown`. The software-passkey flow was qualified on the Linux lab; Windows SSO and cold browser sign-in still need qualification.
 - `Connect-M365PortalBySSO` currently supports Windows only.
 - Cookie reuse and `Connect-M365PortalByEstsCookie` remain best-effort because the admin portal can still reject stale bootstrap state.
 

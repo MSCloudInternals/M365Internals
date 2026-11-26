@@ -29,6 +29,9 @@
     .PARAMETER WebSession
         The web session to use. When omitted, the current portal connection session is used.
 
+    .PARAMETER ValidationHeaders
+        Supplies a candidate connection's default headers for bootstrap validation.
+
     .PARAMETER SkipConnectionRefresh
         Skips the normal refresh of the stored portal connection before the request is sent.
         This is used by internal validation probes to avoid recursive refresh loops.
@@ -64,6 +67,8 @@
 
         [Microsoft.PowerShell.Commands.WebRequestSession]$WebSession,
 
+        [hashtable]$ValidationHeaders,
+
         [switch]$SkipConnectionRefresh,
 
         [switch]$SkipAutoHeal,
@@ -83,8 +88,9 @@
         param()
 
         $currentHeaders = @{}
-        if ($script:m365PortalHeaders) {
-            foreach ($headerEntry in @($script:m365PortalHeaders.GetEnumerator())) {
+        $baseHeaders = if ($null -ne $ValidationHeaders) { $ValidationHeaders } else { $script:m365PortalHeaders }
+        if ($baseHeaders) {
+            foreach ($headerEntry in @($baseHeaders.GetEnumerator())) {
                 $currentHeaders[$headerEntry.Key] = $headerEntry.Value
             }
         }
