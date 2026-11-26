@@ -432,6 +432,9 @@
     $script:m365PortalSession = $WebSession
     $script:m365PortalHeaders = $candidateHeaders
     $script:m365PortalConnection = $connection
+    if (-not $isCurrentSessionRefresh) {
+        Clear-M365Cache -All
+    }
     if (-not [string]::IsNullOrWhiteSpace($shellInfoContent)) {
         try {
             $null = Set-M365Cache -CacheKey 'ShellInfo' -Value $shellInfoContent -TTLMinutes 15 -TenantId $resolvedTenantId -ErrorAction Stop
