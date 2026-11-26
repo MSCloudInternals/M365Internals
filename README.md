@@ -322,6 +322,8 @@ Import-Module .\M365Internals\M365Internals.psd1
 - `Connect-M365PortalByTemporaryAccessPass` uses a Temporary Access Pass for bootstrap, recovery, or other short-lived sign-in scenarios.
 - `Connect-M365PortalBySoftwarePasskey` requires PowerShell 7.0 or later and supports local or Azure Key Vault-backed passkeys.
 - `Connect-M365PortalByBrowser` and `Connect-M365PortalBySSO` use a dedicated Chromium profile directory to reduce session-restore friction during repeated sign-ins.
+- Browser sign-in resolves an explicit `-ProfilePath` to an absolute filesystem directory before launch. Repeat the same browser and profile to reuse its sign-in state.
+- Reconnect validation uses a separate candidate web session and routing headers. The stored connection stays active until the candidate succeeds.
 - `Connect-M365PortalBySSO` currently supports Windows only.
 - Cookie reuse and `Connect-M365PortalByEstsCookie` remain best-effort because the admin portal can still reject stale bootstrap state.
 

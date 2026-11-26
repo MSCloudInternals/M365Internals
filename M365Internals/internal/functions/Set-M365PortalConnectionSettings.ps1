@@ -67,17 +67,17 @@
 
     function Update-PortalHeaderState {
         if ([string]::IsNullOrWhiteSpace($cookieValues['s.AjaxSessionKey'])) {
-            $null = $script:m365PortalHeaders.Remove('AjaxSessionKey')
+            $null = $candidateHeaders.Remove('AjaxSessionKey')
         }
         else {
-            $script:m365PortalHeaders['AjaxSessionKey'] = $cookieValues['s.AjaxSessionKey']
+            $candidateHeaders['AjaxSessionKey'] = $cookieValues['s.AjaxSessionKey']
         }
 
         if ([string]::IsNullOrWhiteSpace($cookieValues['x-portal-routekey'])) {
-            $null = $script:m365PortalHeaders.Remove('x-portal-routekey')
+            $null = $candidateHeaders.Remove('x-portal-routekey')
         }
         else {
-            $script:m365PortalHeaders['x-portal-routekey'] = $cookieValues['x-portal-routekey']
+            $candidateHeaders['x-portal-routekey'] = $cookieValues['x-portal-routekey']
         }
     }
 
@@ -137,7 +137,7 @@
     }
 
     function Get-BootstrapFailureDetails {
-        $bootstrapState = $script:m365PortalLastBootstrapState
+        $bootstrapState = $WebSession.M365PortalBootstrapState
         if (-not $bootstrapState) {
             return ''
         }
@@ -172,7 +172,7 @@
 
         while ($true) {
             $attempt++
-            $response = Invoke-M365PortalRequest -Path $Path -Headers $Headers -RawResponse -SkipConnectionRefresh -SkipAutoHeal
+            $response = Invoke-M365PortalRequest -Path $Path -Headers $Headers -WebSession $WebSession -ValidationHeaders $candidateHeaders -RawResponse -SkipConnectionRefresh -SkipAutoHeal
 
             if (-not (Test-M365PortalUnexpectedHtmlShell -Content $response.Content)) {
                 return $response
@@ -190,7 +190,7 @@
 
                 Sync-PortalCookieValues
                 if (-not [string]::IsNullOrWhiteSpace($cookieValues['x-portal-routekey'])) {
-                    $script:m365PortalHeaders['x-portal-routekey'] = $cookieValues['x-portal-routekey']
+                    $candidateHeaders['x-portal-routekey'] = $cookieValues['x-portal-routekey']
                 }
 
                 continue
@@ -198,10 +198,6 @@
 
             throw ("Connected to admin.cloud.microsoft, but the {0} validation probe returned the admin portal HTML error shell instead of bootstrap data.{1}" -f $ProbeName, (Get-BootstrapFailureDetails))
         }
-    }
-
-    if ($UserAgent) {
-        $WebSession.UserAgent = $UserAgent
     }
 
     $requiredCookieNames = 'RootAuthToken', 'SPAAuthCookie', 'OIDCAuthCookie'
@@ -214,11 +210,21 @@
     }
 
     $previousSession = $script:m365PortalSession
-    $previousHeaders = $script:m365PortalHeaders
     $previousConnection = $script:m365PortalConnection
-    $previousBootstrapState = $script:m365PortalLastBootstrapState
-    $script:m365PortalLastBootstrapState = $null
-    $isCurrentSessionRefresh = ($null -ne $previousSession -and $WebSession -eq $previousSession)
+    $isCurrentSessionRefresh = [object]::ReferenceEquals($WebSession, $previousSession)
+    if ($null -ne $previousSession -and (
+            ($isCurrentSessionRefresh -and -not $SkipValidation) -or
+            (-not $isCurrentSessionRefresh -and (
+                    [object]::ReferenceEquals($WebSession.Cookies, $previousSession.Cookies) -or
+                    [object]::ReferenceEquals($WebSession.Headers, $previousSession.Headers)
+                ))
+        )) {
+        throw 'The candidate shares state with the active Microsoft 365 portal connection. Use an independent web session to reconnect.'
+    }
+    if ($UserAgent) {
+        $WebSession.UserAgent = $UserAgent
+    }
+
     $tokenRefreshSatisfiedUntilUtc = if ($WebSession.PSObject.Properties['M365TokenRefreshSatisfiedUntilUtc']) {
         $WebSession.M365TokenRefreshSatisfiedUntilUtc
     }
@@ -238,8 +244,7 @@
         $null
     }
 
-    $script:m365PortalSession = $WebSession
-    $script:m365PortalHeaders = @{
+    $candidateHeaders = @{
         Accept         = 'application/json, text/plain, */*'
     }
     Update-PortalHeaderState
@@ -273,7 +278,7 @@
 
         try {
             if ([string]::IsNullOrWhiteSpace($cookieValues['s.UserTenantId'])) {
-                $null = Invoke-WebRequest -MaximumRedirection 20 -ErrorAction Stop -WebSession $WebSession -Method Get -Uri 'https://admin.cloud.microsoft/admin/api/tenant/datalocationandcommitments' -Headers (Get-M365PortalContextHeaders -Context DataLocation -AjaxSessionKey $script:m365PortalHeaders['AjaxSessionKey']) -UserAgent $UserAgent
+                $null = Invoke-WebRequest -MaximumRedirection 20 -ErrorAction Stop -WebSession $WebSession -Method Get -Uri 'https://admin.cloud.microsoft/admin/api/tenant/datalocationandcommitments' -Headers (Get-M365PortalContextHeaders -Context DataLocation -AjaxSessionKey $candidateHeaders['AjaxSessionKey']) -UserAgent $UserAgent
             }
         }
         catch {
@@ -282,7 +287,7 @@
 
         if ([string]::IsNullOrWhiteSpace((Get-PortalCookieValue -Name 's.UserTenantId'))) {
             try {
-                $null = Invoke-WebRequest -MaximumRedirection 20 -ErrorAction Stop -WebSession $WebSession -Method Get -Uri 'https://admin.cloud.microsoft/adminportal/home/ClassicModernAdminDataStream?ref=/homepage' -Headers (Get-M365PortalContextHeaders -Context Homepage -AjaxSessionKey $script:m365PortalHeaders['AjaxSessionKey']) -UserAgent $UserAgent
+                $null = Invoke-WebRequest -MaximumRedirection 20 -ErrorAction Stop -WebSession $WebSession -Method Get -Uri 'https://admin.cloud.microsoft/adminportal/home/ClassicModernAdminDataStream?ref=/homepage' -Headers (Get-M365PortalContextHeaders -Context Homepage -AjaxSessionKey $candidateHeaders['AjaxSessionKey']) -UserAgent $UserAgent
             }
             catch {
                 Write-Verbose "The optional ClassicModernAdminDataStream validation request did not complete successfully: $($_.Exception.Message)"
@@ -294,6 +299,7 @@
     }
 
     $validationResults = New-Object System.Collections.Generic.List[object]
+    $shellInfoContent = $null
     $resolvedTenantId = if (Test-IsGuidValue -Value $cookieValues['s.UserTenantId']) {
         $cookieValues['s.UserTenantId']
     }
@@ -303,134 +309,136 @@
     else {
         $null
     }
-    try {
-        if (-not $SkipValidation) {
-            $classicModernResponse = Invoke-ValidatedBootstrapProbe -ProbeName 'ClassicModernAdminDataStream' -Path '/adminportal/home/ClassicModernAdminDataStream?ref=/homepage' -Headers (Get-M365PortalContextHeaders -Context Homepage) -RetryOnHtmlShell
+    if (-not $SkipValidation) {
+        $classicModernResponse = Invoke-ValidatedBootstrapProbe -ProbeName 'ClassicModernAdminDataStream' -Path '/adminportal/home/ClassicModernAdminDataStream?ref=/homepage' -Headers (Get-M365PortalContextHeaders -Context Homepage) -RetryOnHtmlShell
+        if ([string]::IsNullOrWhiteSpace($resolvedTenantId)) {
+            $resolvedTenantId = Resolve-TenantIdFromContent -Content $classicModernResponse.Content
+        }
+
+        Sync-PortalCookieValues
+        if ([string]::IsNullOrWhiteSpace($resolvedTenantId)) {
+            $resolvedTenantId = $cookieValues['s.UserTenantId']
+        }
+
+        Update-PortalHeaderState
+
+        $validationResults.Add([pscustomobject]@{
+            Name       = 'ClassicModernAdminDataStream'
+            Path       = '/adminportal/home/ClassicModernAdminDataStream?ref=/homepage'
+            StatusCode = [int]$classicModernResponse.StatusCode
+        })
+
+        try {
+            $shellInfoResponse = Invoke-ValidatedBootstrapProbe -ProbeName 'ShellInfo' -Path '/admin/api/coordinatedbootstrap/shellinfo' -Headers (Get-M365PortalContextHeaders -Context Homepage) -RetryOnHtmlShell
             if ([string]::IsNullOrWhiteSpace($resolvedTenantId)) {
-                $resolvedTenantId = Resolve-TenantIdFromContent -Content $classicModernResponse.Content
+                $resolvedTenantId = Resolve-TenantIdFromContent -Content $shellInfoResponse.Content
             }
-
-            Sync-PortalCookieValues
-            if ([string]::IsNullOrWhiteSpace($resolvedTenantId)) {
-                $resolvedTenantId = $cookieValues['s.UserTenantId']
-            }
-
-            Update-PortalHeaderState
-
             $validationResults.Add([pscustomobject]@{
-                Name       = 'ClassicModernAdminDataStream'
-                Path       = '/adminportal/home/ClassicModernAdminDataStream?ref=/homepage'
-                StatusCode = [int]$classicModernResponse.StatusCode
+                Name       = 'ShellInfo'
+                Path       = '/admin/api/coordinatedbootstrap/shellinfo'
+                StatusCode = [int]$shellInfoResponse.StatusCode
             })
 
-            try {
-                $shellInfoResponse = Invoke-ValidatedBootstrapProbe -ProbeName 'ShellInfo' -Path '/admin/api/coordinatedbootstrap/shellinfo' -Headers (Get-M365PortalContextHeaders -Context Homepage) -RetryOnHtmlShell
-                if ([string]::IsNullOrWhiteSpace($resolvedTenantId)) {
-                    $resolvedTenantId = Resolve-TenantIdFromContent -Content $shellInfoResponse.Content
-                }
-                $validationResults.Add([pscustomobject]@{
-                    Name       = 'ShellInfo'
-                    Path       = '/admin/api/coordinatedbootstrap/shellinfo'
-                    StatusCode = [int]$shellInfoResponse.StatusCode
-                })
+            $shellInfoContent = $shellInfoResponse.Content
+        }
+        catch {
+            $validationResults.Add([pscustomobject]@{
+                Name       = 'ShellInfo'
+                Path       = '/admin/api/coordinatedbootstrap/shellinfo'
+                StatusCode = $null
+                Error      = $_.Exception.Message
+            })
+        }
 
-                if (-not [string]::IsNullOrWhiteSpace($shellInfoResponse.Content)) {
-                    $cacheTenantId = if (-not [string]::IsNullOrWhiteSpace($resolvedTenantId)) { $resolvedTenantId } elseif (Test-IsGuidValue -Value $cookieValues['s.UserTenantId']) { $cookieValues['s.UserTenantId'] } else { $null }
-                    $null = Set-M365Cache -CacheKey 'ShellInfo' -Value $shellInfoResponse.Content -TTLMinutes 15 -TenantId $cacheTenantId
-                }
+        foreach ($validationProbe in @(
+            @{ Name = 'Navigation'; Path = '/admin/api/navigation' },
+            @{ Name = 'FeatureAll'; Path = '/admin/api/features/all' }
+        )) {
+            try {
+                $probeResponse = Invoke-M365PortalRequest -Path $validationProbe.Path -WebSession $WebSession -ValidationHeaders $candidateHeaders -RawResponse -SkipConnectionRefresh -SkipAutoHeal
+                $validationResults.Add([pscustomobject]@{
+                    Name       = $validationProbe.Name
+                    Path       = $validationProbe.Path
+                    StatusCode = [int]$probeResponse.StatusCode
+                })
             }
             catch {
                 $validationResults.Add([pscustomobject]@{
-                    Name       = 'ShellInfo'
-                    Path       = '/admin/api/coordinatedbootstrap/shellinfo'
+                    Name       = $validationProbe.Name
+                    Path       = $validationProbe.Path
                     StatusCode = $null
                     Error      = $_.Exception.Message
                 })
             }
-
-            foreach ($validationProbe in @(
-                @{ Name = 'Navigation'; Path = '/admin/api/navigation' },
-                @{ Name = 'FeatureAll'; Path = '/admin/api/features/all' }
-            )) {
-                try {
-                    $probeResponse = Invoke-M365PortalRequest -Path $validationProbe.Path -RawResponse -SkipConnectionRefresh -SkipAutoHeal
-                    $validationResults.Add([pscustomobject]@{
-                        Name       = $validationProbe.Name
-                        Path       = $validationProbe.Path
-                        StatusCode = [int]$probeResponse.StatusCode
-                    })
-                }
-                catch {
-                    $validationResults.Add([pscustomobject]@{
-                        Name       = $validationProbe.Name
-                        Path       = $validationProbe.Path
-                        StatusCode = $null
-                        Error      = $_.Exception.Message
-                    })
-                }
-            }
-
-            if ([string]::IsNullOrWhiteSpace($resolvedTenantId)) {
-                throw 'Connected to admin.cloud.microsoft, but failed to resolve the active tenant ID from the validated portal bootstrap responses.'
-            }
         }
 
-        Sync-PortalCookieValues
-        Update-PortalHeaderState
         if ([string]::IsNullOrWhiteSpace($resolvedTenantId)) {
-            if (Test-IsGuidValue -Value $cookieValues['s.UserTenantId']) {
-                $resolvedTenantId = $cookieValues['s.UserTenantId']
-            }
-            elseif ($isCurrentSessionRefresh -and $previousConnection -and (Test-IsGuidValue -Value $previousConnection.TenantId)) {
-                $resolvedTenantId = $previousConnection.TenantId
-            }
+            throw 'Connected to admin.cloud.microsoft, but failed to resolve the active tenant ID from the validated portal bootstrap responses.'
         }
-
-        $resolvedAuthFlow = if (-not [string]::IsNullOrWhiteSpace($AuthFlow)) {
-            $AuthFlow
-        }
-        elseif ($isCurrentSessionRefresh -and $previousConnection -and $previousConnection.PSObject.Properties['AuthFlow'] -and -not [string]::IsNullOrWhiteSpace([string]$previousConnection.AuthFlow)) {
-            [string]$previousConnection.AuthFlow
-        }
-        else {
-            $AuthSource
-        }
-
-        $resolvedUsername = Resolve-UsernameFromCookieValue -Value $cookieValues['s.userid']
-
-        $connection = [System.Management.Automation.PSObject]::new()
-        $connectedAt = if ($isCurrentSessionRefresh -and $previousConnection -and $previousConnection.PSObject.Properties['ConnectedAt']) {
-            $previousConnection.ConnectedAt
-        }
-        else {
-            Get-Date
-        }
-        $connection | Add-Member -NotePropertyName PortalHost -NotePropertyValue 'admin.cloud.microsoft'
-        $connection | Add-Member -NotePropertyName TenantId -NotePropertyValue $resolvedTenantId
-        # Keep both property names: Username is canonical, while UserId preserves the
-        # historical field used by existing callers and the default connection view.
-        $connection | Add-Member -NotePropertyName Username -NotePropertyValue $resolvedUsername
-        $connection | Add-Member -NotePropertyName UserId -NotePropertyValue $resolvedUsername
-        $connection | Add-Member -NotePropertyName SessionId -NotePropertyValue $cookieValues['s.SessID']
-        $connection | Add-Member -NotePropertyName RouteKeyPresent -NotePropertyValue (-not [string]::IsNullOrWhiteSpace($cookieValues['x-portal-routekey']))
-        $connection | Add-Member -NotePropertyName Source -NotePropertyValue $AuthSource
-        $connection | Add-Member -NotePropertyName AuthFlow -NotePropertyValue $resolvedAuthFlow
-        $connection | Add-Member -NotePropertyName ConnectedAt -NotePropertyValue $connectedAt
-        $connection | Add-Member -NotePropertyName RefreshedAt -NotePropertyValue (Get-Date)
-        $connection | Add-Member -NotePropertyName Validated -NotePropertyValue (-not $SkipValidation)
-        $connection | Add-Member -NotePropertyName Validation -NotePropertyValue ([object[]]$validationResults.ToArray())
-        $connection | Add-Member -NotePropertyName TokenRefreshSatisfiedUntilUtc -NotePropertyValue $tokenRefreshSatisfiedUntilUtc -Force
-        $null = Set-M365PortalConnectionFreshness -Connection $connection -TokenMetadata $tokenMetadata
-        $connection.PSObject.TypeNames.Insert(0, 'M365Portal.Connection')
-
-        $script:m365PortalConnection = $connection
-        $connection
     }
-    catch {
-        $script:m365PortalSession = $previousSession
-        $script:m365PortalHeaders = $previousHeaders
-        $script:m365PortalConnection = $previousConnection
-        $script:m365PortalLastBootstrapState = $previousBootstrapState
-        throw
+
+    Sync-PortalCookieValues
+    Update-PortalHeaderState
+    if ([string]::IsNullOrWhiteSpace($resolvedTenantId)) {
+        if (Test-IsGuidValue -Value $cookieValues['s.UserTenantId']) {
+            $resolvedTenantId = $cookieValues['s.UserTenantId']
+        }
+        elseif ($isCurrentSessionRefresh -and $previousConnection -and (Test-IsGuidValue -Value $previousConnection.TenantId)) {
+            $resolvedTenantId = $previousConnection.TenantId
+        }
     }
+
+    $resolvedAuthFlow = if (-not [string]::IsNullOrWhiteSpace($AuthFlow)) {
+        $AuthFlow
+    }
+    elseif ($isCurrentSessionRefresh -and $previousConnection -and $previousConnection.PSObject.Properties['AuthFlow'] -and -not [string]::IsNullOrWhiteSpace([string]$previousConnection.AuthFlow)) {
+        [string]$previousConnection.AuthFlow
+    }
+    else {
+        $AuthSource
+    }
+
+    $resolvedUsername = Resolve-UsernameFromCookieValue -Value $cookieValues['s.userid']
+
+    $connection = [System.Management.Automation.PSObject]::new()
+    $connectedAt = if ($isCurrentSessionRefresh -and $previousConnection -and $previousConnection.PSObject.Properties['ConnectedAt']) {
+        $previousConnection.ConnectedAt
+    }
+    else {
+        Get-Date
+    }
+    $connection | Add-Member -NotePropertyName PortalHost -NotePropertyValue 'admin.cloud.microsoft'
+    $connection | Add-Member -NotePropertyName TenantId -NotePropertyValue $resolvedTenantId
+    # Keep both property names: Username is canonical, while UserId preserves the
+    # historical field used by existing callers and the default connection view.
+    $connection | Add-Member -NotePropertyName Username -NotePropertyValue $resolvedUsername
+    $connection | Add-Member -NotePropertyName UserId -NotePropertyValue $resolvedUsername
+    $connection | Add-Member -NotePropertyName SessionId -NotePropertyValue $cookieValues['s.SessID']
+    $connection | Add-Member -NotePropertyName RouteKeyPresent -NotePropertyValue (-not [string]::IsNullOrWhiteSpace($cookieValues['x-portal-routekey']))
+    $connection | Add-Member -NotePropertyName Source -NotePropertyValue $AuthSource
+    $connection | Add-Member -NotePropertyName AuthFlow -NotePropertyValue $resolvedAuthFlow
+    $connection | Add-Member -NotePropertyName ConnectedAt -NotePropertyValue $connectedAt
+    $connection | Add-Member -NotePropertyName RefreshedAt -NotePropertyValue (Get-Date)
+    $connection | Add-Member -NotePropertyName Validated -NotePropertyValue (-not $SkipValidation)
+    $connection | Add-Member -NotePropertyName Validation -NotePropertyValue ([object[]]$validationResults.ToArray())
+    $connection | Add-Member -NotePropertyName TokenRefreshSatisfiedUntilUtc -NotePropertyValue $tokenRefreshSatisfiedUntilUtc -Force
+    $null = Set-M365PortalConnectionFreshness -Connection $connection -TokenMetadata $tokenMetadata
+    $connection.PSObject.TypeNames.Insert(0, 'M365Portal.Connection')
+
+    if (-not [object]::ReferenceEquals($previousSession, $script:m365PortalSession) -or
+        -not [object]::ReferenceEquals($previousConnection, $script:m365PortalConnection)) {
+        throw 'The active Microsoft 365 portal connection changed during validation. Run Connect-M365Portal again.'
+    }
+    $script:m365PortalSession = $WebSession
+    $script:m365PortalHeaders = $candidateHeaders
+    $script:m365PortalConnection = $connection
+    if (-not [string]::IsNullOrWhiteSpace($shellInfoContent)) {
+        try {
+            $null = Set-M365Cache -CacheKey 'ShellInfo' -Value $shellInfoContent -TTLMinutes 15 -TenantId $resolvedTenantId -ErrorAction Stop
+        }
+        catch {
+            Write-Verbose 'The validated shell information could not be cached.'
+        }
+    }
+    $connection
 }
