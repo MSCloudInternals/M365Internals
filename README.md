@@ -291,27 +291,15 @@ Low-level REST access helpers for authenticated admin-center requests.
 
 ## Installation
 
-### From the PowerShell Gallery
-
-`M365Internals` is not published to the PowerShell Gallery yet. Once it is published, installation will look like this:
+Use PowerShell 7.6 or later and Git. Clone the repository from GitHub and import the module manifest from inside the clone. Gallery publication is tracked in [issue #10](https://github.com/MSCloudInternals/M365Internals/issues/10).
 
 ```powershell
-# Install the module from the PowerShell Gallery
-Install-Module M365Internals
-
-# Import the module
-Import-Module M365Internals
-```
-
-### From GitHub
-
-```powershell
-# Clone the repository
 git clone https://github.com/MSCloudInternals/M365Internals.git
-
-# Import the module
-Import-Module .\M365Internals\M365Internals.psd1
+Set-Location ./M365Internals
+Import-Module ./M365Internals/M365Internals.psd1
 ```
+
+See the [roadmap](docs/roadmap.md) and the [maintainer validation handoff](docs/milestone-1-validation.md).
 
 ## MCP server
 
@@ -325,7 +313,7 @@ The [local MCP server](mcp/README.md) exposes verified, read-only M365 and Purvi
 - `Connect-M365Portal -Credential` and `Connect-M365PortalByCredential` support username/password sign-in and optional Authenticator TOTP completion through `-TotpSecret`.
 - `Connect-M365PortalByPhoneSignIn` starts the Microsoft Authenticator phone sign-in flow for passwordless approval scenarios.
 - `Connect-M365PortalByTemporaryAccessPass` uses a Temporary Access Pass for bootstrap, recovery, or other short-lived sign-in scenarios.
-- `Connect-M365PortalBySoftwarePasskey` requires PowerShell 7.0 or later and supports local or Azure Key Vault-backed passkeys.
+- `Connect-M365PortalBySoftwarePasskey` supports local or Azure Key Vault-backed passkeys.
 - `Connect-M365PortalByBrowser` and `Connect-M365PortalBySSO` use a dedicated Chromium profile directory to reduce session-restore friction during repeated sign-ins.
 - Browser sign-in resolves an explicit `-ProfilePath` to an absolute filesystem directory before launch. Repeat the same browser and profile to reuse its sign-in state.
 - Reconnect validation uses a separate candidate web session and routing headers. The stored connection stays active until the candidate succeeds.

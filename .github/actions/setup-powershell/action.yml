@@ -1,0 +1,35 @@
+name: Set up PowerShell
+description: Install a pinned PowerShell release on Linux x64
+inputs:
+  version:
+    description: PowerShell version to install
+    required: true
+outputs:
+  executable:
+    description: Absolute path to the verified PowerShell executable
+    value: ${{ steps.install.outputs.executable }}
+runs:
+  using: composite
+  steps:
+    - id: install
+      shell: bash
+      env:
+        VERSION: ${{ inputs.version }}
+      run: |
+        case "$VERSION" in
+          7.6.6) checksum=ddbc4a2d113bbd46d283cfedcbcd117a70caefd7673f41f2b4e0000badf103bc ;;
+          7.7.0) checksum=c89d9c682d2c403dfe726f3df948e359675235a5bd6fab535776de69729ca0cb ;;
+          *) echo "Unsupported PowerShell pin: $VERSION" >&2; exit 1 ;;
+        esac
+        install_dir=$(mktemp -d "$RUNNER_TEMP/powershell-$VERSION.XXXXXX")
+        archive="$install_dir/powershell.tar.gz"
+        curl --fail --silent --show-error --location --retry 3 \
+          "https://github.com/PowerShell/PowerShell/releases/download/v$VERSION/powershell-$VERSION-linux-x64.tar.gz" \
+          --output "$archive"
+        printf '%s  %s\n' "$checksum" "$archive" | sha256sum --check
+        tar -xzf "$archive" -C "$install_dir"
+        chmod +x "$install_dir/pwsh"
+        actual=$("$install_dir/pwsh" -NoProfile -Command '$PSVersionTable.PSVersion.ToString()')
+        test "$actual" = "$VERSION"
+        echo "PowerShell $actual at $install_dir/pwsh"
+        echo "executable=$install_dir/pwsh" >> "$GITHUB_OUTPUT"

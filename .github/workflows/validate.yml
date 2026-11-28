@@ -2,13 +2,22 @@ on: [pull_request]
 
 jobs:
   validate:
+    strategy:
+      fail-fast: false
+      matrix:
+        powershell: ['7.6.6', '7.7.0']
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Set up PowerShell
+        id: powershell
+        uses: ./.github/actions/setup-powershell
+        with:
+          version: ${{ matrix.powershell }}
       - name: Install Prerequisites
-        run: ./build/vsts-prerequisites.ps1
-        shell: pwsh
+        run: '"${{ steps.powershell.outputs.executable }}" -NoProfile -File ./build/vsts-prerequisites.ps1'
+        shell: bash
       - name: Validate
-        run: ./build/vsts-validate.ps1
-        shell: pwsh
+        run: '"${{ steps.powershell.outputs.executable }}" -NoProfile -File ./build/vsts-validate.ps1'
+        shell: bash
