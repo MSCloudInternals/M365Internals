@@ -34,7 +34,7 @@ InModuleScope M365Internals {
         It 'rejects a caller-supplied profile path in private mode' {
             { Connect-M365PortalBySSO -PrivateSession -ProfilePath 'C:\Example\Profile' -SkipValidation } |
                 Should -Throw '*Do not combine -PrivateSession with -ProfilePath*'
-            Assert-MockCalled Start-M365SsoBrowserProcess -Exactly 0
+            Should -Invoke Start-M365SsoBrowserProcess -Times 0 -Exactly
         }
 
         It 'cleans up a temporary profile when initialization fails' {
@@ -50,7 +50,7 @@ InModuleScope M365Internals {
         It 'continues to select the persistent SSO default for ordinary sessions' {
             Mock Resolve-M365BrowserProfileConfiguration { throw 'Synthetic resolver stop' }
             { Connect-M365PortalBySSO -SkipValidation } | Should -Throw '*Synthetic resolver stop*'
-            Assert-MockCalled Resolve-M365BrowserProfileConfiguration -Exactly 1 -ParameterFilter {
+            Should -Invoke Resolve-M365BrowserProfileConfiguration -Times 1 -Exactly -ParameterFilter {
                 $ProfilePath -eq (Get-M365SsoDefaultProfilePath) -and -not $PrivateSession
             }
         }
