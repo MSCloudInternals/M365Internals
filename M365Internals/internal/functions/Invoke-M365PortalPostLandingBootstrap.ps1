@@ -72,10 +72,10 @@
         'https://admin.cloud.microsoft/login?ru=%2Fadminportal%3Fref%3D%2Fhomepage'
     )) {
         try {
-            $null = Invoke-WebRequest -MaximumRedirection 20 -ErrorAction Stop -WebSession $WebSession -Method Get -Uri $uri -Headers $documentHeaders -UserAgent $UserAgent
+            $null = Invoke-WebRequest -Debug:$false -Verbose:$false -MaximumRedirection 20 -ErrorAction Stop -WebSession $WebSession -Method Get -Uri $uri -Headers $documentHeaders -UserAgent $UserAgent
         }
         catch {
-            throw "Failed to complete the admin portal post-landing bootstrap at '$uri'. $($_.Exception.Message)"
+            throw "Failed to complete the admin portal post-landing bootstrap navigation. $(Get-M365SafeFailureDetail -ErrorRecord $_)"
         }
     }
 
@@ -93,7 +93,7 @@
     if (-not [string]::IsNullOrWhiteSpace($ajaxSessionKey)) {
         try {
             $bootstrapState.LogClientAttempted = $true
-            $null = Invoke-WebRequest -MaximumRedirection 20 -ErrorAction Stop -WebSession $WebSession -Method Post -Uri 'https://admin.cloud.microsoft/api/instrument/logclient' -Headers @{
+            $null = Invoke-WebRequest -Debug:$false -Verbose:$false -MaximumRedirection 20 -ErrorAction Stop -WebSession $WebSession -Method Post -Uri 'https://admin.cloud.microsoft/api/instrument/logclient' -Headers @{
                 Accept                 = '*/*'
                 'Cache-Control'        = 'no-cache'
                 Origin                 = 'https://admin.cloud.microsoft'
@@ -105,22 +105,22 @@
             $bootstrapState.LogClientSucceeded = $true
         }
         catch {
-            $bootstrapState.LogClientError = $_.Exception.Message
-            Write-Warning "The optional logclient bootstrap request did not complete successfully. Subsequent validation may return the admin portal HTML shell instead of bootstrap data. $($_.Exception.Message)"
+            $bootstrapState.LogClientError = Get-M365SafeFailureDetail -ErrorRecord $_
+            Write-Warning "The optional logclient bootstrap request did not complete successfully. Subsequent validation may return the admin portal HTML shell instead of bootstrap data. $(Get-M365SafeFailureDetail -ErrorRecord $_)"
         }
 
         try {
-            $null = Invoke-WebRequest -MaximumRedirection 20 -ErrorAction Stop -WebSession $WebSession -Method Get -Uri 'https://admin.cloud.microsoft/adminportal/home/ClassicModernAdminDataStream?ref=/homepage' -Headers (Copy-HeaderMap -Headers (Get-M365PortalContextHeaders -Context Homepage -AjaxSessionKey $ajaxSessionKey)) -UserAgent $UserAgent
+            $null = Invoke-WebRequest -Debug:$false -Verbose:$false -MaximumRedirection 20 -ErrorAction Stop -WebSession $WebSession -Method Get -Uri 'https://admin.cloud.microsoft/adminportal/home/ClassicModernAdminDataStream?ref=/homepage' -Headers (Copy-HeaderMap -Headers (Get-M365PortalContextHeaders -Context Homepage -AjaxSessionKey $ajaxSessionKey)) -UserAgent $UserAgent
         }
         catch {
-            Write-Verbose "The optional ClassicModernAdminDataStream bootstrap request did not complete successfully: $($_.Exception.Message)"
+            Write-Verbose "The optional ClassicModernAdminDataStream bootstrap request did not complete successfully: $(Get-M365SafeFailureDetail -ErrorRecord $_)"
         }
 
         try {
-            $null = Invoke-WebRequest -MaximumRedirection 20 -ErrorAction Stop -WebSession $WebSession -Method Get -Uri 'https://admin.cloud.microsoft/admin/api/tenant/datalocationandcommitments' -Headers (Copy-HeaderMap -Headers (Get-M365PortalContextHeaders -Context DataLocation -AjaxSessionKey $ajaxSessionKey)) -UserAgent $UserAgent
+            $null = Invoke-WebRequest -Debug:$false -Verbose:$false -MaximumRedirection 20 -ErrorAction Stop -WebSession $WebSession -Method Get -Uri 'https://admin.cloud.microsoft/admin/api/tenant/datalocationandcommitments' -Headers (Copy-HeaderMap -Headers (Get-M365PortalContextHeaders -Context DataLocation -AjaxSessionKey $ajaxSessionKey)) -UserAgent $UserAgent
         }
         catch {
-            Write-Verbose "The optional data-location bootstrap request did not complete successfully: $($_.Exception.Message)"
+            Write-Verbose "The optional data-location bootstrap request did not complete successfully: $(Get-M365SafeFailureDetail -ErrorRecord $_)"
         }
     }
 

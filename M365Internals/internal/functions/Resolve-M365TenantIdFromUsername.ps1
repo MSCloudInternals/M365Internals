@@ -52,7 +52,7 @@
     $userRealmUri = 'https://login.microsoftonline.com/common/userrealm/?user={0}&api-version=2.1' -f [uri]::EscapeDataString($Username)
 
     try {
-        $userRealm = Invoke-RestMethod -Uri $userRealmUri -Method Get -Headers $headers -ErrorAction Stop -Verbose:$false
+        $userRealm = Invoke-RestMethod -Debug:$false -Uri $userRealmUri -Method Get -Headers $headers -ErrorAction Stop -Verbose:$false
         if ($userRealm -and -not [string]::IsNullOrWhiteSpace($userRealm.DomainName)) {
             $discoveryDomain = [string]$userRealm.DomainName
         }
@@ -63,7 +63,7 @@
     $oidcDiscoveryUri = 'https://login.microsoftonline.com/{0}/v2.0/.well-known/openid-configuration' -f [uri]::EscapeDataString($discoveryDomain)
 
     try {
-        $oidcConfig = Invoke-RestMethod -Uri $oidcDiscoveryUri -Method Get -Headers $headers -ErrorAction Stop -Verbose:$false
+        $oidcConfig = Invoke-RestMethod -Debug:$false -Uri $oidcDiscoveryUri -Method Get -Headers $headers -ErrorAction Stop -Verbose:$false
     } catch {
         throw "Could not resolve tenant ID for '$Username' using OpenID discovery for domain '$discoveryDomain'. Specify -TenantId explicitly."
     }

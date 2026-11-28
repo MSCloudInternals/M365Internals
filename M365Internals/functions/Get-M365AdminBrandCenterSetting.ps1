@@ -57,7 +57,7 @@
                 }
             }
             catch {
-                Write-Verbose "Unable to acquire a SharePoint bearer token for Brand center. Falling back to cookie-only headers. $($_.Exception.Message)"
+                Write-Verbose "Unable to acquire a SharePoint bearer token for Brand center. Falling back to cookie-only headers. $(Get-M365SafeFailureDetail -ErrorRecord $_)"
             }
 
             return $headers

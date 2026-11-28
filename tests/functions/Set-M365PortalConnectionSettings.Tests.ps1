@@ -48,6 +48,32 @@
             $script:m365CacheStore = @{}
         }
 
+        It 'returns a successful connection with safe optional probe failure details' {
+            $session = & $script:newTestPortalWebSession
+
+            Mock Invoke-M365PortalRequest {
+                if ($Path -in @('/admin/api/coordinatedbootstrap/shellinfo','/admin/api/navigation')) {
+                    $response = [System.Net.Http.HttpResponseMessage]::new([System.Net.HttpStatusCode]::Forbidden)
+                    throw [Microsoft.PowerShell.Commands.HttpResponseException]::new('synthetic-provider-canary', $response)
+                }
+
+                [pscustomobject]@{
+                    StatusCode = 200
+                    Content = '{}'
+                    Headers = @{ 'Content-Type' = 'application/json' }
+                }
+            }
+
+            $result = Set-M365PortalConnectionSettings -WebSession $session -AuthSource 'UnitTest' -UserAgent 'UnitTestAgent/1.0'
+
+            $result.Validated | Should -BeTrue
+            $result.Validation.Count | Should -Be 4
+            @($result.Validation | Where-Object StatusCode -EQ 200).Count | Should -Be 2
+            foreach ($name in 'ShellInfo','Navigation') {
+                ($result.Validation | Where-Object Name -EQ $name).Error | Should -Be 'HTTP 403 (Forbidden).'
+            }
+        }
+
         It 'retries the bootstrap flow when ClassicModernAdminDataStream returns the admin HTML shell' {
             $session = & $script:newTestPortalWebSession
 

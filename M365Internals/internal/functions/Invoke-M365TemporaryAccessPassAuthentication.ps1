@@ -51,7 +51,7 @@
     $session = [Microsoft.PowerShell.Commands.WebRequestSession]::new()
     $session.UserAgent = $UserAgent
 
-    Write-Verbose "Initiating TAP authentication flow for $Username in tenant $TenantId"
+    Write-Verbose 'Initiating temporary access pass authentication.'
     $loginState = Get-M365AdminLoginState -WebSession $session -Username $Username -TenantId $TenantId -UserAgent $UserAgent
     $config = $loginState.Config
 
@@ -109,14 +109,13 @@
                 WebSession         = $session
                 UseBasicParsing    = $true
                 MaximumRedirection = 0
-                Verbose            = $false
             }
             if ($currentMethod -eq 'POST' -and $null -ne $currentBody) {
                 $requestParams['Body'] = $currentBody
                 $requestParams['ContentType'] = 'application/x-www-form-urlencoded'
             }
 
-            $response = Invoke-WebRequest @requestParams -ErrorAction Stop
+            $response = Invoke-WebRequest -Debug:$false -Verbose:$false @requestParams -ErrorAction Stop
             $parsedState = Get-M365AuthStateFromResponse -Response $response
 
             $formPost = Get-M365HtmlFormPost -Response $response
@@ -128,7 +127,7 @@
             }
 
             if ($parsedState -and $parsedState.sErrorCode) {
-                throw "TAP authentication failed ($($parsedState.sErrorCode)): $($parsedState.sErrTxt)"
+                throw "TAP authentication failed. $(Get-M365SafeFailureDetail -ServiceCode $parsedState.sErrorCode)"
             }
 
             break
@@ -137,7 +136,7 @@
             $statusCode = [int]$response.StatusCode
 
             if ($statusCode -lt 300 -or $statusCode -ge 400) {
-                throw
+                throw "The TAP sign-in request failed. $(Get-M365SafeFailureDetail -ErrorRecord $_)"
             }
 
             $location = Get-M365ResponseLocation -Response $response
@@ -151,7 +150,7 @@
             }
 
             if ($resolvedLocation -match 'error=') {
-                throw "TAP authentication failed: $resolvedLocation"
+                throw 'TAP authentication redirected to an error page.'
             }
 
             $currentUrl = $resolvedLocation
@@ -166,7 +165,7 @@
         throw 'No ESTS authentication cookie was found after TAP authentication.'
     }
 
-    Write-Verbose "Obtained ESTS cookie (length: $($bestCookie.Length))"
+    Write-Verbose 'Obtained an ESTS authentication cookie.'
     return New-M365EstsAuthenticationResult -WebSession $session -EstsAuthCookieValue $bestCookie
 }
 
