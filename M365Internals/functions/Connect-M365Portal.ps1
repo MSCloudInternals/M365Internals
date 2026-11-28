@@ -557,7 +557,7 @@
                     }
 
                     $browserAuth = Invoke-M365BrowserAuthentication @browserParams
-                    return Connect-M365AuthArtifactSet -EstsAuthCookieValue $browserAuth.EstsAuthCookieValue -PortalWebSession $browserAuth.PortalWebSession -TenantId $TenantId -UserAgent $UserAgent -SkipValidation:$SkipValidation -AuthFlow 'BrowserSignIn' -ConnectionPreference PreferPortal -FailureLabel 'Browser sign-in'
+                    return Connect-M365AuthArtifactSet -EstsAuthCookieValue $browserAuth.EstsAuthCookieValue -PortalWebSession $browserAuth.PortalWebSession -TenantId $TenantId -UserAgent $UserAgent -SkipValidation:$SkipValidation -AuthFlow 'BrowserSignIn' -RetainedProfilePath $browserAuth.RetainedProfilePath -ConnectionPreference PreferPortal -FailureLabel 'Browser sign-in'
                 }
                 'SSO' {
                     $ssoParams = @{
@@ -584,7 +584,7 @@
                     }
 
                     $ssoAuth = Invoke-M365SsoAuthentication @ssoParams
-                    return Connect-M365AuthArtifactSet -EstsAuthCookieValue $ssoAuth.EstsAuthCookieValue -PortalWebSession $ssoAuth.PortalWebSession -TenantId $TenantId -UserAgent $UserAgent -SkipValidation:$SkipValidation -AuthFlow 'SSO' -ConnectionPreference PreferPortal -FailureLabel 'SSO authentication'
+                    return Connect-M365AuthArtifactSet -EstsAuthCookieValue $ssoAuth.EstsAuthCookieValue -PortalWebSession $ssoAuth.PortalWebSession -TenantId $TenantId -UserAgent $UserAgent -SkipValidation:$SkipValidation -AuthFlow 'SSO' -RetainedProfilePath $ssoAuth.RetainedProfilePath -ConnectionPreference PreferPortal -FailureLabel 'SSO authentication'
                 }
                 'SoftwarePasskey' {
                     $passkeyParams = @{
