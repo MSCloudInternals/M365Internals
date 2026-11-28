@@ -1,7 +1,7 @@
 on: [pull_request]
 
 jobs:
-  validate:
+  validate-matrix:
     strategy:
       fail-fast: false
       matrix:
@@ -21,3 +21,17 @@ jobs:
       - name: Validate
         run: '"${{ steps.powershell.outputs.executable }}" -NoProfile -File ./build/vsts-validate.ps1'
         shell: bash
+
+  # Keep the exact status check required by the main branch ruleset.
+  validate:
+    if: always()
+    needs: validate-matrix
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - name: Require both PowerShell validation jobs to pass
+        shell: bash
+        env:
+          MATRIX_RESULT: ${{ needs.validate-matrix.result }}
+        run: test "$MATRIX_RESULT" = success
