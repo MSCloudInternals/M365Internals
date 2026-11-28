@@ -433,6 +433,7 @@
     $script:m365PortalHeaders = $candidateHeaders
     $script:m365PortalConnection = $connection
     if (-not $isCurrentSessionRefresh) {
+        $script:m365PortalConnectionGeneration = [guid]::NewGuid()
         Clear-M365Cache -All
     }
     if (-not [string]::IsNullOrWhiteSpace($shellInfoContent)) {
