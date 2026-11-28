@@ -49,7 +49,7 @@
         $body = Merge-M365AdminSettingsPayload -CurrentSettings $currentSettings -Settings $Settings
 
         if ($PSCmdlet.ShouldProcess('Copilot pin policy', "POST $path")) {
-            $result = Invoke-M365AdminRestMethod -Path $path -Method Post -Body $body
+            $result = Invoke-M365AdminRestMethod -Path $path -Method Post -Body $body -ErrorAction Stop
             Clear-M365Cache -TenantId (Get-M365PortalTenantId)
 
             if ($PassThru) {
