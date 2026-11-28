@@ -1,4 +1,4 @@
-function Assert-M365PortalConnectionGeneration {
+﻿function Assert-M365PortalConnectionGeneration {
     <#
     .SYNOPSIS
         Checks that the active portal connection has not been replaced since preflight.
