@@ -40,6 +40,7 @@
         $result.PortalRoute | Should -Be '#/Settings/EnterpriseMicrosoftRewards'
         $result.DirectReadSupported | Should -BeFalse
         $result.SuggestedAction | Should -Match 'DevTools|browser'
+        Should -Invoke Get-M365AdminPortalData -ModuleName M365Internals -Times 0 -Exactly
     }
 
     It 'falls back to the configuration inventory when the direct configurations endpoint is unavailable' {
@@ -54,7 +55,7 @@
                 Settings = @(
                     [pscustomobject]@{
                         SettingName = 'SearchAdminConfigurationBingSetting'
-                        TeamContact = 'ECSearchAdminFC'
+                        TeamContact = 'ExampleSearchTeam'
                         PermissionLevel = 1
                     }
                 )
@@ -75,7 +76,10 @@
         $result.ConfigurationSettings[0].SettingName | Should -Be 'SearchAdminConfigurationBingSetting'
     }
 
-    It 'returns the direct failure plus configuration inventory bundle when Configurations is requested with Raw' {
+    It 'preserves the direct Configurations failure and inventory with <OutputSwitch>' -ForEach @(
+        @{ OutputSwitch = 'Raw' }
+        @{ OutputSwitch = 'RawJson' }
+    ) {
         Mock -ModuleName M365Internals Get-M365AdminPortalData {
             throw 'Response status code does not indicate success: 503 (Service Unavailable).'
         } -ParameterFilter {
@@ -87,7 +91,7 @@
                 Settings = @(
                     [pscustomobject]@{
                         SettingName = 'SearchAdminConfigurationBingSetting'
-                        TeamContact = 'ECSearchAdminFC'
+                        TeamContact = 'ExampleSearchTeam'
                         PermissionLevel = 1
                     }
                 )
@@ -96,12 +100,21 @@
             $Path -eq '/admin/api/searchadminapi/ConfigurationSettings'
         }
 
-        $result = Get-M365AdminSearchSetting -Name Configurations -Raw
+        $outputParameters = @{ $OutputSwitch = $true }
+        $result = Get-M365AdminSearchSetting -Name Configurations @outputParameters
 
-        $result.PSObject.TypeNames | Should -Contain 'M365Admin.SearchSetting.Configurations.Raw'
-        $result.DirectConfigurations.PSObject.TypeNames | Should -Contain 'M365Admin.UnavailableResult'
+        if ($OutputSwitch -eq 'RawJson') {
+            $result | Should -BeOfType [string]
+            $result = ConvertFrom-Json -InputObject $result
+        }
+        else {
+            $result.PSObject.TypeNames | Should -Contain 'M365Admin.SearchSetting.Configurations.Raw'
+            $result.DirectConfigurations.PSObject.TypeNames | Should -Contain 'M365Admin.UnavailableResult'
+            $result.ConfigurationSettings.PSObject.TypeNames | Should -Contain 'M365Admin.SearchSetting.ConfigurationSettings'
+        }
+
+        $result.DirectConfigurations.Reason | Should -Be 'Transient'
         $result.DirectConfigurations.HttpStatusCode | Should -Be 503
-        $result.ConfigurationSettings.PSObject.TypeNames | Should -Contain 'M365Admin.SearchSetting.ConfigurationSettings'
         $result.ConfigurationSettings.Settings[0].SettingName | Should -Be 'SearchAdminConfigurationBingSetting'
     }
 }

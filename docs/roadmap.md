@@ -43,4 +43,4 @@ Use the direct M365 module and the worker-isolated MCP connection to test identi
 
 ## Portal coverage after recovery
 
-Resume with the Search & intelligence Configurations read, then determine whether Account Linking has a reproducible direct read. Record the tested tenant conditions and result for each route before expanding its documented coverage. Keep the remaining telemetry, cross-tenant validation, and output consistency work in the existing backlog. [Known issues and follow-up order](../KNOWN_ISSUES.md)
+Resume with the Search & intelligence Configurations read, then determine whether Account Linking has a reproducible direct read. Record the tested tenant conditions and result for each route before expanding its documented coverage. Keep the remaining telemetry, cross-tenant validation, and output consistency work in the existing backlog. [Configurations findings](../KNOWN_ISSUES.md#search--intelligence) · [Account Linking findings](../KNOWN_ISSUES.md#weakly-mapped-or-unstable-surfaces)
