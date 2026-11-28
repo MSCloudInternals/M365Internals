@@ -29,14 +29,13 @@
 
     .EXAMPLE
         $first = Get-M365AdminGroup -Name Groups -Raw
-        if ($first.$continuationProperty) {
-            $second = Get-M365AdminGroup -Name Groups -PageToken $first.$continuationProperty -Raw
-            $isLastPage = -not $second.$continuationProperty
+        if ($first.PageToken) {
+            $second = Get-M365AdminGroup -Name Groups -PageToken $first.PageToken -Raw
+            $isLastPage = $null -eq $second.PageToken
         }
 
-        Set $continuationProperty to the continuation field name in your service
-        payload. Pass the first page's value directly to the second call. A page
-        with no continuation value is the last page.
+        Pass the first page's PageToken directly to the second call. The service
+        returns a null PageToken on the last page.
 
     .OUTPUTS
         Object

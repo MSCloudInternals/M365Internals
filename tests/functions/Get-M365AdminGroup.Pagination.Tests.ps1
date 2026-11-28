@@ -8,11 +8,10 @@ InModuleScope M365Internals {
             Mock Invoke-M365PortalRequest {
                 $script:requestedPageTokens.Add($Body.PageToken)
                 $payload = if ($null -eq $Body.PageToken) {
-                    # Synthetic field name. The cmdlet passes through the service payload.
-                    @{ Marker = 'initial'; Groups = @(@{ Id = 'first-group' }); FixtureContinuation = 'opaque+/= token A' }
+                    @{ Marker = 'initial'; Groups = @(@{ Id = 'first-group' }); PageToken = 'opaque+/= token A' }
                 }
                 elseif ($Body.PageToken -ceq 'opaque+/= token A') {
-                    @{ Marker = 'second'; Groups = @(@{ Id = 'second-group' }); FixtureContinuation = $null }
+                    @{ Marker = 'second'; Groups = @(@{ Id = 'second-group' }); PageToken = $null }
                 }
                 else {
                     @{ Marker = $Body.PageToken }
@@ -27,18 +26,18 @@ InModuleScope M365Internals {
         }
 
         It 'passes the returned continuation to a second call and reaches the last page' {
-            $continuationProperty = 'FixtureContinuation'
             $first = M365Internals\Get-M365AdminGroup -Name Groups -Raw
             $first.Groups.Id | Should -BeExactly 'first-group'
-            $first.$continuationProperty | Should -BeExactly 'opaque+/= token A'
+            $first.PageToken | Should -BeExactly 'opaque+/= token A'
             $script:requestedPageTokens.Count | Should -Be 1
             ($null -eq $script:requestedPageTokens[0]) | Should -BeTrue
 
-            $second = M365Internals\Get-M365AdminGroup -Name Groups -PageToken $first.$continuationProperty -Raw
+            $second = M365Internals\Get-M365AdminGroup -Name Groups -PageToken $first.PageToken -Raw
             $second.Groups.Id | Should -BeExactly 'second-group'
-            $second.$continuationProperty | Should -BeNullOrEmpty
+            $second.PSObject.Properties.Name | Should -Contain 'PageToken'
+            ($null -eq $second.PageToken) | Should -BeTrue
             $script:requestedPageTokens.Count | Should -Be 2
-            $script:requestedPageTokens[1] | Should -BeExactly $first.$continuationProperty
+            $script:requestedPageTokens[1] | Should -BeExactly $first.PageToken
         }
 
         It 'keeps the default, Raw, and RawJson single-page output contracts' {
