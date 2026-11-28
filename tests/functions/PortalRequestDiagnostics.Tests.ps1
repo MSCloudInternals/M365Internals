@@ -45,7 +45,7 @@ InModuleScope M365Internals {
             }
 
             try {
-                Invoke-M365AdminRestMethod -Uri 'https://example.invalid/?q=synthetic-query-canary' -Method Post -Body @{ data = 'synthetic-body-canary' } -Debug -Verbose -ErrorAction Stop | Out-Null
+                Invoke-M365AdminRestMethod -Uri 'https://admin.cloud.microsoft/?q=synthetic-query-canary' -Method Post -Body @{ data = 'synthetic-body-canary' } -Debug -Verbose -ErrorAction Stop | Out-Null
                 throw 'Expected transport to fail.'
             }
             catch {

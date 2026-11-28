@@ -5,7 +5,8 @@
 
     .DESCRIPTION
         Updates the user-owned apps and services experience by toggling Office Store access,
-        in-app purchases and trials, and the auto-claim licensing policy.
+        in-app purchases and trials, and the auto-claim licensing policy. If a later write
+        fails, earlier successful updates remain applied and the cache is invalidated.
 
     .PARAMETER LetUsersAccessOfficeStore
         Controls whether users can access the Office Store.
@@ -56,40 +57,51 @@
             throw 'At least one user-owned apps setting value must be provided.'
         }
 
-        if ($null -ne $LetUsersAccessOfficeStore) {
-            $storePath = Get-M365AdminUserOwnedAppSettingPath -Name StoreAccess
-            if ($PSCmdlet.ShouldProcess('User-owned apps Office Store access', "POST $storePath")) {
-                $null = Invoke-M365AdminRestMethod -Path $storePath -Method Post -Body @{
-                    Enabled = $LetUsersAccessOfficeStore
+        try {
+            if ($null -ne $LetUsersAccessOfficeStore) {
+                $storePath = Get-M365AdminUserOwnedAppSettingPath -Name StoreAccess
+                if ($PSCmdlet.ShouldProcess('User-owned apps Office Store access', "POST $storePath")) {
+                    $null = Invoke-M365AdminRestMethod -Path $storePath -Method Post -Body @{
+                        Enabled = $LetUsersAccessOfficeStore
+                    } -ErrorAction Stop
+                    $didUpdate = $true
                 }
-                $didUpdate = $true
+            }
+
+            if ($null -ne $LetUsersStartTrials) {
+                $trialState = $LetUsersStartTrials.ToString().ToLowerInvariant()
+                $trialPath = "/admin/api/storesettings/iwpurchase/{0}" -f $trialState
+                if ($PSCmdlet.ShouldProcess('User-owned apps in-app purchases and trials', "PUT $trialPath")) {
+                    $null = Invoke-M365AdminRestMethod -Path $trialPath -Method Put -ErrorAction Stop
+                    $didUpdate = $true
+                }
+            }
+
+            if ($null -ne $LetUsersAutoClaimLicenses) {
+                $autoClaimPath = Get-M365AdminUserOwnedAppSettingPath -Name AutoClaimPolicy
+                if ($PSCmdlet.ShouldProcess('User-owned apps auto-claim licensing policy', "POST $autoClaimPath")) {
+                    $null = Invoke-M365AdminRestMethod -Path $autoClaimPath -Method Post -Body @{
+                        policyValue = if ($LetUsersAutoClaimLicenses) { 'Enabled' } else { 'Disabled' }
+                    } -ErrorAction Stop
+                    $didUpdate = $true
+                }
             }
         }
-
-        if ($null -ne $LetUsersStartTrials) {
-            $trialState = $LetUsersStartTrials.ToString().ToLowerInvariant()
-            $trialPath = "/admin/api/storesettings/iwpurchase/{0}" -f $trialState
-            if ($PSCmdlet.ShouldProcess('User-owned apps in-app purchases and trials', "PUT $trialPath")) {
-                $null = Invoke-M365AdminRestMethod -Path $trialPath -Method Put
-                $didUpdate = $true
+        catch {
+            if ($didUpdate) {
+                throw "A user-owned apps update failed after an earlier update succeeded: $($_.Exception.Message)"
             }
+            throw
         }
-
-        if ($null -ne $LetUsersAutoClaimLicenses) {
-            $autoClaimPath = Get-M365AdminUserOwnedAppSettingPath -Name AutoClaimPolicy
-            if ($PSCmdlet.ShouldProcess('User-owned apps auto-claim licensing policy', "POST $autoClaimPath")) {
-                $null = Invoke-M365AdminRestMethod -Path $autoClaimPath -Method Post -Body @{
-                    policyValue = if ($LetUsersAutoClaimLicenses) { 'Enabled' } else { 'Disabled' }
-                }
-                $didUpdate = $true
+        finally {
+            if ($didUpdate) {
+                Clear-M365Cache -TenantId (Get-M365PortalTenantId)
             }
         }
 
         if (-not $didUpdate) {
             return
         }
-
-        Clear-M365Cache -TenantId (Get-M365PortalTenantId)
 
         if ($PassThru) {
             return Get-M365AdminUserOwnedAppSetting -Force
