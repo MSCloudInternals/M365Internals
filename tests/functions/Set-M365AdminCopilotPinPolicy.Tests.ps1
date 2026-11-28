@@ -57,4 +57,23 @@
         $result.CopilotPinningPolicy | Should -Be 0
         Assert-MockCalled Get-M365AdminCopilotPinPolicy -ModuleName M365Internals -Exactly 2
     }
+
+    It 'does not clear cache or read back after a failed write with <Preference>' -TestCases @(
+        @{ Preference = 'Stop' }
+        @{ Preference = 'SilentlyContinue' }
+    ) {
+        param($Preference)
+        Mock -ModuleName M365Internals Invoke-M365AdminRestMethod { throw 'Synthetic write failure' }
+        $result = $null
+        $failure = $null
+        try {
+            $result = Set-M365AdminCopilotPinPolicy -Settings @{ CopilotPinningPolicy = 0 } -PassThru -Confirm:$false -ErrorAction $Preference
+        }
+        catch { $failure = $_ }
+        $result | Should -BeNullOrEmpty
+        $failure.Exception.Message | Should -Match 'Synthetic write failure'
+        Should -Invoke Invoke-M365AdminRestMethod -ModuleName M365Internals -Times 1 -Exactly
+        Should -Invoke Clear-M365Cache -ModuleName M365Internals -Times 0 -Exactly
+        Should -Invoke Get-M365AdminCopilotPinPolicy -ModuleName M365Internals -Times 1 -Exactly
+    }
 }

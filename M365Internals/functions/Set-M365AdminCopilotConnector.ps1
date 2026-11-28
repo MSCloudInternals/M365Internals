@@ -275,7 +275,7 @@
         $action = if ($Enabled) { 'Enable' } else { 'Disable' }
         $targetLabel = '{0} ({1})' -f ([string]$targetConnector.connectionName), ([string]$targetConnector.connectionId)
         if ($PSCmdlet.ShouldProcess($targetLabel, "$action Copilot connector visibility")) {
-            $result = Invoke-M365AdminRestMethod -Path $path -Method Post -Body $writeBody
+            $result = Invoke-M365AdminRestMethod -Path $path -Method Post -Body $writeBody -ErrorAction Stop
             Clear-M365Cache -TenantId (Get-M365PortalTenantId)
 
             if ($PassThru) {
