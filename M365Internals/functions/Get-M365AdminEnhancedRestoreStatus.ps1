@@ -82,7 +82,7 @@
             $result = Invoke-M365AdminGraphRequest -Path '/beta/$batch' -Method Post -AdminAppRequest '/Settings/enhancedRestore' -Body $batchBody
         }
         catch {
-            throw "Failed to retrieve M365 admin enhanced restore status: $($_.Exception.Message)"
+            throw "Failed to retrieve M365 admin enhanced restore status: $(Get-M365SafeFailureDetail -ErrorRecord $_)"
         }
 
         $responsesById = @{}

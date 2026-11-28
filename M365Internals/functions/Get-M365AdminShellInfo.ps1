@@ -65,7 +65,7 @@
             return Resolve-M365AdminOutput -DefaultValue $result -RawValue $rawResult -Raw:$Raw -RawJson:$RawJson
         }
         catch {
-            throw "Failed to retrieve M365 admin shell info: $($_.Exception.Message)"
+            throw "Failed to retrieve M365 admin shell info: $(Get-M365SafeFailureDetail -ErrorRecord $_)"
         }
     }
 }

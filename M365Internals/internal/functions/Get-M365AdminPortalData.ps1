@@ -72,7 +72,7 @@
     process {
         $currentCacheValue = Get-M365Cache -CacheKey $CacheKey -ErrorAction SilentlyContinue
         if (-not $Force -and $currentCacheValue -and $currentCacheValue.NotValidAfter -gt (Get-Date)) {
-            Write-Verbose "Using cached $CacheKey data"
+            Write-Verbose 'Using cached Microsoft 365 admin portal data.'
             return $currentCacheValue.Value
         }
         elseif ($Force) {
@@ -108,7 +108,7 @@
             $result = Invoke-M365PortalRequest @requestParams
         }
         catch {
-            throw "Failed to retrieve M365 admin portal data from ${uri}: $($_.Exception.Message)"
+            throw "Failed to retrieve M365 admin portal data for the requested endpoint. $(Get-M365SafeFailureDetail -ErrorRecord $_)"
         }
 
         if ($null -eq $result) {

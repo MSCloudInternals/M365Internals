@@ -61,7 +61,7 @@
             return Resolve-M365AdminOutput -DefaultValue $result -RawValue $rawResult -Raw:$Raw -RawJson:$RawJson
         }
         catch {
-            throw "Failed to retrieve M365 admin home data: $($_.Exception.Message)"
+            throw "Failed to retrieve M365 admin home data: $(Get-M365SafeFailureDetail -ErrorRecord $_)"
         }
     }
 }

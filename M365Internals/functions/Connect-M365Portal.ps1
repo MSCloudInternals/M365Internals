@@ -442,205 +442,210 @@
             $session = New-Object Microsoft.PowerShell.Commands.WebRequestSession
             $session.UserAgent = $ResolvedUserAgent
 
-            $null = Invoke-WebRequest -MaximumRedirection 10 -ErrorAction SilentlyContinue -WebSession $session -Method Get -Uri 'https://login.microsoftonline.com/error'
+            $null = Invoke-WebRequest -Debug:$false -Verbose:$false -MaximumRedirection 10 -ErrorAction SilentlyContinue -WebSession $session -Method Get -Uri 'https://login.microsoftonline.com/error'
             foreach ($cookieName in @('ESTSAUTH', 'ESTSAUTHPERSISTENT')) {
                 Add-CookieToSession -Session $session -Name $cookieName -Value $ResolvedEstsAuthCookieValue -Domain 'login.microsoftonline.com'
             }
             Complete-M365AdminPortalSignIn -WebSession $session -UserAgent $ResolvedUserAgent
         }
 
-        switch ($PSCmdlet.ParameterSetName) {
-            'Credential' {
-                $credentialAuthParams = @{
-                    Username  = $Credential.UserName
-                    Password  = $Credential.Password
-                    UserAgent = $UserAgent
-                }
-                if ($PSBoundParameters.ContainsKey('TimeoutSeconds')) {
-                    $credentialAuthParams.TimeoutSeconds = $TimeoutSeconds
-                }
-                if (-not [string]::IsNullOrWhiteSpace($TotpSecret)) {
-                    $credentialAuthParams.TotpSecret = $TotpSecret
-                }
-                if (-not [string]::IsNullOrWhiteSpace($MfaMethod)) {
-                    $credentialAuthParams.MfaMethod = $MfaMethod
-                }
+        try {
+            switch ($PSCmdlet.ParameterSetName) {
+                'Credential' {
+                    $credentialAuthParams = @{
+                        Username  = $Credential.UserName
+                        Password  = $Credential.Password
+                        UserAgent = $UserAgent
+                    }
+                    if ($PSBoundParameters.ContainsKey('TimeoutSeconds')) {
+                        $credentialAuthParams.TimeoutSeconds = $TimeoutSeconds
+                    }
+                    if (-not [string]::IsNullOrWhiteSpace($TotpSecret)) {
+                        $credentialAuthParams.TotpSecret = $TotpSecret
+                    }
+                    if (-not [string]::IsNullOrWhiteSpace($MfaMethod)) {
+                        $credentialAuthParams.MfaMethod = $MfaMethod
+                    }
 
-                $estsAuth = Resolve-EstsAuthenticationArtifact -Artifact (Invoke-M365CredentialAuthentication @credentialAuthParams)
-                return Connect-M365AuthArtifactSet -EstsAuthCookieValue $estsAuth.EstsAuthCookieValue -EstsWebSession $estsAuth.WebSession -TenantId $TenantId -UserAgent $UserAgent -SkipValidation:$SkipValidation -AuthFlow 'Credential' -FailureLabel 'Credential authentication'
+                    $estsAuth = Resolve-EstsAuthenticationArtifact -Artifact (Invoke-M365CredentialAuthentication @credentialAuthParams)
+                    return Connect-M365AuthArtifactSet -EstsAuthCookieValue $estsAuth.EstsAuthCookieValue -EstsWebSession $estsAuth.WebSession -TenantId $TenantId -UserAgent $UserAgent -SkipValidation:$SkipValidation -AuthFlow 'Credential' -FailureLabel 'Credential authentication'
+                }
+                'CredentialExplicit' {
+                    $resolvedUsername = $Username
+                    if (-not $resolvedUsername) {
+                        $resolvedUsername = Read-Host 'Username'
+                    }
+
+                    if (-not $resolvedUsername) {
+                        throw 'No username provided.'
+                    }
+
+                    $credentialAuthParams = @{
+                        Username  = $resolvedUsername
+                        Password  = $Password
+                        UserAgent = $UserAgent
+                    }
+                    if ($PSBoundParameters.ContainsKey('TimeoutSeconds')) {
+                        $credentialAuthParams.TimeoutSeconds = $TimeoutSeconds
+                    }
+                    if (-not [string]::IsNullOrWhiteSpace($TotpSecret)) {
+                        $credentialAuthParams.TotpSecret = $TotpSecret
+                    }
+                    if (-not [string]::IsNullOrWhiteSpace($MfaMethod)) {
+                        $credentialAuthParams.MfaMethod = $MfaMethod
+                    }
+
+                    $estsAuth = Resolve-EstsAuthenticationArtifact -Artifact (Invoke-M365CredentialAuthentication @credentialAuthParams)
+                    return Connect-M365AuthArtifactSet -EstsAuthCookieValue $estsAuth.EstsAuthCookieValue -EstsWebSession $estsAuth.WebSession -TenantId $TenantId -UserAgent $UserAgent -SkipValidation:$SkipValidation -AuthFlow 'Credential' -FailureLabel 'Credential authentication'
+                }
+                'TemporaryAccessPass' {
+                    $resolvedUsername = $Username
+                    if (-not $resolvedUsername) {
+                        $resolvedUsername = Read-Host 'Username'
+                    }
+
+                    if (-not $resolvedUsername) {
+                        throw 'No username provided.'
+                    }
+
+                    $resolvedTenantId = if ($TenantId) { $TenantId } else { Resolve-M365TenantIdFromUsername -Username $resolvedUsername -UserAgent $UserAgent }
+                    $estsAuth = Resolve-EstsAuthenticationArtifact -Artifact (Invoke-M365TemporaryAccessPassAuthentication -Username $resolvedUsername -TemporaryAccessPass $TemporaryAccessPass -TenantId $resolvedTenantId -UserAgent $UserAgent)
+                    return Connect-M365AuthArtifactSet -EstsAuthCookieValue $estsAuth.EstsAuthCookieValue -EstsWebSession $estsAuth.WebSession -TenantId $resolvedTenantId -UserAgent $UserAgent -SkipValidation:$SkipValidation -AuthFlow 'TemporaryAccessPass' -FailureLabel 'Temporary Access Pass authentication'
+                }
+                'PhoneSignIn' {
+                    $resolvedUsername = $Username
+                    if (-not $resolvedUsername) {
+                        $resolvedUsername = Read-Host 'Username'
+                    }
+
+                    if (-not $resolvedUsername) {
+                        throw 'No username provided.'
+                    }
+
+                    $phoneParams = @{
+                        Username  = $resolvedUsername
+                        UserAgent = $UserAgent
+                    }
+                    if ($PSBoundParameters.ContainsKey('TimeoutSeconds')) {
+                        $phoneParams.TimeoutSeconds = $TimeoutSeconds
+                    }
+
+                    $estsAuth = Resolve-EstsAuthenticationArtifact -Artifact (Invoke-M365PhoneSignInAuthentication @phoneParams)
+                    return Connect-M365AuthArtifactSet -EstsAuthCookieValue $estsAuth.EstsAuthCookieValue -EstsWebSession $estsAuth.WebSession -TenantId $TenantId -UserAgent $UserAgent -SkipValidation:$SkipValidation -AuthFlow 'PhoneSignIn' -FailureLabel 'Phone sign-in'
+                }
+                'BrowserSignIn' {
+                    $browserParams = @{
+                        UserAgent = $UserAgent
+                    }
+                    if ($PSBoundParameters.ContainsKey('Username')) {
+                        $browserParams.Username = $Username
+                    }
+                    if ($TenantId) {
+                        $browserParams.TenantId = $TenantId
+                    }
+                    if ($PSBoundParameters.ContainsKey('TimeoutSeconds')) {
+                        $browserParams.TimeoutSeconds = $TimeoutSeconds
+                    }
+                    if ($BrowserPath) {
+                        $browserParams.BrowserPath = $BrowserPath
+                    }
+                    if ($ProfilePath) {
+                        $browserParams.ProfilePath = $ProfilePath
+                    }
+                    if ($ResetProfile) {
+                        $browserParams.ResetProfile = $true
+                    }
+                    if ($PrivateSession) {
+                        $browserParams.PrivateSession = $true
+                    }
+
+                    $browserAuth = Invoke-M365BrowserAuthentication @browserParams
+                    return Connect-M365AuthArtifactSet -EstsAuthCookieValue $browserAuth.EstsAuthCookieValue -PortalWebSession $browserAuth.PortalWebSession -TenantId $TenantId -UserAgent $UserAgent -SkipValidation:$SkipValidation -AuthFlow 'BrowserSignIn' -ConnectionPreference PreferPortal -FailureLabel 'Browser sign-in'
+                }
+                'SSO' {
+                    $ssoParams = @{
+                        UserAgent = $UserAgent
+                        Visible   = $Visible
+                    }
+                    if ($TenantId) {
+                        $ssoParams.TenantId = $TenantId
+                    }
+                    if ($PSBoundParameters.ContainsKey('TimeoutSeconds')) {
+                        $ssoParams.TimeoutSeconds = $TimeoutSeconds
+                    }
+                    if ($BrowserPath) {
+                        $ssoParams.BrowserPath = $BrowserPath
+                    }
+                    if ($ProfilePath) {
+                        $ssoParams.ProfilePath = $ProfilePath
+                    }
+                    if ($ResetProfile) {
+                        $ssoParams.ResetProfile = $true
+                    }
+                    if ($PrivateSession) {
+                        $ssoParams.PrivateSession = $true
+                    }
+
+                    $ssoAuth = Invoke-M365SsoAuthentication @ssoParams
+                    return Connect-M365AuthArtifactSet -EstsAuthCookieValue $ssoAuth.EstsAuthCookieValue -PortalWebSession $ssoAuth.PortalWebSession -TenantId $TenantId -UserAgent $UserAgent -SkipValidation:$SkipValidation -AuthFlow 'SSO' -ConnectionPreference PreferPortal -FailureLabel 'SSO authentication'
+                }
+                'SoftwarePasskey' {
+                    $passkeyParams = @{
+                        KeyFilePath        = $KeyFilePath
+                        KeyVaultApiVersion = $KeyVaultApiVersion
+                        UserAgent          = $UserAgent
+                    }
+                    if ($KeyVaultTenantId) {
+                        $passkeyParams.KeyVaultTenantId = $KeyVaultTenantId
+                    }
+                    if ($KeyVaultClientId) {
+                        $passkeyParams.KeyVaultClientId = $KeyVaultClientId
+                    }
+
+                    $portalSession = Invoke-M365PasskeyAuthentication @passkeyParams
+                    return Connect-M365AuthArtifactSet -PortalWebSession $portalSession -TenantId $TenantId -UserAgent $UserAgent -SkipValidation:$SkipValidation -AuthFlow 'SoftwarePasskey' -ConnectionPreference PreferPortal -FailureLabel 'Software passkey authentication'
+                }
             }
-            'CredentialExplicit' {
-                $resolvedUsername = $Username
-                if (-not $resolvedUsername) {
-                    $resolvedUsername = Read-Host 'Username'
-                }
 
-                if (-not $resolvedUsername) {
-                    throw 'No username provided.'
+            $resolvedSession = switch ($PSCmdlet.ParameterSetName) {
+                'PortalCookies' {
+                    New-PortalCookieSession -ResolvedUserAgent $UserAgent
+                    break
                 }
-
-                $credentialAuthParams = @{
-                    Username  = $resolvedUsername
-                    Password  = $Password
-                    UserAgent = $UserAgent
+                'WebSession' {
+                    if ($UserAgent) {
+                        $WebSession.UserAgent = $UserAgent
+                    }
+                    $WebSession
+                    break
                 }
-                if ($PSBoundParameters.ContainsKey('TimeoutSeconds')) {
-                    $credentialAuthParams.TimeoutSeconds = $TimeoutSeconds
+                'EstsPlainText' {
+                    New-PortalSessionFromEstsCookie -ResolvedEstsAuthCookieValue $EstsAuthCookieValue -ResolvedUserAgent $UserAgent
+                    break
                 }
-                if (-not [string]::IsNullOrWhiteSpace($TotpSecret)) {
-                    $credentialAuthParams.TotpSecret = $TotpSecret
+                'EstsSecureString' {
+                    $resolvedEstsCookie = ConvertTo-PlainText -SecureString $SecureEstsAuthCookieValue
+                    New-PortalSessionFromEstsCookie -ResolvedEstsAuthCookieValue $resolvedEstsCookie -ResolvedUserAgent $UserAgent
+                    break
                 }
-                if (-not [string]::IsNullOrWhiteSpace($MfaMethod)) {
-                    $credentialAuthParams.MfaMethod = $MfaMethod
-                }
-
-                $estsAuth = Resolve-EstsAuthenticationArtifact -Artifact (Invoke-M365CredentialAuthentication @credentialAuthParams)
-                return Connect-M365AuthArtifactSet -EstsAuthCookieValue $estsAuth.EstsAuthCookieValue -EstsWebSession $estsAuth.WebSession -TenantId $TenantId -UserAgent $UserAgent -SkipValidation:$SkipValidation -AuthFlow 'Credential' -FailureLabel 'Credential authentication'
             }
-            'TemporaryAccessPass' {
-                $resolvedUsername = $Username
-                if (-not $resolvedUsername) {
-                    $resolvedUsername = Read-Host 'Username'
-                }
 
-                if (-not $resolvedUsername) {
-                    throw 'No username provided.'
-                }
-
-                $resolvedTenantId = if ($TenantId) { $TenantId } else { Resolve-M365TenantIdFromUsername -Username $resolvedUsername -UserAgent $UserAgent }
-                $estsAuth = Resolve-EstsAuthenticationArtifact -Artifact (Invoke-M365TemporaryAccessPassAuthentication -Username $resolvedUsername -TemporaryAccessPass $TemporaryAccessPass -TenantId $resolvedTenantId -UserAgent $UserAgent)
-                return Connect-M365AuthArtifactSet -EstsAuthCookieValue $estsAuth.EstsAuthCookieValue -EstsWebSession $estsAuth.WebSession -TenantId $resolvedTenantId -UserAgent $UserAgent -SkipValidation:$SkipValidation -AuthFlow 'TemporaryAccessPass' -FailureLabel 'Temporary Access Pass authentication'
+            $authSource = switch ($PSCmdlet.ParameterSetName) {
+                'PortalCookies' { 'PortalCookies' }
+                'WebSession' { 'WebSession' }
+                default { 'ESTSAUTHPERSISTENT' }
             }
-            'PhoneSignIn' {
-                $resolvedUsername = $Username
-                if (-not $resolvedUsername) {
-                    $resolvedUsername = Read-Host 'Username'
-                }
 
-                if (-not $resolvedUsername) {
-                    throw 'No username provided.'
-                }
-
-                $phoneParams = @{
-                    Username  = $resolvedUsername
-                    UserAgent = $UserAgent
-                }
-                if ($PSBoundParameters.ContainsKey('TimeoutSeconds')) {
-                    $phoneParams.TimeoutSeconds = $TimeoutSeconds
-                }
-
-                $estsAuth = Resolve-EstsAuthenticationArtifact -Artifact (Invoke-M365PhoneSignInAuthentication @phoneParams)
-                return Connect-M365AuthArtifactSet -EstsAuthCookieValue $estsAuth.EstsAuthCookieValue -EstsWebSession $estsAuth.WebSession -TenantId $TenantId -UserAgent $UserAgent -SkipValidation:$SkipValidation -AuthFlow 'PhoneSignIn' -FailureLabel 'Phone sign-in'
+            $authFlow = switch ($PSCmdlet.ParameterSetName) {
+                'PortalCookies' { 'PortalCookies' }
+                'WebSession' { 'WebSession' }
+                default { 'EstsCookie' }
             }
-            'BrowserSignIn' {
-                $browserParams = @{
-                    UserAgent = $UserAgent
-                }
-                if ($PSBoundParameters.ContainsKey('Username')) {
-                    $browserParams.Username = $Username
-                }
-                if ($TenantId) {
-                    $browserParams.TenantId = $TenantId
-                }
-                if ($PSBoundParameters.ContainsKey('TimeoutSeconds')) {
-                    $browserParams.TimeoutSeconds = $TimeoutSeconds
-                }
-                if ($BrowserPath) {
-                    $browserParams.BrowserPath = $BrowserPath
-                }
-                if ($ProfilePath) {
-                    $browserParams.ProfilePath = $ProfilePath
-                }
-                if ($ResetProfile) {
-                    $browserParams.ResetProfile = $true
-                }
-                if ($PrivateSession) {
-                    $browserParams.PrivateSession = $true
-                }
 
-                $browserAuth = Invoke-M365BrowserAuthentication @browserParams
-                return Connect-M365AuthArtifactSet -EstsAuthCookieValue $browserAuth.EstsAuthCookieValue -PortalWebSession $browserAuth.PortalWebSession -TenantId $TenantId -UserAgent $UserAgent -SkipValidation:$SkipValidation -AuthFlow 'BrowserSignIn' -ConnectionPreference PreferPortal -FailureLabel 'Browser sign-in'
-            }
-            'SSO' {
-                $ssoParams = @{
-                    UserAgent = $UserAgent
-                    Visible   = $Visible
-                }
-                if ($TenantId) {
-                    $ssoParams.TenantId = $TenantId
-                }
-                if ($PSBoundParameters.ContainsKey('TimeoutSeconds')) {
-                    $ssoParams.TimeoutSeconds = $TimeoutSeconds
-                }
-                if ($BrowserPath) {
-                    $ssoParams.BrowserPath = $BrowserPath
-                }
-                if ($ProfilePath) {
-                    $ssoParams.ProfilePath = $ProfilePath
-                }
-                if ($ResetProfile) {
-                    $ssoParams.ResetProfile = $true
-                }
-                if ($PrivateSession) {
-                    $ssoParams.PrivateSession = $true
-                }
-
-                $ssoAuth = Invoke-M365SsoAuthentication @ssoParams
-                return Connect-M365AuthArtifactSet -EstsAuthCookieValue $ssoAuth.EstsAuthCookieValue -PortalWebSession $ssoAuth.PortalWebSession -TenantId $TenantId -UserAgent $UserAgent -SkipValidation:$SkipValidation -AuthFlow 'SSO' -ConnectionPreference PreferPortal -FailureLabel 'SSO authentication'
-            }
-            'SoftwarePasskey' {
-                $passkeyParams = @{
-                    KeyFilePath        = $KeyFilePath
-                    KeyVaultApiVersion = $KeyVaultApiVersion
-                    UserAgent          = $UserAgent
-                }
-                if ($KeyVaultTenantId) {
-                    $passkeyParams.KeyVaultTenantId = $KeyVaultTenantId
-                }
-                if ($KeyVaultClientId) {
-                    $passkeyParams.KeyVaultClientId = $KeyVaultClientId
-                }
-
-                $portalSession = Invoke-M365PasskeyAuthentication @passkeyParams
-                return Connect-M365AuthArtifactSet -PortalWebSession $portalSession -TenantId $TenantId -UserAgent $UserAgent -SkipValidation:$SkipValidation -AuthFlow 'SoftwarePasskey' -ConnectionPreference PreferPortal -FailureLabel 'Software passkey authentication'
-            }
+            Set-M365PortalConnectionSettings -WebSession $resolvedSession -AuthSource $authSource -AuthFlow $authFlow -UserAgent $UserAgent -SkipValidation:$SkipValidation
         }
-
-        $resolvedSession = switch ($PSCmdlet.ParameterSetName) {
-            'PortalCookies' {
-                New-PortalCookieSession -ResolvedUserAgent $UserAgent
-                break
-            }
-            'WebSession' {
-                if ($UserAgent) {
-                    $WebSession.UserAgent = $UserAgent
-                }
-                $WebSession
-                break
-            }
-            'EstsPlainText' {
-                New-PortalSessionFromEstsCookie -ResolvedEstsAuthCookieValue $EstsAuthCookieValue -ResolvedUserAgent $UserAgent
-                break
-            }
-            'EstsSecureString' {
-                $resolvedEstsCookie = ConvertTo-PlainText -SecureString $SecureEstsAuthCookieValue
-                New-PortalSessionFromEstsCookie -ResolvedEstsAuthCookieValue $resolvedEstsCookie -ResolvedUserAgent $UserAgent
-                break
-            }
+        catch [Microsoft.PowerShell.Commands.HttpResponseException], [System.Net.Http.HttpRequestException], [System.UriFormatException] {
+            throw "Microsoft 365 portal sign-in request failed. $(Get-M365SafeFailureDetail -ErrorRecord $_)"
         }
-
-        $authSource = switch ($PSCmdlet.ParameterSetName) {
-            'PortalCookies' { 'PortalCookies' }
-            'WebSession' { 'WebSession' }
-            default { 'ESTSAUTHPERSISTENT' }
-        }
-
-        $authFlow = switch ($PSCmdlet.ParameterSetName) {
-            'PortalCookies' { 'PortalCookies' }
-            'WebSession' { 'WebSession' }
-            default { 'EstsCookie' }
-        }
-
-        Set-M365PortalConnectionSettings -WebSession $resolvedSession -AuthSource $authSource -AuthFlow $authFlow -UserAgent $UserAgent -SkipValidation:$SkipValidation
     }
 }

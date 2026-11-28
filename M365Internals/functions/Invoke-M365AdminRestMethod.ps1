@@ -139,10 +139,10 @@
         }
 
         try {
-            Invoke-RestMethod @invokeParams
+            Invoke-RestMethod -Debug:$false -Verbose:$false @invokeParams
         }
         catch {
-            throw "Failed to invoke M365 REST method for $Method $requestUri. $($_.Exception.Message)"
+            throw "Failed to invoke M365 REST method ($Method). $(Get-M365SafeFailureDetail -ErrorRecord $_)"
         }
     }
 }

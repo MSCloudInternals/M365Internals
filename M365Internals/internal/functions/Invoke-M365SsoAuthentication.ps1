@@ -269,7 +269,7 @@ function Invoke-M365SsoAuthentication {
             try {
                 $targetContext = Get-M365BrowserPreferredTargetContext -Port $debugPort -FallbackWebSocketUrl $browserWebSocketUrl
                 $browserWebSocketUrl = $targetContext.WebSocketUrl
-                $currentTargetDescription = Format-M365BrowserTargetDescription -Url $targetContext.Url -Title $targetContext.Title
+                $currentTargetDescription = $targetContext.Description
                 if ($currentTargetDescription -and $currentTargetDescription -ne $lastObservedTargetDescription) {
                     $lastObservedTargetDescription = $currentTargetDescription
                     Write-Verbose "Observed browser page: $currentTargetDescription"
@@ -277,7 +277,7 @@ function Invoke-M365SsoAuthentication {
 
                 $cookies = @(Get-M365BrowserCookieJar -WebSocketUrl $browserWebSocketUrl)
             } catch {
-                Write-Verbose "Cookie polling failed: $($_.Exception.Message)"
+                Write-Verbose "Cookie polling failed: $(Get-M365SafeFailureDetail -ErrorRecord $_)"
                 continue
             }
 

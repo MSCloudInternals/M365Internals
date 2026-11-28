@@ -284,7 +284,7 @@
                 hpgrequestid        = ([guid]::NewGuid().Guid)
             }
 
-            $null = Invoke-RestMethod -Method Post -Uri (Resolve-M365EstsUrl -Url $config.urlGetCredentialType) -Headers $requestHeaders -ContentType 'application/json; charset=UTF-8' -Body $requestBody -WebSession $Session -UserAgent $Agent
+            $null = Invoke-RestMethod -Debug:$false -Verbose:$false -Method Post -Uri (Resolve-M365EstsUrl -Url $config.urlGetCredentialType) -Headers $requestHeaders -ContentType 'application/json; charset=UTF-8' -Body $requestBody -WebSession $Session -UserAgent $Agent
         }
 
         function Get-EncodedCredentialList {
@@ -350,7 +350,7 @@
                 loginCanary                   = $config.canary
             }
 
-            $fidoResponse = Invoke-WebRequest -Method Post -Uri 'https://login.microsoft.com/common/fido/get?uiflavor=Web' -Body $formFields -ContentType 'application/x-www-form-urlencoded' -WebSession $Session -UserAgent $Agent -Headers @{ Origin = 'https://login.microsoftonline.com'; Referer = 'https://login.microsoftonline.com/' }
+            $fidoResponse = Invoke-WebRequest -Debug:$false -Verbose:$false -Method Post -Uri 'https://login.microsoft.com/common/fido/get?uiflavor=Web' -Body $formFields -ContentType 'application/x-www-form-urlencoded' -WebSession $Session -UserAgent $Agent -Headers @{ Origin = 'https://login.microsoftonline.com'; Referer = 'https://login.microsoftonline.com/' }
             $fidoConfig = Get-M365LoginPageConfig -Content $fidoResponse.Content
 
             [pscustomobject]@{
@@ -425,7 +425,7 @@
                     }
                 }
                 catch {
-                    throw "The keyVault.keyId value '$keyId' is not a valid URI."
+                    throw 'The keyVault.keyId value is not a valid URI.'
                 }
             }
 
@@ -466,7 +466,7 @@
                         $azParams.TenantId = $TenantId
                     }
 
-                    $azToken = Get-AzAccessToken @azParams -ErrorAction Stop
+                    $azToken = Get-AzAccessToken -Debug:$false -Verbose:$false @azParams -ErrorAction Stop
                     if ($azToken.Token -is [System.Security.SecureString]) {
                         return ConvertTo-PlainTextString -SecureString $azToken.Token
                     }
@@ -474,7 +474,7 @@
                     return [string]$azToken.Token
                 }
                 catch {
-                    Write-Verbose "Az module token acquisition failed: $($_.Exception.Message)"
+                    Write-Verbose "Az module token acquisition failed: $(Get-M365SafeFailureDetail -ErrorRecord $_)"
                 }
             }
 
@@ -490,10 +490,10 @@
                         return ((($azCliOutput | Out-String) | ConvertFrom-Json).accessToken)
                     }
 
-                    Write-Verbose "Azure CLI token acquisition failed: $azCliOutput"
+                    Write-Verbose "Azure CLI token acquisition failed (exit code $LASTEXITCODE)."
                 }
                 catch {
-                    Write-Verbose "Azure CLI token acquisition failed: $($_.Exception.Message)"
+                    Write-Verbose "Azure CLI token acquisition failed: $(Get-M365SafeFailureDetail -ErrorRecord $_)"
                 }
             }
 
@@ -503,10 +503,10 @@
                     $imdsUri += '&client_id=' + [uri]::EscapeDataString($ClientId)
                 }
 
-                return (Invoke-RestMethod -Uri $imdsUri -Headers @{ Metadata = 'true' } -TimeoutSec 3 -ErrorAction Stop).access_token
+                return (Invoke-RestMethod -Debug:$false -Verbose:$false -Uri $imdsUri -Headers @{ Metadata = 'true' } -TimeoutSec 3 -ErrorAction Stop).access_token
             }
             catch {
-                Write-Verbose "IMDS token acquisition failed: $($_.Exception.Message)"
+                Write-Verbose "IMDS token acquisition failed: $(Get-M365SafeFailureDetail -ErrorRecord $_)"
             }
 
             throw @"
@@ -563,7 +563,7 @@ Could not obtain an Azure Key Vault access token. Ensure one of the following:
                 $retryDelayMilliseconds = 1000
                 for ($attempt = 1; $attempt -le 3; $attempt++) {
                     try {
-                        $signResult = Invoke-RestMethod -Uri $signUri -Method Post -Headers $requestHeaders -Body $requestBody -ErrorAction Stop
+                        $signResult = Invoke-RestMethod -Debug:$false -Verbose:$false -Uri $signUri -Method Post -Headers $requestHeaders -Body $requestBody -ErrorAction Stop
                         if (-not $signResult.value) {
                             throw 'Azure Key Vault returned an empty signature value.'
                         }
@@ -573,7 +573,7 @@ Could not obtain an Azure Key Vault access token. Ensure one of the following:
                     }
                     catch {
                         if ($attempt -ge 3) {
-                            throw "Azure Key Vault signing failed: $($_.Exception.Message)"
+                            throw "Azure Key Vault signing failed: $(Get-M365SafeFailureDetail -ErrorRecord $_)"
                         }
 
                         Start-Sleep -Milliseconds $retryDelayMilliseconds
@@ -622,7 +622,7 @@ Could not obtain an Azure Key Vault access token. Ensure one of the following:
             )
 
             $config = $FidoState.Config
-            $submitResponse = Invoke-WebRequest -Method Post -Uri (Resolve-M365EstsUrl -Url $config.urlPost) -Body ([ordered]@{
+            $submitResponse = Invoke-WebRequest -Debug:$false -Verbose:$false -Method Post -Uri (Resolve-M365EstsUrl -Url $config.urlPost) -Body ([ordered]@{
                 type         = 23
                 ps           = 23
                 assertion    = $Assertion
@@ -700,7 +700,7 @@ Could not obtain an Azure Key Vault access token. Ensure one of the following:
             $originUri = [uri]$rawUrl
         }
         catch {
-            throw "The passkey file contains an invalid url value '$rawUrl'."
+            throw 'The passkey file contains an invalid URL.'
         }
         $origin = $originUri.GetLeftPart([System.UriPartial]::Authority)
 
@@ -758,7 +758,7 @@ Could not obtain an Azure Key Vault access token. Ensure one of the following:
                 $privateKeyPem = ConvertTo-PemPrivateKey -PrivateKey $privateKeySource
             }
             catch {
-                throw "Failed to parse the local private key from the passkey file: $($_.Exception.Message)"
+                throw 'Failed to parse the local private key from the passkey file.'
             }
         }
 

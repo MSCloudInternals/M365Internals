@@ -78,7 +78,7 @@
             $webSession.UserAgent = $UserAgent
         }
 
-        $null = Invoke-WebRequest -MaximumRedirection 10 -ErrorAction SilentlyContinue -WebSession $webSession -Method Get -Uri 'https://login.microsoftonline.com/error'
+        $null = Invoke-WebRequest -Debug:$false -Verbose:$false -MaximumRedirection 10 -ErrorAction SilentlyContinue -WebSession $webSession -Method Get -Uri 'https://login.microsoftonline.com/error'
         foreach ($cookieName in @('ESTSAUTH', 'ESTSAUTHPERSISTENT')) {
             $cookie = [System.Net.Cookie]::new($cookieName, $CookieValue, '/', 'login.microsoftonline.com')
             $webSession.Cookies.Add($cookie)
@@ -106,9 +106,9 @@
             return Connect-FromPortalWebSession -WebSession $PortalWebSession
         }
         catch {
-            $attemptErrors.Add("Portal session: $($_.Exception.Message)")
+            $attemptErrors.Add("Portal session: $(Get-M365SafeFailureDetail -ErrorRecord $_)")
             if (-not $hasEsts) {
-                throw
+                throw "$FailureLabel failed. $($attemptErrors -join ' | ')"
             }
         }
     }
@@ -118,7 +118,7 @@
             return Connect-FromEstsWebSession -WebSession $EstsWebSession
         }
         catch {
-            $attemptErrors.Add("ESTS session bootstrap: $($_.Exception.Message)")
+            $attemptErrors.Add("ESTS session bootstrap: $(Get-M365SafeFailureDetail -ErrorRecord $_)")
         }
     }
 
@@ -131,7 +131,7 @@
             return Connect-FromEstsCookieValue -CookieValue $EstsAuthCookieValue
         }
         catch {
-            $attemptErrors.Add("ESTS bootstrap: $($_.Exception.Message)")
+            $attemptErrors.Add("ESTS bootstrap: $(Get-M365SafeFailureDetail -ErrorRecord $_)")
         }
     }
 
@@ -141,8 +141,8 @@
             return Connect-FromPortalWebSession -WebSession $PortalWebSession
         }
         catch {
-            $attemptErrors.Add("Portal session: $($_.Exception.Message)")
-            throw
+            $attemptErrors.Add("Portal session: $(Get-M365SafeFailureDetail -ErrorRecord $_)")
+            throw "$FailureLabel failed. $($attemptErrors -join ' | ')"
         }
     }
 

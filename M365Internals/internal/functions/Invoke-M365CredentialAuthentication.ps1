@@ -18,7 +18,7 @@ function Get-M365TotpCode {
     $bits = ""
     foreach ($c in $cleanSecret.ToCharArray()) {
         $idx = $base32Chars.IndexOf($c)
-        if ($idx -lt 0) { throw "Invalid base32 character: $c" }
+        if ($idx -lt 0) { throw 'The supplied base32 value contains an invalid character.' }
         $bits += [Convert]::ToString($idx, 2).PadLeft(5, '0')
     }
     $keyBytes = [byte[]]::new([Math]::Floor($bits.Length / 8))
@@ -300,7 +300,6 @@ function Invoke-M365RedirectCapturingWebRequest {
         UseBasicParsing    = $true
         SkipHttpErrorCheck = $true
         MaximumRedirection = 0
-        Verbose            = $false
         ErrorAction        = 'SilentlyContinue'
     }
 
@@ -321,7 +320,7 @@ function Invoke-M365RedirectCapturingWebRequest {
     }
 
     $redirectErrors = @()
-    $response = Invoke-WebRequest @requestParams -ErrorVariable +redirectErrors
+    $response = Invoke-WebRequest -Debug:$false -Verbose:$false @requestParams -ErrorVariable +redirectErrors
     if ($null -ne $response) {
         return $response
     }
@@ -333,14 +332,14 @@ function Invoke-M365RedirectCapturingWebRequest {
         }
 
         if ($errorRecord.Exception -and $errorRecord.Exception.Message -match 'maximum redirection count has been exceeded') {
-            Write-Verbose "Captured redirect response from $Method $Uri after PowerShell reported the redirection limit."
+            Write-Verbose 'The web request reached its redirection limit.'
             continue
         }
 
-        throw $errorRecord
+        throw "Sign-in web request failed ($Method). $(Get-M365SafeFailureDetail -ErrorRecord $errorRecord)"
     }
 
-    throw "Web request to '$Uri' did not return a usable response."
+    throw 'The sign-in web request did not return a usable response.'
 }
 
 function Test-M365SecurityPortalFormPostResponse {
@@ -381,8 +380,8 @@ function Complete-M365SecurityPortalFormPost {
         'https://admin.cloud.microsoft/'
     }
 
-    Write-Verbose "Completing portal form POST at $postUri"
-    return Invoke-WebRequest -UseBasicParsing -Method Post -Uri $postUri -Body $body -WebSession $Session -MaximumRedirection 10 -SkipHttpErrorCheck -Verbose:$false
+    Write-Verbose 'Completing the portal form submission.'
+    return Invoke-WebRequest -Debug:$false -UseBasicParsing -Method Post -Uri $postUri -Body $body -WebSession $Session -MaximumRedirection 10 -SkipHttpErrorCheck -Verbose:$false
 }
 
 function Resolve-M365AuthenticationResponse {
@@ -421,12 +420,12 @@ function Resolve-M365AuthenticationResponse {
 
         $nextUri = [uri]::new($baseUri, $location)
         if ($nextUri.Scheme -notin @('http', 'https')) {
-            Write-Verbose "Authentication redirect reached native callback URI $nextUri; stopping redirect resolution."
+            Write-Verbose 'Authentication reached the native callback; stopping redirect resolution.'
             break
         }
 
-        Write-Verbose "Following authentication redirect to $nextUri"
-        $currentResponse = Invoke-WebRequest -UseBasicParsing -Method Get -Uri $nextUri -WebSession $Session -MaximumRedirection 10 -SkipHttpErrorCheck -Verbose:$false
+        Write-Verbose 'Following authentication redirect.'
+        $currentResponse = Invoke-WebRequest -Debug:$false -UseBasicParsing -Method Get -Uri $nextUri -WebSession $Session -MaximumRedirection 10 -SkipHttpErrorCheck -Verbose:$false
     }
 
     return [pscustomobject]@{
@@ -593,7 +592,7 @@ function Invoke-M365CredentialAuthentication {
     $session = New-Object Microsoft.PowerShell.Commands.WebRequestSession
     $session.UserAgent = $UserAgent
 
-    Write-Verbose "Initiating authentication flow for $Username..."
+    Write-Verbose 'Initiating credential authentication.'
     $loginState = Get-M365AdminLoginState -WebSession $session -Username $Username -UserAgent $UserAgent
     $sessionInfo = $loginState.Config
     if (-not $sessionInfo) {
@@ -602,7 +601,7 @@ function Invoke-M365CredentialAuthentication {
 
     if (-not $sessionInfo.urlPost) {
         if ($sessionInfo.sErrorCode) {
-            throw "Authentication failed with error $($sessionInfo.sErrorCode): $($sessionInfo.sErrTxt)"
+            throw "Authentication bootstrap failed. $(Get-M365SafeFailureDetail -ServiceCode $sessionInfo.sErrorCode)"
         }
         throw "Unexpected response: no urlPost in login page configuration."
     }
@@ -631,7 +630,7 @@ function Invoke-M365CredentialAuthentication {
             hpgrequestid = $sessionInfo.correlationId
         }
 
-        $credResponse = Invoke-WebRequest -UseBasicParsing -Method Post `
+        $credResponse = Invoke-WebRequest -Debug:$false -UseBasicParsing -Method Post `
             -Uri (Resolve-M365AuthAbsoluteUri -Uri $sessionInfo.urlPost) `
             -Body $credBody `
             -WebSession $session -MaximumRedirection 0 -SkipHttpErrorCheck -Verbose:$false
@@ -660,8 +659,8 @@ function Invoke-M365CredentialAuthentication {
             '50034' = "User account not found."
         }
         $msg = $errorMessages[$authState.sErrorCode]
-        if (-not $msg) { $msg = $authState.sErrTxt }
-        throw "Authentication failed ($($authState.sErrorCode)): $msg"
+        if (-not $msg) { $msg = 'The service rejected credential authentication.' }
+        throw "Authentication failed. $msg $(Get-M365SafeFailureDetail -ServiceCode $authState.sErrorCode)"
     }
 
     Write-Verbose "Credential submission succeeded (pgid: $($authState.pgid))"
@@ -743,15 +742,14 @@ function Invoke-M365CredentialAuthentication {
             } | ConvertTo-Json
 
             Write-Verbose "Calling SAS/EndAuth with verification code..."
-            $endAuth = Invoke-RestMethod -Method Post `
+            $endAuth = Invoke-RestMethod -Debug:$false -Method Post `
                 -Uri "https://login.microsoftonline.com/common/SAS/EndAuth" `
                 -Body $endBody -ContentType "application/json" `
                 -Headers $sasHeaders `
                 -WebSession $session -Verbose:$false
 
             if (-not (Test-M365MfaAuthSucceeded -Response $endAuth)) {
-                $errDetail = if ($endAuth.Message) { $endAuth.Message } else { $endAuth.ResultValue }
-                throw "MFA verification failed: $errDetail"
+                throw 'MFA verification failed.'
             }
 
             Write-Host "MFA verification succeeded."
@@ -880,11 +878,10 @@ function Invoke-M365CredentialAuthentication {
             UseBasicParsing    = $true
             SkipHttpErrorCheck = $true
             MaximumRedirection = 10
-            Verbose            = $false
         }
         if ($handler.Body) { $reqParams.Body = & $handler.Body }
 
-        $respFinalize = Invoke-WebRequest @reqParams
+        $respFinalize = Invoke-WebRequest -Debug:$false -Verbose:$false @reqParams
         Start-Sleep -Milliseconds 300
 
         $interruptOutcome = Resolve-M365AuthenticationResponse -Response $respFinalize -Session $session
@@ -915,7 +912,7 @@ function Invoke-M365CredentialAuthentication {
         $allCookies | Where-Object Name -EQ "ESTSAUTHLIGHT"
     ) | Where-Object { $_ } | Sort-Object { $_.Value.Length } -Descending | Select-Object -First 1
 
-    Write-Verbose "Obtained $($bestCookie.Name) cookie (length: $($bestCookie.Value.Length))"
+    Write-Verbose 'Obtained an ESTS authentication cookie.'
     return New-M365EstsAuthenticationResult -WebSession $session -EstsAuthCookieValue $bestCookie.Value
     #endregion
 }

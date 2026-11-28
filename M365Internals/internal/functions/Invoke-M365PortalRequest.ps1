@@ -151,7 +151,7 @@
             $bootstrapReplaySucceeded = $true
         }
         catch {
-            Write-Verbose "The portal self-heal bootstrap replay did not complete successfully: $($_.Exception.Message)"
+            Write-Verbose "The portal self-heal bootstrap replay did not complete successfully. $(Get-M365SafeFailureDetail -ErrorRecord $_)"
         }
 
         try {
@@ -159,7 +159,7 @@
             return $bootstrapReplaySucceeded
         }
         catch {
-            Write-Verbose "Refreshing the stored portal connection after the self-heal attempt failed: $($_.Exception.Message)"
+            Write-Verbose "Refreshing the stored portal connection after the self-heal attempt failed. $(Get-M365SafeFailureDetail -ErrorRecord $_)"
             return $false
         }
     }
@@ -234,7 +234,7 @@
         }
 
         try {
-            $response = Invoke-WebRequest @invokeParams
+            $response = Invoke-WebRequest -Debug:$false -Verbose:$false @invokeParams
         }
         catch {
             if ($attempt -lt $maxAttempts -and (Test-IsRetryablePortalRequestError -ErrorRecord $_) -and (Invoke-PortalRequestSelfHeal)) {
@@ -242,7 +242,7 @@
                 continue
             }
 
-            throw "Portal request failed for $Method $requestUri. $($_.Exception.Message)"
+            throw "Portal request failed ($Method). $(Get-M365SafeFailureDetail -ErrorRecord $_)"
         }
 
         if ($attempt -lt $maxAttempts -and (Test-M365PortalUnexpectedHtmlShell -Content $response.Content) -and (Invoke-PortalRequestSelfHeal)) {

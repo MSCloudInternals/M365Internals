@@ -91,10 +91,8 @@
             }
             catch {
                 $fallbackNames = @('Dynamics365ConnectionGraph', 'Dynamics365SalesInsights', 'OfficeScripts', 'UserOwnedAppsAndServices')
-                $isKnownUnavailableSurface = $fallbackNames -contains $ResultName
-                $isUnavailableStatus = $_.Exception.Message -match '400 \(Bad Request\)|404 \(Not Found\)'
-
-                if ($isKnownUnavailableSurface -and $isUnavailableStatus) {
+                $isUnavailableStatus = $_.Exception.Message -match '\b(?:HTTP (?:400|404) \(|400 \(Bad Request\)|404 \(Not Found\))'
+                if ($ResultName -in $fallbackNames -and $isUnavailableStatus) {
                     return New-M365AdminUnavailableResultFromError -Name $ResultName -Area 'app setting surface' -DefaultDescription 'This app setting endpoint currently does not return a usable payload in the current tenant.' -ErrorMessage $_.Exception.Message
                 }
 
