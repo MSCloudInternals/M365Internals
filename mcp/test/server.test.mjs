@@ -15,7 +15,11 @@ import { z } from 'zod';
 
 const fixture = fileURLToPath(new URL('./portal-fixture.psm1', import.meta.url));
 const server = fileURLToPath(new URL('../server.mjs', import.meta.url));
-const clientEnv = Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith('MSCI_')));
+const pwsh = process.env.MSCI_PWSH || 'pwsh';
+const clientEnv = {
+  ...Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith('MSCI_'))),
+  MSCI_PWSH: pwsh,
+};
 
 async function start(t, env = {}) {
   const transport = new StdioClientTransport({
@@ -103,7 +107,7 @@ test('worker rejects extra result fields and abandons a cancelled exchange', asy
     "if ($request.operation -eq 'slow') { Start-Sleep -Seconds 30 }",
     "[Console]::WriteLine((@{id=$request.id;ok=$true;data=@{allowed='yes';Token='secret-fixture'}} | ConvertTo-Json -Compress))",
   ].join('\n'));
-  const cfg = { pwsh: 'pwsh', module: fixture, auth: 'browser' };
+  const cfg = { pwsh, module: fixture, auth: 'browser' };
   const schema = z.object({ allowed: z.string() }).strict();
   const malformed = new Worker('m365', cfg, script);
   t.after(() => malformed.close());
@@ -156,7 +160,7 @@ test('worker cancellation terminates a spawned process in its group', { skip: pr
     "[IO.File]::WriteAllText((Join-Path $PSScriptRoot 'pid'), [string]$child.Id)",
     'Start-Sleep -Seconds 60',
   ].join('\n'));
-  const worker = new Worker('m365', { pwsh: 'pwsh', module: fixture, auth: 'browser' }, script);
+  const worker = new Worker('m365', { pwsh, module: fixture, auth: 'browser' }, script);
   t.after(() => worker.close());
   const controller = new AbortController();
   const result = worker.request('slow', {}, z.object({}), 8000, controller.signal);

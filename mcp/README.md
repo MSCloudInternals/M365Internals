@@ -4,7 +4,7 @@ The local stdio server exposes a curated set of read-only M365 and Purview tools
 
 ## Run
 
-Use Node.js 20 or later and PowerShell 7. Run `npm ci` here. Configure your client to run Node with an absolute path to `server.mjs`. For example, supply a configuration like this through your MCP client.
+Use Node.js 20 or later and PowerShell 7.6 or later. Run `npm ci` here. Configure your client to run Node with an absolute path to `server.mjs`. For example, supply a configuration like this through your MCP client.
 
 ```json
 {
@@ -53,7 +53,7 @@ For audit history, provide an optional `limit` on the first call. If the result 
 
 ## Verify
 
-Run `npm test` for the offline stdio integration suite. Run `npm run test:live` with one or both providers explicitly configured for a lab. Set `MSCI_LIVE_REQUIRE_AUDIT_CONTINUATION=1` in a lab with enough existing jobs to require distinct IDs across two pages. The live command prints only outcome and row counts. The auth flow can open a browser when needed.
+Run `npm test` for the offline stdio integration suite. Set `MSCI_PWSH` to the absolute path of the PowerShell executable you want to test. See the [maintainer validation handoff](../docs/milestone-1-validation.md) for the two-runtime commands. Run `npm run test:live` with one or both providers explicitly configured for a lab. Set `MSCI_LIVE_REQUIRE_AUDIT_CONTINUATION=1` in a lab with enough existing jobs to require distinct IDs across two pages. The live command prints only outcome and row counts. The auth flow can open a browser when needed.
 
 ## Lab qualification
 

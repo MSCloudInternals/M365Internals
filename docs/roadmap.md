@@ -10,6 +10,8 @@ At the November 2026 review, main at `443a971` included the read-only M365/Purvi
 
 Start from refreshed `origin/main` in a clean Paseo worktree on `paseo-lxc`. At review, `~/.local/bin/pwsh` ran 7.6.6 and `/usr/bin/pwsh` ran 7.7.0. Plain `pwsh` selected 7.6.6. Node 24.22.3 met the MCP server's Node 20+ requirement. Set `MSCI_PWSH` explicitly for each MCP run so the worker uses the runtime under test. [Maintainer validation](../build/run-maintainer-validation.ps1) · [MCP setup](../mcp/README.md)
 
+See the [baseline results and reproduction commands](milestone-1-validation.md).
+
 **Acceptance criteria**
 
 - Run maintainer validation and the offline MCP stdio suite on both runtimes before integrating recovery fixes. Preserve separate summaries with commit, executable, loaded Pester version, test counts, and failures. The host has Pester 5.7.1 and 6.2.0, and the runner imports it by name.

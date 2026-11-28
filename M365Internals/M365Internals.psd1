@@ -4,6 +4,8 @@
 
     ModuleVersion     = '0.0.1'
 
+    PowerShellVersion = '7.6'
+
     GUID              = '2f16c0f4-7064-4f0c-b296-24df7f12f0c1'
 
     Author            = 'Nathan McNulty'
