@@ -90,8 +90,9 @@ Last updated: 2026-03-30
 
 ### Search & intelligence
 
-- `/admin/api/searchadminapi/configurations` still returns `503` in both direct PowerShell reads and live in-browser fetches.
-- `Get-M365AdminSearchSetting -Name Configurations` now falls back to the stable `/admin/api/searchadminapi/ConfigurationSettings` inventory while preserving the direct failure details through `-Raw` and `-RawJson`.
+- On 2026-11-28, the read-only lab on `paseo-lxc` reproduced HTTP `503` twice for `GET /admin/api/searchadminapi/configurations`. The lab used M365Internals `b536644`, PowerShell 7.6.6, and the existing Global Reader software passkey. The current-user principal matched the selected account and the module verified the account and resource tenant on the same session. Search-specific licensing and feature rollout were unverified.
+- Both forced calls to `Get-M365AdminSearchSetting -Name Configurations -Force -Raw` returned the direct failure as `Transient` and three inventory entries from `GET /admin/api/searchadminapi/ConfigurationSettings`. A fresh Chromium context using that session also matched the current-user principal. Manual same-origin GETs at `#/MicrosoftSearch` with the registry's `MicrosoftSearch` headers returned `503` and `200` respectively, again with three inventory entries. The existing fallback exposes the direct failure through `-Raw` and `-RawJson`. The synthetic 503 and inventory mocks in `tests/functions/Get-M365AdminSurfaceConsistency.Tests.ps1` replay this output contract.
+- A successful direct read remains unverified. Retest both GETs with the `MicrosoftSearch` header profile at `#/MicrosoftSearch` in a second approved tenant. Record the Search feature and licensing state, the account role, and both statuses. The existing lab result provides no authorization error to isolate a missing role.
 - `/admin/api/searchadminapi/firstrunexperience/get` is a POST-backed endpoint. The live portal sends an array of feature names and returns `200` in this tenant when that body is preserved.
 - `/admin/api/searchadminapi/Qnas` is also POST-backed. The live portal sends `{"ServiceType":"Bing","Filter":"Published"}` and the current tenant returns `404` for that published Bing payload.
 - The grouped cmdlet should preserve those POST request shapes and only surface tenant-specific unavailability when the portal itself does.
@@ -173,9 +174,10 @@ These behaved as informational or static pages in the current tenant rather than
 ### Weakly Mapped Or Unstable Surfaces
 
 - `Account Linking / EnterpriseMicrosoftRewards`
-  - Route is known.
-  - A stable reproducible same-origin read has not been found outside the live portal interaction flow.
-  - `Get-M365AdminSearchSetting -Name AccountLinking` now returns the route and discovery metadata together with a structured `InteractiveOnly` unavailable result.
+  - On 2026-11-28, a fresh Chromium context imported the same verified Global Reader session on `paseo-lxc`. `GET /admin/api/users/currentUser` returned `200` and matched the selected principal. Opening `#/Settings/EnterpriseMicrosoftRewards` and `#/Settings` led to the admin homepage. Org settings → Services loaded at `#/Settings/Services` without a permission message. The Account Linking tile was absent and the capture identified no request for its data. The browser probe permitted GET, HEAD, and OPTIONS and blocked other methods.
+  - The missing prerequisite is a session in which the Org settings Account Linking flyout opens and its current tenant policy value can be read. The lab run did not establish whether browser bootstrap, provisioned feature availability, or role controls that access. Microsoft documents the flyout under Org settings. [Microsoft Rewards account linking guidance](https://support.microsoft.com/en-us/accounts-billing/rewards/getting-personal-rewards-points-for-work-searches)
+  - To resume, use an already authorized session with the tile visible. Start the network capture before opening the flyout, leave the switch untouched, and identify the request that supplies the current value. Record the origin, method, route context, status, and sanitized response shape. Confirm that it is a read before replaying it in a fresh session without opening the flyout. Identify the precise read and authorization response before requesting a role change.
+  - `Get-M365AdminSearchSetting -Name AccountLinking` returns the route and discovery metadata with a structured `InteractiveOnly` result. The offline test verifies that this path issues no data request.
 - `News`
   - The stable implementation should continue using the three search-admin news endpoints.
   - The direct `/fd/bfb/api/v3/office/switch/feature` path returned `503` during direct probing.
