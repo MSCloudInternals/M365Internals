@@ -38,7 +38,7 @@ InModuleScope M365Internals {
             Mock Get-M365BrowserPreferredTargetContext { [pscustomobject]@{ WebSocketUrl = 'ws://127.0.0.1/test' } }
             Mock Start-Sleep {}
             Mock Get-Date { $script:clock = $script:clock.AddSeconds(31); $script:clock }
-            Mock Get-M365BrowserCookieJar { @() }
+            Mock Invoke-M365BrowserCdpCommand { [pscustomobject]@{ cookies = @() } }
             Mock Get-M365BestBrowserEstsCookie { $null }
             Mock New-M365BrowserPortalWebSession { $null }
             Mock Test-M365BrowserAuthenticationCompletion { $false }
@@ -50,8 +50,9 @@ InModuleScope M365Internals {
         }
 
         It 'reports a lost browser connection rather than a sign-in timeout' {
-            Mock Get-M365BrowserCookieJar { throw 'private connection details' }
+            Mock Invoke-M365BrowserCdpCommand { throw 'private connection details' }
             { Invoke-M365BrowserAuthentication -TimeoutSeconds 30 } | Should -Throw '*lost its browser connection*'
+            Should -Invoke Invoke-M365BrowserCdpCommand -Times 3 -Exactly
         }
 
         It 'reports an invalid DevTools response as a startup failure' {
@@ -59,7 +60,10 @@ InModuleScope M365Internals {
             { Invoke-M365BrowserAuthentication -TimeoutSeconds 30 } | Should -Throw '*startup failed*did not become ready*'
         }
 
-        It 'reports an ordinary sign-in timeout when polling succeeds' {
+        It 'reports an ordinary sign-in timeout when a fallback polling command succeeds' {
+            Mock Invoke-M365BrowserCdpCommand { throw 'unsupported browser command' } -ParameterFilter {
+                $Method -eq 'Network.getAllCookies'
+            }
             { Invoke-M365BrowserAuthentication -TimeoutSeconds 30 } | Should -Throw '*sign-in timed out*'
         }
 

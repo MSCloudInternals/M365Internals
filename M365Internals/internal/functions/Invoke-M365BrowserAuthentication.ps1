@@ -789,7 +789,7 @@ function Get-M365BrowserCdpVersion {
         }
 
         try {
-            return Invoke-RestMethod -Debug:$false -Verbose:$false -Uri $versionUri -Method Get -ErrorAction Stop
+            return Invoke-RestMethod -Debug:$false -Verbose:$false -Uri $versionUri -Method Get -ConnectionTimeoutSeconds 2 -OperationTimeoutSeconds 2 -ErrorAction Stop
         } catch {
             Start-Sleep -Milliseconds 500
         }
@@ -807,7 +807,7 @@ function Get-M365BrowserTargetList {
     )
 
     $targetUri = "http://127.0.0.1:$Port/json/list"
-    $targets = Invoke-RestMethod -Debug:$false -Verbose:$false -Uri $targetUri -Method Get -ErrorAction Stop
+    $targets = Invoke-RestMethod -Debug:$false -Verbose:$false -Uri $targetUri -Method Get -ConnectionTimeoutSeconds 2 -OperationTimeoutSeconds 2 -ErrorAction Stop
     return @($targets | Where-Object { $_ })
 }
 
@@ -915,7 +915,7 @@ function Invoke-M365BrowserCdpCommand {
     )
 
     $webSocket = [System.Net.WebSockets.ClientWebSocket]::new()
-    $cancellation = [System.Threading.CancellationTokenSource]::new()
+    $cancellation = [System.Threading.CancellationTokenSource]::new([TimeSpan]::FromSeconds(5))
 
     try {
         $webSocket.ConnectAsync($WebSocketUrl, $cancellation.Token).GetAwaiter().GetResult()
@@ -978,10 +978,12 @@ function Get-M365BrowserCookieJar {
     )
 
     $cookieResult = $null
+    $commandSucceeded = $false
 
     foreach ($method in @('Network.getAllCookies', 'Network.getCookies', 'Storage.getCookies')) {
         try {
             $result = Invoke-M365BrowserCdpCommand -WebSocketUrl $WebSocketUrl -Method $method
+            $commandSucceeded = $true
         } catch {
             continue
         }
@@ -995,6 +997,10 @@ function Get-M365BrowserCookieJar {
         if ($cookieResult) {
             break
         }
+    }
+
+    if (-not $commandSucceeded) {
+        throw 'The browser DevTools endpoint did not respond to cookie polling.'
     }
 
     if ($null -eq $cookieResult -or $null -eq $cookieResult.cookies) {
