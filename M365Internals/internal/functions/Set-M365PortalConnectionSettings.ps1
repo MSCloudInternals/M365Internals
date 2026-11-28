@@ -185,7 +185,7 @@
                     $null = Invoke-M365PortalPostLandingBootstrap -WebSession $WebSession -UserAgent $UserAgent
                 }
                 catch {
-                    Write-Verbose "The retry bootstrap attempt after the $ProbeName HTML shell did not complete successfully: $($_.Exception.Message)"
+                    Write-Verbose "The retry bootstrap attempt after the $ProbeName HTML shell did not complete successfully: $(Get-M365SafeFailureDetail -ErrorRecord $_)"
                 }
 
                 Sync-PortalCookieValues
@@ -257,7 +257,7 @@
             $null = Invoke-M365PortalPostLandingBootstrap -WebSession $WebSession -UserAgent $UserAgent
         }
         catch {
-            Write-Verbose "The first optional post-landing bootstrap attempt did not complete successfully: $($_.Exception.Message)"
+            Write-Verbose "The first optional post-landing bootstrap attempt did not complete successfully: $(Get-M365SafeFailureDetail -ErrorRecord $_)"
         }
 
         Sync-PortalCookieValues
@@ -270,7 +270,7 @@
             $null = Invoke-M365PortalPostLandingBootstrap -WebSession $WebSession -UserAgent $UserAgent
         }
         catch {
-            Write-Verbose "The second optional post-landing bootstrap attempt did not complete successfully: $($_.Exception.Message)"
+            Write-Verbose "The second optional post-landing bootstrap attempt did not complete successfully: $(Get-M365SafeFailureDetail -ErrorRecord $_)"
         }
 
         Sync-PortalCookieValues
@@ -278,19 +278,19 @@
 
         try {
             if ([string]::IsNullOrWhiteSpace($cookieValues['s.UserTenantId'])) {
-                $null = Invoke-WebRequest -MaximumRedirection 20 -ErrorAction Stop -WebSession $WebSession -Method Get -Uri 'https://admin.cloud.microsoft/admin/api/tenant/datalocationandcommitments' -Headers (Get-M365PortalContextHeaders -Context DataLocation -AjaxSessionKey $candidateHeaders['AjaxSessionKey']) -UserAgent $UserAgent
+                $null = Invoke-WebRequest -Debug:$false -Verbose:$false -MaximumRedirection 20 -ErrorAction Stop -WebSession $WebSession -Method Get -Uri 'https://admin.cloud.microsoft/admin/api/tenant/datalocationandcommitments' -Headers (Get-M365PortalContextHeaders -Context DataLocation -AjaxSessionKey $candidateHeaders['AjaxSessionKey']) -UserAgent $UserAgent
             }
         }
         catch {
-            Write-Verbose "The optional data-location bootstrap validation request did not complete successfully: $($_.Exception.Message)"
+            Write-Verbose "The optional data-location bootstrap validation request did not complete successfully: $(Get-M365SafeFailureDetail -ErrorRecord $_)"
         }
 
         if ([string]::IsNullOrWhiteSpace((Get-PortalCookieValue -Name 's.UserTenantId'))) {
             try {
-                $null = Invoke-WebRequest -MaximumRedirection 20 -ErrorAction Stop -WebSession $WebSession -Method Get -Uri 'https://admin.cloud.microsoft/adminportal/home/ClassicModernAdminDataStream?ref=/homepage' -Headers (Get-M365PortalContextHeaders -Context Homepage -AjaxSessionKey $candidateHeaders['AjaxSessionKey']) -UserAgent $UserAgent
+                $null = Invoke-WebRequest -Debug:$false -Verbose:$false -MaximumRedirection 20 -ErrorAction Stop -WebSession $WebSession -Method Get -Uri 'https://admin.cloud.microsoft/adminportal/home/ClassicModernAdminDataStream?ref=/homepage' -Headers (Get-M365PortalContextHeaders -Context Homepage -AjaxSessionKey $candidateHeaders['AjaxSessionKey']) -UserAgent $UserAgent
             }
             catch {
-                Write-Verbose "The optional ClassicModernAdminDataStream validation request did not complete successfully: $($_.Exception.Message)"
+                Write-Verbose "The optional ClassicModernAdminDataStream validation request did not complete successfully: $(Get-M365SafeFailureDetail -ErrorRecord $_)"
             }
         }
 
@@ -346,7 +346,7 @@
                 Name       = 'ShellInfo'
                 Path       = '/admin/api/coordinatedbootstrap/shellinfo'
                 StatusCode = $null
-                Error      = $_.Exception.Message
+                Error      = Get-M365SafeFailureDetail -ErrorRecord $_
             })
         }
 
@@ -367,7 +367,7 @@
                     Name       = $validationProbe.Name
                     Path       = $validationProbe.Path
                     StatusCode = $null
-                    Error      = $_.Exception.Message
+                    Error      = Get-M365SafeFailureDetail -ErrorRecord $_
                 })
             }
         }

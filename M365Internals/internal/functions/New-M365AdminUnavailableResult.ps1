@@ -21,7 +21,7 @@
         A short reason code such as TenantSpecific, Optional, or Transient.
 
     .PARAMETER ErrorMessage
-        Optional raw error message associated with the unavailable result.
+        Optional provider error to summarize without including its raw text.
 
     .PARAMETER HttpStatusCode
         Optional HTTP status code associated with the unavailable result.
@@ -68,7 +68,7 @@
             HttpStatusCode = $HttpStatusCode
             Description    = $Description
             SuggestedAction = $SuggestedAction
-            Error          = $ErrorMessage
+            Error          = if ($ErrorMessage) { Get-M365SafeFailureDetail -Message $ErrorMessage -HttpStatusCode $HttpStatusCode }
         }
 
         return Add-M365TypeName -InputObject $result -TypeName 'M365Admin.UnavailableResult'
@@ -122,7 +122,7 @@ function New-M365AdminUnavailableResultFromError {
         $httpStatusCode = $null
         $description = $DefaultDescription
         $reason = $DefaultReason
-        $suggestedAction = 'Retry later or inspect the Error field for the raw admin-center response.'
+        $suggestedAction = 'Retry later or inspect the Error field for the request failure summary.'
 
         if (-not [string]::IsNullOrWhiteSpace($ErrorMessage) -and $ErrorMessage -match '\b(?<StatusCode>400|401|403|404|409|429|500|503)\b') {
             $httpStatusCode = [int]$Matches.StatusCode

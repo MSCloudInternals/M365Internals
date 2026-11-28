@@ -10,14 +10,14 @@
     try {
         return $Response.Content | ConvertFrom-Json -Depth 30
     } catch {
-        Write-Verbose "Response content was not a plain JSON payload: $($_.Exception.Message)"
+        Write-Verbose 'Response content was not a plain JSON payload.'
     }
 
     if ($Response.Content -match '{(.*)}') {
         try {
             return $Matches[0] | ConvertFrom-Json -Depth 30
         } catch {
-            Write-Verbose "Embedded JSON payload could not be parsed: $($_.Exception.Message)"
+            Write-Verbose 'Embedded JSON payload could not be parsed.'
         }
     }
 
@@ -266,12 +266,12 @@ function Invoke-M365PhoneSignInStartRemoteNgcChallenge {
     $sessionLookupKey = $null
     $lastError = $null
     for ($attempt = 1; $attempt -le 2; $attempt++) {
-        $challengeResponse = Invoke-RestMethod -Uri $challengeUri -Method Post -WebSession $Session -Headers $headers -Body $challengeBody -ContentType 'application/json; charset=UTF-8' -ErrorAction Stop
+        $challengeResponse = Invoke-RestMethod -Debug:$false -Verbose:$false -Uri $challengeUri -Method Post -WebSession $Session -Headers $headers -Body $challengeBody -ContentType 'application/json; charset=UTF-8' -ErrorAction Stop
 
         if ($challengeResponse.error -and $challengeResponse.error.code) {
-            $lastError = "Phone sign-in challenge start failed ($($challengeResponse.error.code)): $($challengeResponse.error.message)"
+            $lastError = "Phone sign-in challenge start failed. $(Get-M365SafeFailureDetail -ServiceCode $challengeResponse.error.code)"
             if ($attempt -lt 2) {
-                Write-Verbose "GetOneTimeCode attempt $attempt returned error $($challengeResponse.error.code), retrying..."
+                Write-Verbose "GetOneTimeCode attempt $attempt failed; retrying."
                 Start-Sleep -Seconds 2
                 continue
             }
@@ -317,8 +317,7 @@ function Invoke-M365PhoneSignInStartRemoteNgcChallenge {
     }
 
     if ([string]::IsNullOrWhiteSpace($sessionLookupKey)) {
-        $summary = $challengeResponse | ConvertTo-Json -Compress -Depth 10
-        throw "Phone sign-in challenge start did not return an active RemoteNGC session. Response: $summary"
+        throw 'Phone sign-in challenge start did not return an active RemoteNGC session.'
     }
 
     return [pscustomobject]@{
@@ -379,7 +378,7 @@ function Invoke-M365PhoneSignInGetCredentialType {
         isQrCodePinSupported           = $true
     } | ConvertTo-Json -Compress
 
-    return Invoke-RestMethod -Uri 'https://login.microsoftonline.com/common/GetCredentialType?mkt=en-US' -Method Post -WebSession $Session -Headers $credHeaders -Body $credentialTypeBody -ContentType 'application/json; charset=UTF-8' -ErrorAction Stop
+    return Invoke-RestMethod -Debug:$false -Verbose:$false -Uri 'https://login.microsoftonline.com/common/GetCredentialType?mkt=en-US' -Method Post -WebSession $Session -Headers $credHeaders -Body $credentialTypeBody -ContentType 'application/json; charset=UTF-8' -ErrorAction Stop
 }
 
 function Invoke-M365PhoneSignInFidoBootstrap {
@@ -430,7 +429,7 @@ function Invoke-M365PhoneSignInFidoBootstrap {
         -Accept 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7' `
         -IncludeUpgradeInsecureRequests
 
-    $verifyResponse = Invoke-WebRequest -UseBasicParsing -Uri 'https://login.microsoft.com/common/fido/get?uiflavor=Web' -Method Post -Body $verifyBody -Headers $verifyHeaders -WebSession $Session -MaximumRedirection 0 -SkipHttpErrorCheck -Verbose:$false
+    $verifyResponse = Invoke-WebRequest -Debug:$false -UseBasicParsing -Uri 'https://login.microsoft.com/common/fido/get?uiflavor=Web' -Method Post -Body $verifyBody -Headers $verifyHeaders -WebSession $Session -MaximumRedirection 0 -SkipHttpErrorCheck -Verbose:$false
     if ($verifyResponse.StatusCode -ge 400) {
         throw "Phone sign-in initialization failed with HTTP $($verifyResponse.StatusCode)."
     }
@@ -622,7 +621,7 @@ function Invoke-M365PhoneSignInPollSession {
     $nextReminder = (Get-Date).AddSeconds($reminderInterval)
 
     do {
-        $pollResponse = Invoke-RestMethod -Uri $pollUri -Method Post -WebSession $Session -Headers $headers -Body (@{ DeviceCode = $SessionIdentifier } | ConvertTo-Json -Compress) -ContentType 'application/json; charset=UTF-8' -ErrorAction Stop
+        $pollResponse = Invoke-RestMethod -Debug:$false -Verbose:$false -Uri $pollUri -Method Post -WebSession $Session -Headers $headers -Body (@{ DeviceCode = $SessionIdentifier } | ConvertTo-Json -Compress) -ContentType 'application/json; charset=UTF-8' -ErrorAction Stop
         if (Test-M365PhoneSignInApproved -PollResponse $pollResponse) {
             return
         }
@@ -782,7 +781,7 @@ function Invoke-M365PhoneSignInAuthentication {
         }
 
         if ($sasOutcome.Outcome.AuthState -and $sasOutcome.Outcome.AuthState.sErrorCode) {
-            throw "Phone sign-in failed with error $($sasOutcome.Outcome.AuthState.sErrorCode): $($sasOutcome.Outcome.AuthState.sErrTxt)"
+            throw "Phone sign-in failed. $(Get-M365SafeFailureDetail -ServiceCode $sasOutcome.Outcome.AuthState.sErrorCode)"
         }
 
         throw 'Phone sign-in completed, but no ESTS authentication cookie was captured.'
@@ -791,7 +790,7 @@ function Invoke-M365PhoneSignInAuthentication {
     try {
         $credentialType = Invoke-M365PhoneSignInGetCredentialType -Username $Username -AuthState $authState -Session $session -AuthorizeUri $authorizeUri
     } catch {
-        throw "GetCredentialType failed: $($_.Exception.Message)"
+        throw "GetCredentialType failed. $(Get-M365SafeFailureDetail -ErrorRecord $_)"
     }
 
     # --- RemoteNGC / GetOneTimeCode → DeviceCodeStatus flow (preferred) ---
@@ -834,7 +833,7 @@ function Invoke-M365PhoneSignInAuthentication {
         }
 
         if ($submitResult.AuthState -and $submitResult.AuthState.sErrorCode) {
-            throw "Phone sign-in login submission failed with error $($submitResult.AuthState.sErrorCode): $($submitResult.AuthState.sErrTxt)"
+            throw "Phone sign-in login submission failed. $(Get-M365SafeFailureDetail -ServiceCode $submitResult.AuthState.sErrorCode)"
         }
 
         throw 'Phone sign-in completed and approved, but no ESTS authentication cookie was captured.'
@@ -854,7 +853,7 @@ function Invoke-M365PhoneSignInAuthentication {
         }
 
         if ($sasOutcome.Outcome.AuthState -and $sasOutcome.Outcome.AuthState.sErrorCode) {
-            throw "Phone sign-in failed with error $($sasOutcome.Outcome.AuthState.sErrorCode): $($sasOutcome.Outcome.AuthState.sErrTxt)"
+            throw "Phone sign-in failed. $(Get-M365SafeFailureDetail -ServiceCode $sasOutcome.Outcome.AuthState.sErrorCode)"
         }
 
         throw 'Phone sign-in completed, but no ESTS authentication cookie was captured.'
@@ -880,7 +879,7 @@ function Invoke-M365PhoneSignInAuthentication {
         }
 
         if ($sasOutcome.Outcome.AuthState -and $sasOutcome.Outcome.AuthState.sErrorCode) {
-            throw "Phone sign-in failed with error $($sasOutcome.Outcome.AuthState.sErrorCode): $($sasOutcome.Outcome.AuthState.sErrTxt)"
+            throw "Phone sign-in failed. $(Get-M365SafeFailureDetail -ServiceCode $sasOutcome.Outcome.AuthState.sErrorCode)"
         }
 
         throw 'Phone sign-in completed, but no ESTS authentication cookie was captured.'

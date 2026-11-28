@@ -76,7 +76,7 @@ function Invoke-M365SasBeginAuth {
     } | ConvertTo-Json
 
     Write-Verbose 'Calling SAS/BeginAuth...'
-    $beginAuth = Invoke-RestMethod -Method Post `
+    $beginAuth = Invoke-RestMethod -Debug:$false -Method Post `
         -Uri $BeginAuthUri `
         -Body $beginBody -ContentType 'application/json' `
         -Headers $Headers `
@@ -97,10 +97,10 @@ function Invoke-M365SasBeginAuth {
             $beginAuth.SessionId = $AuthState.sessionId
         }
     } elseif (-not $beginAuth.Success -and $beginAuth.ErrCode -ne 0) {
-        throw "$FailureLabel BeginAuth failed (ErrCode: $($beginAuth.ErrCode)): $($beginAuth.Message)"
+        throw "$FailureLabel BeginAuth failed. $(Get-M365SafeFailureDetail -ServiceCode $beginAuth.ErrCode)"
     }
 
-    Write-Verbose "BeginAuth response: Success=$($beginAuth.Success), ResultValue=$($beginAuth.ResultValue)"
+    Write-Verbose "BeginAuth completed. Success=$([bool]$beginAuth.Success)."
     return $beginAuth
 }
 
@@ -164,7 +164,7 @@ function Invoke-M365SasPushNotificationPolling {
 
             $pollUri = Add-M365UriQueryString -Uri $EndAuthUri -Parameters $pollParams
             $pollBody = $null
-            $pollResult = Invoke-RestMethod -Method Get `
+            $pollResult = Invoke-RestMethod -Debug:$false -Method Get `
                 -Uri $pollUri `
                 -WebSession $Session -Verbose:$false
 
@@ -189,7 +189,7 @@ function Invoke-M365SasPushNotificationPolling {
                 } | ConvertTo-Json
 
                 $pollUri = $EndAuthUri
-                $pollResult = Invoke-RestMethod -Method Post `
+                $pollResult = Invoke-RestMethod -Debug:$false -Method Post `
                     -Uri $pollUri `
                     -Body $pollBody -ContentType 'application/json' `
                     -Headers $Headers `
@@ -206,7 +206,7 @@ function Invoke-M365SasPushNotificationPolling {
             } | ConvertTo-Json
 
             $pollUri = $EndAuthUri
-            $pollResult = Invoke-RestMethod -Method Post `
+            $pollResult = Invoke-RestMethod -Debug:$false -Method Post `
                 -Uri $pollUri `
                 -Body $pollBody -ContentType 'application/json' `
                 -Headers $Headers `
@@ -221,7 +221,7 @@ function Invoke-M365SasPushNotificationPolling {
         $lastPollStart = $pollStarted
         $lastPollEnd = $pollEnded
 
-        Write-Verbose "Poll $pollCount : Success=$($pollResult.Success) ResultValue=$($pollResult.ResultValue)"
+        Write-Verbose "Poll ${pollCount}: Success=$([bool]$pollResult.Success)."
 
         if (Test-M365MfaAuthSucceeded -Response $pollResult) {
             return [pscustomobject]@{
@@ -233,7 +233,7 @@ function Invoke-M365SasPushNotificationPolling {
         }
 
         if ($pollResult.ResultValue -ne 'AuthenticationPending') {
-            throw "$FailureLabel denied or failed: $($pollResult.ResultValue) - $($pollResult.Message)"
+            throw "$FailureLabel was denied or failed."
         }
 
         if (-not $pollResult.Retry) {

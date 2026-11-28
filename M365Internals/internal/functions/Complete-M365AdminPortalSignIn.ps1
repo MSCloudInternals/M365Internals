@@ -90,20 +90,6 @@
         return [System.Net.WebUtility]::HtmlDecode($formMatch.Groups['value'].Value)
     }
 
-    function Get-HtmlTitle {
-        param(
-            [Parameter(Mandatory)]
-            [string]$Html
-        )
-
-        $titleMatch = [regex]::Match($Html, '<title[^>]*>(?<value>.*?)</title>', [System.Text.RegularExpressions.RegexOptions]::IgnoreCase -bor [System.Text.RegularExpressions.RegexOptions]::Singleline)
-        if (-not $titleMatch.Success) {
-            return $null
-        }
-
-        return [System.Net.WebUtility]::HtmlDecode($titleMatch.Groups['value'].Value).Trim()
-    }
-
     function Get-MissingRequiredFieldName {
         param(
             [Parameter(Mandatory)]
@@ -294,7 +280,12 @@
                 $requestParams.Body = $interruptBody
             }
 
-            $currentResponse = Invoke-WebRequest @requestParams
+            try {
+                $currentResponse = Invoke-WebRequest -Debug:$false -Verbose:$false @requestParams
+            }
+            catch {
+                throw "The admin portal authorize handoff failed. $(Get-M365SafeFailureDetail -ErrorRecord $_)"
+            }
         }
 
         $finalContent = if ($currentResponse -and $currentResponse.PSObject.Properties['Content']) {
@@ -331,11 +322,11 @@
     if ($missingFields.Count -gt 0) {
         $portalBootstrapResponse = $null
         try {
-            $portalBootstrapResponse = Invoke-WebRequest -MaximumRedirection 0 -WebSession $WebSession -Method Get -Uri 'https://admin.cloud.microsoft/login?ru=%2Fadminportal%3F' -UserAgent $UserAgent -ErrorAction Stop
+            $portalBootstrapResponse = Invoke-WebRequest -Debug:$false -Verbose:$false -MaximumRedirection 0 -WebSession $WebSession -Method Get -Uri 'https://admin.cloud.microsoft/login?ru=%2Fadminportal%3F' -UserAgent $UserAgent -ErrorAction Stop
         }
         catch {
             if (-not $_.Exception.Response) {
-                throw
+                throw "The admin portal bootstrap failed. $(Get-M365SafeFailureDetail -ErrorRecord $_)"
             }
 
             $portalBootstrapResponse = $_.Exception.Response
@@ -371,51 +362,26 @@
                 throw 'Failed to determine the admin portal authorize URL.'
             }
 
-            $authorizeResponse = Invoke-WebRequest -MaximumRedirection 20 -WebSession $WebSession -Method Get -Uri $authorizeUrl -UserAgent $UserAgent
+            try {
+                $authorizeResponse = Invoke-WebRequest -Debug:$false -Verbose:$false -MaximumRedirection 20 -WebSession $WebSession -Method Get -Uri $authorizeUrl -UserAgent $UserAgent -ErrorAction Stop
+            }
+            catch {
+                throw "The admin portal authorize request failed. $(Get-M365SafeFailureDetail -ErrorRecord $_)"
+            }
             $authorizeResult = Resolve-AuthorizeInterruptResult -Response $authorizeResponse
             $hiddenFields = $authorizeResult.HiddenFields
             $missingFields = $authorizeResult.MissingFields
             if ($missingFields.Count -gt 0) {
                 $authorizeConfig = $authorizeResult.AuthState
 
-                $finalAuthorizeResponse = $authorizeResult.Response
-                $responseUri = if ($finalAuthorizeResponse.BaseResponse -and $finalAuthorizeResponse.BaseResponse.ResponseUri) {
-                    [string]$finalAuthorizeResponse.BaseResponse.ResponseUri
-                }
-                elseif ($finalAuthorizeResponse.PSObject.Properties['Url']) {
-                    [string]$finalAuthorizeResponse.Url
-                }
-                else {
-                    $null
-                }
-
-                $responseTitle = if ($finalAuthorizeResponse.Content) {
-                    Get-HtmlTitle -Html $finalAuthorizeResponse.Content
-                }
-                else {
-                    $null
-                }
-
                 $diagnosticParts = @(
                     "Missing response fields: $($missingFields -join ', ')"
                 )
-                if ($responseUri) {
-                    $diagnosticParts += "ResponseUri: $responseUri"
-                }
-                if ($responseTitle) {
-                    $diagnosticParts += "Title: $responseTitle"
-                }
                 if ($authorizeConfig -and $authorizeConfig.PSObject.Properties['sErrorCode'] -and $authorizeConfig.sErrorCode) {
-                    $diagnosticParts += "sErrorCode: $($authorizeConfig.sErrorCode)"
+                    $diagnosticParts += Get-M365SafeFailureDetail -ServiceCode $authorizeConfig.sErrorCode
                 }
                 if ($authorizeConfig -and $authorizeConfig.PSObject.Properties['arrSessions'] -and $authorizeConfig.arrSessions) {
                     $diagnosticParts += "arrSessions: $(@($authorizeConfig.arrSessions).Count)"
-                }
-                if ($authorizeConfig -and $authorizeConfig.PSObject.Properties['sTenantId'] -and $authorizeConfig.sTenantId) {
-                    $diagnosticParts += "sTenantId: $($authorizeConfig.sTenantId)"
-                }
-                if ($authorizeConfig -and $authorizeConfig.PSObject.Properties['pgid'] -and $authorizeConfig.pgid) {
-                    $diagnosticParts += "pgid: $($authorizeConfig.pgid)"
                 }
 
                 throw "Failed to exchange the ESTS session into an admin portal session. $($diagnosticParts -join '; ')."
@@ -429,10 +395,10 @@
     $tokenMetadata = Get-M365JwtTokenMetadata -Token $hiddenFields['id_token'] -Source 'AdminPortalIdToken'
 
     try {
-        $null = Invoke-WebRequest -MaximumRedirection 20 -WebSession $WebSession -Method Post -Uri $landingUri -Body $hiddenFields -UserAgent $UserAgent -ErrorAction Stop
+        $null = Invoke-WebRequest -Debug:$false -Verbose:$false -MaximumRedirection 20 -WebSession $WebSession -Method Post -Uri $landingUri -Body $hiddenFields -UserAgent $UserAgent -ErrorAction Stop
     }
     catch {
-        throw "Failed to complete the admin portal landing flow. $($_.Exception.Message)"
+        throw "Failed to complete the admin portal landing flow. $(Get-M365SafeFailureDetail -ErrorRecord $_)"
     }
 
     if ($tokenMetadata) {

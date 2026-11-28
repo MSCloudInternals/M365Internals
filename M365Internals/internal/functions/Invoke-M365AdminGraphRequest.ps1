@@ -138,9 +138,9 @@
     }
 
     try {
-        return Invoke-RestMethod @invokeParams
+        return Invoke-RestMethod -Debug:$false -Verbose:$false @invokeParams
     }
     catch {
-        throw "Graph proxy request failed for $Method $requestUri. $($_.Exception.Message)"
+        throw "Graph proxy request failed ($Method). $(Get-M365SafeFailureDetail -ErrorRecord $_)"
     }
 }

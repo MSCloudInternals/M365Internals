@@ -49,7 +49,7 @@
         $claims = ConvertFrom-M365Base64UrlSegment -Value $tokenSegments[1] | ConvertFrom-Json -Depth 20
     }
     catch {
-        Write-Verbose "The supplied token could not be parsed as a JWT while reading freshness metadata. $($_.Exception.Message)"
+        Write-Verbose 'The supplied token could not be parsed as a JWT while reading freshness metadata.'
         return $null
     }
 

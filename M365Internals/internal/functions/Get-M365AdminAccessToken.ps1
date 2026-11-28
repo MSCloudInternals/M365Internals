@@ -54,7 +54,7 @@
 
     $currentCacheValue = Get-M365Cache -CacheKey $cacheKey -ErrorAction SilentlyContinue
     if (-not $Force -and $currentCacheValue -and $currentCacheValue.NotValidAfter -gt (Get-Date)) {
-        Write-Verbose "Using cached $cacheKey data"
+        Write-Verbose "Using cached admin $TokenType token."
         return $currentCacheValue.Value
     }
     elseif ($Force) {
@@ -88,10 +88,10 @@
     }
 
     try {
-        $rawToken = Invoke-RestMethod -Uri $uri -Method Get -ContentType 'application/json' -WebSession $script:m365PortalSession -Headers $resolvedHeaders
+        $rawToken = Invoke-RestMethod -Debug:$false -Verbose:$false -Uri $uri -Method Get -ContentType 'application/json' -WebSession $script:m365PortalSession -Headers $resolvedHeaders -ErrorAction Stop
     }
     catch {
-        throw "Failed to retrieve M365 admin access token '$TokenType': $($_.Exception.Message)"
+        throw "Failed to retrieve M365 admin access token '$TokenType': $(Get-M365SafeFailureDetail -ErrorRecord $_)"
     }
 
     $token = [string]$rawToken

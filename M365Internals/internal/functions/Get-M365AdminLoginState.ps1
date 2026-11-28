@@ -43,7 +43,12 @@
         [string]$UserAgent = (Get-M365DefaultUserAgent)
     )
 
-    $bootstrapResponse = Invoke-WebRequest -Uri 'https://admin.cloud.microsoft/' -WebSession $WebSession -UserAgent $UserAgent
+    try {
+        $bootstrapResponse = Invoke-WebRequest -Debug:$false -Verbose:$false -Uri 'https://admin.cloud.microsoft/' -WebSession $WebSession -UserAgent $UserAgent -ErrorAction Stop
+    }
+    catch {
+        throw "The admin portal sign-in bootstrap failed. $(Get-M365SafeFailureDetail -ErrorRecord $_)"
+    }
     $loginUrlMatch = [regex]::Match($bootstrapResponse.Content, "var loginURL = '(?<value>(?:\\.|[^'])+)'")
     if (-not $loginUrlMatch.Success) {
         throw 'Failed to determine the admin.cloud.microsoft sign-in URL.'
@@ -59,7 +64,12 @@
         $loginUrl = $loginUrl + $separator + 'login_hint=' + [uri]::EscapeDataString($Username)
     }
 
-    $loginResponse = Invoke-WebRequest -Uri $loginUrl -WebSession $WebSession -MaximumRedirection 5 -UserAgent $UserAgent
+    try {
+        $loginResponse = Invoke-WebRequest -Debug:$false -Verbose:$false -Uri $loginUrl -WebSession $WebSession -MaximumRedirection 5 -UserAgent $UserAgent -ErrorAction Stop
+    }
+    catch {
+        throw "The Entra sign-in request failed. $(Get-M365SafeFailureDetail -ErrorRecord $_)"
+    }
 
     return [pscustomobject]@{
         LoginUrl = $loginUrl

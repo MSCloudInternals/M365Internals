@@ -694,7 +694,7 @@ function Stop-M365BrowserProcess {
             $null = Invoke-M365BrowserCdpCommand -WebSocketUrl $BrowserWebSocketUrl -Method 'Browser.close'
         }
         catch {
-            Write-Verbose "Graceful browser shutdown failed: $($_.Exception.Message)"
+            Write-Verbose "Graceful browser shutdown failed: $(Get-M365SafeFailureDetail -ErrorRecord $_)"
         }
 
         if (Wait-M365BrowserProcessExit -Process $Process -TimeoutMilliseconds $CloseTimeoutMilliseconds) {
@@ -780,7 +780,7 @@ function Get-M365BrowserCdpVersion {
 
     do {
         try {
-            return Invoke-RestMethod -Uri $versionUri -Method Get -ErrorAction Stop
+            return Invoke-RestMethod -Debug:$false -Verbose:$false -Uri $versionUri -Method Get -ErrorAction Stop
         } catch {
             Start-Sleep -Milliseconds 500
         }
@@ -798,7 +798,7 @@ function Get-M365BrowserTargetList {
     )
 
     $targetUri = "http://127.0.0.1:$Port/json/list"
-    $targets = Invoke-RestMethod -Uri $targetUri -Method Get -ErrorAction Stop
+    $targets = Invoke-RestMethod -Debug:$false -Verbose:$false -Uri $targetUri -Method Get -ErrorAction Stop
     return @($targets | Where-Object { $_ })
 }
 
@@ -846,8 +846,7 @@ function Get-M365BrowserPreferredTargetContext {
     }
     catch {
         return [pscustomobject]@{
-            Url          = $null
-            Title        = $null
+            Description  = $null
             Type         = $null
             WebSocketUrl = $FallbackWebSocketUrl
         }
@@ -861,16 +860,14 @@ function Get-M365BrowserPreferredTargetContext {
 
     if (-not $preferredTarget) {
         return [pscustomobject]@{
-            Url          = $null
-            Title        = $null
+            Description  = $null
             Type         = $null
             WebSocketUrl = $FallbackWebSocketUrl
         }
     }
 
     return [pscustomobject]@{
-        Url          = [string]$preferredTarget.url
-        Title        = [string]$preferredTarget.title
+        Description  = Format-M365BrowserTargetDescription -Url $preferredTarget.url
         Type         = [string]$preferredTarget.type
         WebSocketUrl = [string]$preferredTarget.webSocketDebuggerUrl
     }
@@ -879,21 +876,21 @@ function Get-M365BrowserPreferredTargetContext {
 function Format-M365BrowserTargetDescription {
     [OutputType([string])]
     [CmdletBinding()]
-    param(
-        [string]$Url,
-
-        [string]$Title
-    )
+    param([string]$Url)
 
     if ([string]::IsNullOrWhiteSpace($Url)) {
         return $null
     }
 
-    if ([string]::IsNullOrWhiteSpace($Title)) {
-        return $Url
+    $approvedOrigins = @('admin.cloud.microsoft', 'admin.microsoft.com', 'm365.cloud.microsoft', 'login.microsoftonline.com', 'login.microsoft.com')
+    $targetUri = $null
+    if ([uri]::TryCreate($Url, [UriKind]::Absolute, [ref]$targetUri) -and
+        $targetUri.Scheme -eq 'https' -and $targetUri.IsDefaultPort -and -not $targetUri.UserInfo -and
+        $targetUri.IdnHost -in $approvedOrigins) {
+        return 'https://{0}' -f $targetUri.IdnHost
     }
 
-    return "$Title [$Url]"
+    return 'unrecognized origin'
 }
 
 function Invoke-M365BrowserCdpCommand {
@@ -952,7 +949,7 @@ function Invoke-M365BrowserCdpCommand {
             }
 
             if ($null -ne $response.error) {
-                throw "Browser DevTools command '$Method' failed: $($response.error.message)"
+                throw "Browser DevTools command '$Method' failed. $(Get-M365SafeFailureDetail -ServiceCode $response.error.code)"
             }
 
             return $response.result
@@ -1219,7 +1216,7 @@ function Invoke-M365BrowserAuthentication {
             try {
                 $targetContext = Get-M365BrowserPreferredTargetContext -Port $debugPort -FallbackWebSocketUrl $browserWebSocketUrl
                 $browserWebSocketUrl = $targetContext.WebSocketUrl
-                $currentTargetDescription = Format-M365BrowserTargetDescription -Url $targetContext.Url -Title $targetContext.Title
+                $currentTargetDescription = $targetContext.Description
                 if ($currentTargetDescription -and $currentTargetDescription -ne $lastObservedTargetDescription) {
                     $lastObservedTargetDescription = $currentTargetDescription
                     Write-Verbose "Observed browser page: $currentTargetDescription"
@@ -1227,7 +1224,7 @@ function Invoke-M365BrowserAuthentication {
 
                 $cookies = @(Get-M365BrowserCookieJar -WebSocketUrl $browserWebSocketUrl)
             } catch {
-                Write-Verbose "Cookie polling failed: $($_.Exception.Message)"
+                Write-Verbose "Cookie polling failed: $(Get-M365SafeFailureDetail -ErrorRecord $_)"
                 continue
             }
 
