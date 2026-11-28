@@ -39,6 +39,8 @@
 
         [string]$AuthFlow,
 
+        [string]$RetainedProfilePath,
+
         [string]$UserAgent,
 
         [switch]$SkipValidation
@@ -429,6 +431,12 @@
         -not [object]::ReferenceEquals($previousConnection, $script:m365PortalConnection)) {
         throw 'The active Microsoft 365 portal connection changed during validation. Run Connect-M365Portal again.'
     }
+    if ($isCurrentSessionRefresh -and -not $PSBoundParameters.ContainsKey('RetainedProfilePath') -and
+        $previousConnection -and $previousConnection.PSObject.Properties['AuthFlow'] -and
+        $previousConnection.AuthFlow -eq $resolvedAuthFlow) {
+        $RetainedProfilePath = $script:m365PortalRetainedProfilePath
+    }
+    $script:m365PortalRetainedProfilePath = $RetainedProfilePath
     $script:m365PortalSession = $WebSession
     $script:m365PortalHeaders = $candidateHeaders
     $script:m365PortalConnection = $connection

@@ -21,6 +21,8 @@
 
         [string]$AuthFlow,
 
+        [string]$RetainedProfilePath,
+
         [switch]$FallbackToPortalOnEstsBootstrapFailure,
 
         [switch]$SkipValidation,
@@ -48,7 +50,7 @@
             [Microsoft.PowerShell.Commands.WebRequestSession]$WebSession
         )
 
-        $connection = Set-M365PortalConnectionSettings -WebSession $WebSession -AuthSource 'WebSession' -AuthFlow 'WebSession' -UserAgent $UserAgent -SkipValidation:$SkipValidation
+        $connection = Set-M365PortalConnectionSettings -WebSession $WebSession -AuthSource 'WebSession' -AuthFlow 'WebSession' -RetainedProfilePath $RetainedProfilePath -UserAgent $UserAgent -SkipValidation:$SkipValidation
         Set-ResolvedAuthFlow -Connection $connection
     }
 
@@ -63,7 +65,7 @@
         }
 
         $portalSession = Complete-M365AdminPortalSignIn -WebSession $WebSession -UserAgent $UserAgent
-        $connection = Set-M365PortalConnectionSettings -WebSession $portalSession -AuthSource 'ESTSAUTHPERSISTENT' -AuthFlow 'EstsCookie' -UserAgent $UserAgent -SkipValidation:$SkipValidation
+        $connection = Set-M365PortalConnectionSettings -WebSession $portalSession -AuthSource 'ESTSAUTHPERSISTENT' -AuthFlow 'EstsCookie' -RetainedProfilePath $RetainedProfilePath -UserAgent $UserAgent -SkipValidation:$SkipValidation
         Set-ResolvedAuthFlow -Connection $connection
     }
 
