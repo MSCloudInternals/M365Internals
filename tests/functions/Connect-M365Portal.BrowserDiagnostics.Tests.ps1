@@ -1,3 +1,34 @@
+Describe 'Browser entry point in a fresh PowerShell process' {
+    It 'reaches browser discovery with only M365Internals imported' {
+        $manifest = Join-Path (Get-Module M365Internals).ModuleBase 'M365Internals.psd1'
+        $fixturePath = Join-Path $TestDrive 'Test-M365ColdStartup.ps1'
+        $missingBrowser = Join-Path $TestDrive 'missing-browser'
+        @'
+param($Manifest, $BrowserPath, $ProfilePath)
+$ErrorActionPreference = 'Stop'
+Import-Module $Manifest
+try {
+    $null = Connect-M365Portal -BrowserSignIn -BrowserPath $BrowserPath -ProfilePath $ProfilePath
+} catch {
+    if ($_.Exception.Message -ne "Browser executable '$BrowserPath' was not found. Specify a valid path or command name.") {
+        throw
+    }
+    if ([IO.Directory]::Exists($ProfilePath)) {
+        throw 'Browser discovery unexpectedly created the profile directory.'
+    }
+    'BrowserDiscoveryReached'
+    exit 0
+}
+throw 'Connection unexpectedly succeeded.'
+'@ | Set-Content -LiteralPath $fixturePath
+
+        $powerShellPath = (Get-Process -Id $PID).Path
+        $result = & $powerShellPath -NoProfile -NonInteractive -File $fixturePath $manifest $missingBrowser (Join-Path $TestDrive 'profile')
+        $LASTEXITCODE | Should -Be 0
+        $result | Should -Be 'BrowserDiscoveryReached'
+    }
+}
+
 InModuleScope M365Internals {
     Describe 'browser startup diagnostics' {
         It 'reports an already-exited browser before polling DevTools' {
